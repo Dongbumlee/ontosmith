@@ -1,10 +1,8 @@
-**DRAFT — release notes for v0.1.0 (NOT POSTED)**
+**Release notes for v0.1.0**
 
-> **Status: draft.** This is the prepared body for the
-> v0.1.0 GitHub release. It has not been posted anywhere.
-> Publication — public repository creation, the release
-> itself, and the PyPI upload — is the launch checkpoint's
-> decision, taken separately. Wording follows the
+> **Status: published 2026-10-24** as the
+> [v0.1.0 GitHub release](https://github.com/Dongbumlee/ontosmith/releases/tag/v0.1.0).
+> The body below is the posted text. Wording follows the
 > project's placement rule: scores live in the whitepaper,
 > front surfaces carry the pointer, not the numbers.
 

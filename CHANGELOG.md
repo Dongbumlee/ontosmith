@@ -7,6 +7,10 @@ and the project adheres to
 
 ## [Unreleased]
 
+## [0.1.0] - 2026-10-24
+
+Release notes: [v0.1.0 on GitHub](https://github.com/Dongbumlee/ontosmith/releases/tag/v0.1.0).
+
 ### Changed
 
 - **The store holds one graph (RR program).** Neo4j
@@ -365,12 +369,6 @@ and the project adheres to
   the DocRED data cache, gate-eval results, a JF-F1 pack
   artefact, pack-data loading in the harness) now resolve
   against the state root / the shipped-data candidates.
-
-Everything below is staged for the first release. (This
-changelog is a pre-release draft until the 0.1.0
-publication checkpoint.)
-
-## [0.1.0] — initial release (draft — not yet published)
 
 ### Added
 
