@@ -1,0 +1,9 @@
+{
+ "family": "redocred",
+ "profile_hash": "sha256:38ee94d60b421a4cdd121eda9ce0937bad6ef76fcc5621a6bccd5266700b6f09",
+ "corpus_dir": "data/redocred",
+ "service_version": "hand-drafted in the service schema for issue #66 stage 2 (gold audit); no API calls, no LLM drafting",
+ "status": "DRAFT_NOT_APPROVED",
+ "drafted_for": "Re-DocRED gold audit (issue #66 stage 2): extraction profile only; the setup_config payload is this family's single content source.",
+ "created_at": "2026-10-20T00:00:00+00:00"
+}

@@ -1,0 +1,1140 @@
+{
+ "family": "redocred",
+ "profile_version": 2,
+ "triple_threshold": 0.25,
+ "review_band": [
+  0.25,
+  0.5
+ ],
+ "er_threshold": 0.4,
+ "er_cross_doc_min_p_same": 0.85,
+ "embed_model": "openai/text-embedding-3-large",
+ "route_baseline": "arm_c",
+ "er_auto_merge": "form_variants_only",
+ "er_alias_sources": "text_attested_only",
+ "batch_cost_cap_usd": 2.0,
+ "provider_sort": "throughput",
+ "corpus_scope": {
+  "family": "redocred",
+  "registry_namespace": "redocred",
+  "working_slice": "Dev (500 docs) — gold-audit slice of 30, issue #66 stage 2",
+  "sealed_splits": [],
+  "untouched_splits": [
+   "train_revised (one revision round — never scored, per survey §3.1)",
+   "test_revised (not used in stage 2)"
+  ],
+  "cross_corpus_links": "reviewed_edges_only"
+ },
+ "c1_whitelist": null,
+ "c1_whitelist_note": "unchanged from the playbook: never fires on LLM-proposed candidates",
+ "label_categories": [],
+ "label_categories_note": "triples-only (DP-B11 analog)",
+ "proposer_framing": "Extract factual relations from this encyclopedia article excerpt.",
+ "entity_types": [
+  "PER",
+  "ORG",
+  "LOC",
+  "TIME",
+  "NUM",
+  "MISC"
+ ],
+ "relation_types": [
+  "head of government",
+  "country",
+  "place of birth",
+  "place of death",
+  "father",
+  "mother",
+  "spouse",
+  "country of citizenship",
+  "continent",
+  "instance of",
+  "head of state",
+  "capital",
+  "official language",
+  "position held",
+  "child",
+  "author",
+  "member of sports team",
+  "director",
+  "screenwriter",
+  "educated at",
+  "composer",
+  "member of political party",
+  "employer",
+  "founded by",
+  "league",
+  "publisher",
+  "owned by",
+  "located in the administrative territorial entity",
+  "genre",
+  "operator",
+  "religion",
+  "contains administrative territorial entity",
+  "follows",
+  "followed by",
+  "headquarters location",
+  "cast member",
+  "producer",
+  "award received",
+  "creator",
+  "parent taxon",
+  "ethnic group",
+  "performer",
+  "manufacturer",
+  "developer",
+  "series",
+  "sister city",
+  "legislative body",
+  "basin country",
+  "located in or next to body of water",
+  "military branch",
+  "record label",
+  "production company",
+  "location",
+  "subclass of",
+  "subsidiary",
+  "part of",
+  "original language of work",
+  "platform",
+  "mouth of the watercourse",
+  "original network",
+  "member of",
+  "chairperson",
+  "country of origin",
+  "has part",
+  "residence",
+  "date of birth",
+  "date of death",
+  "inception",
+  "dissolved, abolished or demolished",
+  "publication date",
+  "start time",
+  "end time",
+  "point in time",
+  "conflict",
+  "characters",
+  "lyrics by",
+  "located on terrain feature",
+  "participant",
+  "influenced by",
+  "location of formation",
+  "parent organization",
+  "notable work",
+  "separated from",
+  "narrative location",
+  "work location",
+  "applies to jurisdiction",
+  "product or material produced",
+  "unemployment rate",
+  "territory claimed by",
+  "participant of",
+  "replaces",
+  "replaced by",
+  "capital of",
+  "languages spoken, written or signed",
+  "present in work",
+  "sibling"
+ ],
+ "schema_front": {
+  "purpose": "The corpus schema as the proposer's working instructions: DocRED's closed entity-type inventory and 96-relation inventory. Pack candidate payload (DocRED pack, issue #66 stage 3): relation definitions authored from the denoted Wikidata property's semantics and train-gold usage; endpoint signatures and directionality derived from the TRAIN split (fitting side) — dev is never used for fitting.",
+  "entity_inventory": [
+   {
+    "type": "PER",
+    "role": "entity",
+    "definition": "A person: a named individual human, including historical, fictional, or legendary persons referred to as individuals in the text.",
+    "form_examples": [
+     "Barack Obama",
+     "Marie Curie"
+    ]
+   },
+   {
+    "type": "ORG",
+    "role": "entity",
+    "definition": "An organization: a company, institution, agency, band, team, political party, or other named group with a collective identity.",
+    "form_examples": [
+     "United Nations",
+     "The Beatles"
+    ]
+   },
+   {
+    "type": "LOC",
+    "role": "entity",
+    "definition": "A location: a country, city, region, building, facility, or geographical feature.",
+    "form_examples": [
+     "Paris",
+     "Pacific Ocean"
+    ],
+    "not_entities": {
+     "demonym adjectives (nationality words, not places)": [
+      "Russian",
+      "American",
+      "British",
+      "French",
+      "German",
+      "Japanese"
+     ]
+    }
+   },
+   {
+    "type": "TIME",
+    "role": "entity",
+    "definition": "A point or span of time: a date, year, month, century, or named period.",
+    "form_examples": [
+     "1914",
+     "3 March 1969"
+    ]
+   },
+   {
+    "type": "NUM",
+    "role": "entity",
+    "definition": "A numeric quantity: a count, measurement, sum, percentage, or ranking expressed in digits or number words.",
+    "form_examples": [
+     "42",
+     "1.5 million"
+    ]
+   },
+   {
+    "type": "MISC",
+    "role": "entity",
+    "definition": "Any other named entity that is not PER, ORG, LOC, TIME, or NUM: creative works, events, laws, awards, products, languages, ethnic or religious groups, and similar referents.",
+    "form_examples": [
+     "World War II",
+     "English language"
+    ]
+   }
+  ],
+  "relation_inventory": [
+   {
+    "type": "head of government",
+    "definition": "The head of government of the subject polity (country, state, city, or other governmental body): the subject is the polity, the object is the person who heads its executive government.",
+    "endpoint_signature": [
+     "subject LOC -> object PER"
+    ],
+    "direction": "directed",
+    "signature_note": "Train gold: the modal endpoint pattern covers 358/368 (97%) of train triples for this relation. Other attested patterns: ORG->PER (4), LOC->LOC (3), LOC->MISC (2).",
+    "extraction_intent": "Distinct from head of state: a president who is both head of state and head of government takes both relations; a prime minister serving under a monarch takes only this one."
+   },
+   {
+    "type": "country",
+    "definition": "The sovereign country the subject belongs to or is located in: the object is the country, whatever the subject is (place, organization, person, work).",
+    "endpoint_signature": [
+     "subject LOC -> object LOC"
+    ],
+    "direction": "directed",
+    "signature_note": "Train gold: the modal endpoint pattern covers 9036/14401 (63%) of train triples for this relation. Other attested patterns: ORG->LOC (3921), MISC->LOC (1214), PER->LOC (69).",
+    "extraction_intent": "For a city or region this is its country. Do not confuse with 'located in the administrative territorial entity', which names the immediate administrative unit at any level (province, state, city)."
+   },
+   {
+    "type": "place of birth",
+    "definition": "The place where the subject person was born: subject is a person, object is the place.",
+    "endpoint_signature": [
+     "subject PER -> object LOC"
+    ],
+    "direction": "directed",
+    "signature_note": "Train gold: the modal endpoint pattern covers 686/692 (99%) of train triples for this relation. Other attested patterns: LOC->LOC (4), PER->ORG (1), MISC->LOC (1)."
+   },
+   {
+    "type": "place of death",
+    "definition": "The place where the subject person died: subject is a person, object is the place.",
+    "endpoint_signature": [
+     "subject PER -> object LOC"
+    ],
+    "direction": "directed",
+    "signature_note": "Train gold: the modal endpoint pattern covers 271/281 (96%) of train triples for this relation. Other attested patterns: PER->MISC (6), LOC->LOC (2), PER->ORG (1)."
+   },
+   {
+    "type": "father",
+    "definition": "The subject's father: the subject is the child, the object is the father (person -> person).",
+    "endpoint_signature": [
+     "subject PER -> object PER"
+    ],
+    "direction": "directed",
+    "signature_note": "Train gold: the modal endpoint pattern covers 450/466 (97%) of train triples for this relation. Other attested patterns: PER->LOC (4), MISC->MISC (4), PER->ORG (2).",
+    "extraction_intent": "Direction is child -> father. The reverse viewpoint (parent -> child) is 'child'."
+   },
+   {
+    "type": "mother",
+    "definition": "The subject's mother: the subject is the child, the object is the mother (person -> person).",
+    "endpoint_signature": [
+     "subject PER -> object PER"
+    ],
+    "direction": "directed",
+    "signature_note": "Train gold: the modal endpoint pattern covers 161/168 (96%) of train triples for this relation. Other attested patterns: MISC->MISC (5), PER->MISC (2).",
+    "extraction_intent": "Direction is child -> mother. The reverse viewpoint (parent -> child) is 'child'."
+   },
+   {
+    "type": "spouse",
+    "definition": "The subject's spouse (husband or wife): person -> person. The relation is symmetric: it holds in both directions and either endpoint order is correct.",
+    "endpoint_signature": [
+     "subject PER -> object PER"
+    ],
+    "direction": "symmetric",
+    "signature_note": "Train gold: the modal endpoint pattern covers 622/640 (97%) of train triples for this relation. Other attested patterns: MISC->PER (5), PER->MISC (5), PER->LOC (3)."
+   },
+   {
+    "type": "country of citizenship",
+    "definition": "The country of which the subject person is a citizen: person -> country.",
+    "endpoint_signature": [
+     "subject PER -> object LOC"
+    ],
+    "direction": "directed",
+    "signature_note": "Train gold: the modal endpoint pattern covers 4499/4665 (96%) of train triples for this relation. Other attested patterns: PER->MISC (47), PER->ORG (36), LOC->LOC (34).",
+    "extraction_intent": "Citizenship is a legal fact about the person; do not substitute birthplace, residence, or the country a person is merely associated with."
+   },
+   {
+    "type": "continent",
+    "definition": "The continent on or in which the subject is located: the subject is a place, the object is a continent.",
+    "endpoint_signature": [
+     "subject LOC -> object LOC"
+    ],
+    "direction": "directed",
+    "signature_note": "Train gold: the modal endpoint pattern covers 737/761 (97%) of train triples for this relation. Other attested patterns: ORG->LOC (16), MISC->LOC (5), LOC->ORG (2)."
+   },
+   {
+    "type": "instance of",
+    "definition": "The subject is an individual instance of the object class or type (a specific ship -> 'aircraft carrier'; a specific award ceremony -> 'award ceremony').",
+    "endpoint_signature": [
+     "subject MISC -> object MISC"
+    ],
+    "direction": "directed",
+    "signature_note": "Train gold: the modal endpoint pattern covers 138/225 (61%) of train triples for this relation. Other attested patterns: ORG->ORG (39), LOC->LOC (20), ORG->MISC (9).",
+    "extraction_intent": "Distinct from 'subclass of', where the subject itself is a class. If the subject is a unique named individual, use instance of."
+   },
+   {
+    "type": "head of state",
+    "definition": "The head of state of the subject polity: the subject is the polity, the object is the person (monarch, president) who is its formal head of state.",
+    "endpoint_signature": [
+     "subject LOC -> object PER"
+    ],
+    "direction": "directed",
+    "signature_note": "Train gold: the modal endpoint pattern covers 275/292 (94%) of train triples for this relation. Other attested patterns: ORG->PER (8), MISC->PER (4), LOC->ORG (2).",
+    "extraction_intent": "See 'head of government' for the contrast: the head of government runs the executive; the head of state is the polity's formal head. One person can hold both."
+   },
+   {
+    "type": "capital",
+    "definition": "The capital city of the subject polity: the subject is a country, state, or region, the object is its seat of government (place -> place).",
+    "endpoint_signature": [
+     "subject LOC -> object LOC"
+    ],
+    "direction": "directed",
+    "signature_note": "Train gold: the modal endpoint pattern covers 171/178 (96%) of train triples for this relation. Other attested patterns: ORG->LOC (4), MISC->LOC (1), LOC->PER (1).",
+    "inverse_of": "capital of",
+    "extraction_intent": "Inverse is 'capital of', where the city is the subject. Check which side the text makes the subject."
+   },
+   {
+    "type": "official language",
+    "definition": "A language with official status in the subject country or organization: the object is the language.",
+    "endpoint_signature": [
+     "subject LOC -> object MISC"
+    ],
+    "direction": "directed",
+    "signature_note": "Train gold: the modal endpoint pattern covers 191/281 (68%) of train triples for this relation. Other attested patterns: LOC->LOC (67), ORG->MISC (11), MISC->LOC (5)."
+   },
+   {
+    "type": "position held",
+    "definition": "A position, office, or role the subject person holds or held: the object is the position itself (e.g. 'President of France', 'member of parliament').",
+    "endpoint_signature": [
+     "subject PER -> object MISC"
+    ],
+    "direction": "directed",
+    "signature_note": "Train gold: the modal endpoint pattern covers 30/49 (61%) of train triples for this relation. Other attested patterns: PER->ORG (12), PER->PER (4), PER->LOC (3).",
+    "extraction_intent": "The object is the position, not the organization. Working for an organization is 'employer'; belonging to it is 'member of'."
+   },
+   {
+    "type": "child",
+    "definition": "The subject's child: the subject is the parent, the object is the child (person -> person).",
+    "endpoint_signature": [
+     "subject PER -> object PER"
+    ],
+    "direction": "directed",
+    "signature_note": "Train gold: the modal endpoint pattern covers 671/703 (95%) of train triples for this relation. Other attested patterns: MISC->MISC (9), LOC->PER (8), PER->MISC (5).",
+    "extraction_intent": "Direction is parent -> child; the reverse viewpoints are 'father' and 'mother'."
+   },
+   {
+    "type": "author",
+    "definition": "The author of the subject work: the subject is a written work (book, article, text), the object is the person who wrote it.",
+    "endpoint_signature": [
+     "subject MISC -> object PER"
+    ],
+    "direction": "directed",
+    "signature_note": "Train gold: the modal endpoint pattern covers 463/489 (95%) of train triples for this relation. Other attested patterns: PER->PER (14), LOC->PER (4), ORG->PER (3)."
+   },
+   {
+    "type": "member of sports team",
+    "definition": "A sports team the subject athlete belongs or belonged to: person -> sports team/organization.",
+    "endpoint_signature": [
+     "subject PER -> object ORG"
+    ],
+    "direction": "directed",
+    "signature_note": "Train gold: the modal endpoint pattern covers 348/379 (92%) of train triples for this relation. Other attested patterns: PER->LOC (16), NUM->ORG (6), ORG->ORG (3).",
+    "extraction_intent": "Use instead of 'member of' when the group is a sports team; use 'member of political party' for parties."
+   },
+   {
+    "type": "director",
+    "definition": "The director of the subject film or directed work: the subject is the work, the object is the person who directed it.",
+    "endpoint_signature": [
+     "subject MISC -> object PER"
+    ],
+    "direction": "directed",
+    "signature_note": "Train gold: the modal endpoint pattern covers 331/341 (97%) of train triples for this relation. Other attested patterns: PER->PER (4), LOC->PER (3), ORG->PER (3)."
+   },
+   {
+    "type": "screenwriter",
+    "definition": "The screenwriter of the subject film or work: the subject is the work, the object is the person who wrote its screenplay.",
+    "endpoint_signature": [
+     "subject MISC -> object PER"
+    ],
+    "direction": "directed",
+    "signature_note": "Train gold: the modal endpoint pattern covers 234/237 (99%) of train triples for this relation. Other attested patterns: PER->PER (2), LOC->PER (1)."
+   },
+   {
+    "type": "educated at",
+    "definition": "An educational institution the subject person attended or was educated at: person -> institution.",
+    "endpoint_signature": [
+     "subject PER -> object ORG"
+    ],
+    "direction": "directed",
+    "signature_note": "Train gold: the modal endpoint pattern covers 468/503 (93%) of train triples for this relation. Other attested patterns: PER->LOC (34), PER->PER (1)."
+   },
+   {
+    "type": "composer",
+    "definition": "The composer of the subject musical work: the subject is the work, the object is the person who composed the music.",
+    "endpoint_signature": [
+     "subject MISC -> object PER"
+    ],
+    "direction": "directed",
+    "signature_note": "Train gold: the modal endpoint pattern covers 169/171 (99%) of train triples for this relation. Other attested patterns: PER->PER (1), NUM->PER (1).",
+    "extraction_intent": "For the words of a song use 'lyrics by'; for the music, composer."
+   },
+   {
+    "type": "member of political party",
+    "definition": "The political party the subject person is a member of: person -> party.",
+    "endpoint_signature": [
+     "subject PER -> object ORG"
+    ],
+    "direction": "directed",
+    "signature_note": "Train gold: the modal endpoint pattern covers 387/403 (96%) of train triples for this relation. Other attested patterns: PER->MISC (8), LOC->ORG (4), MISC->ORG (1).",
+    "extraction_intent": "Use instead of 'member of' when the group is a political party."
+   },
+   {
+    "type": "employer",
+    "definition": "The organization the subject person works or worked for: person -> organization.",
+    "endpoint_signature": [
+     "subject PER -> object ORG"
+    ],
+    "direction": "directed",
+    "signature_note": "Train gold: the modal endpoint pattern covers 403/421 (96%) of train triples for this relation. Other attested patterns: PER->LOC (15), PER->MISC (3).",
+    "extraction_intent": "Founding a company is not employment: from the company's side that is 'founded by'."
+   },
+   {
+    "type": "founded by",
+    "definition": "A founder of the subject organization: the subject is the organization, the object is the person (or organization) who founded it.",
+    "endpoint_signature": [
+     "subject ORG -> object PER"
+    ],
+    "direction": "directed",
+    "signature_note": "Train gold: the modal endpoint pattern covers 140/204 (69%) of train triples for this relation. Other attested patterns: MISC->PER (26), LOC->PER (13), PER->MISC (9)."
+   },
+   {
+    "type": "league",
+    "definition": "The league or competition series in which the subject sports team or athlete competes: the object is the league.",
+    "endpoint_signature": [
+     "subject ORG -> object ORG"
+    ],
+    "direction": "directed",
+    "signature_note": "Train gold: the modal endpoint pattern covers 297/356 (83%) of train triples for this relation. Other attested patterns: ORG->MISC (33), LOC->ORG (8), ORG->LOC (6)."
+   },
+   {
+    "type": "publisher",
+    "definition": "The publisher of the subject work or periodical: the subject is the work, the object is the publishing organization or person.",
+    "endpoint_signature": [
+     "subject MISC -> object ORG"
+    ],
+    "direction": "directed",
+    "signature_note": "Train gold: the modal endpoint pattern covers 254/298 (85%) of train triples for this relation. Other attested patterns: MISC->MISC (15), PER->ORG (12), MISC->PER (7)."
+   },
+   {
+    "type": "owned by",
+    "definition": "The owner of the subject: the subject is the thing owned (organization, property, work), the object is the person or organization that owns it.",
+    "endpoint_signature": [
+     "subject ORG -> object ORG"
+    ],
+    "direction": "directed",
+    "signature_note": "Train gold: the modal endpoint pattern covers 198/389 (51%) of train triples for this relation. Other attested patterns: MISC->ORG (105), LOC->ORG (47), LOC->LOC (16).",
+    "extraction_intent": "Direction: owned thing -> owner."
+   },
+   {
+    "type": "located in the administrative territorial entity",
+    "definition": "The administrative territory the subject is located in: the object is the containing administrative unit at any level (a city in a province, a site in a country, an organization in its city).",
+    "endpoint_signature": [
+     "subject LOC -> object LOC"
+    ],
+    "direction": "directed",
+    "signature_note": "Train gold: the modal endpoint pattern covers 14981/20402 (73%) of train triples for this relation. Other attested patterns: ORG->LOC (5091), MISC->LOC (178), LOC->ORG (65).",
+    "inverse_of": "contains administrative territorial entity",
+    "extraction_intent": "Extract every containment the text states, at each stated level. The inverse viewpoint (territory -> what it contains) is 'contains administrative territorial entity'. Do not use for bodies of water — that is 'located in or next to body of water'."
+   },
+   {
+    "type": "genre",
+    "definition": "The genre of the subject creative work: the subject is a work, the object is the genre.",
+    "endpoint_signature": [
+     "subject PER -> object MISC"
+    ],
+    "direction": "directed",
+    "signature_note": "Train gold: the modal endpoint pattern covers 123/239 (51%) of train triples for this relation. Other attested patterns: MISC->MISC (71), ORG->MISC (30), PER->LOC (6)."
+   },
+   {
+    "type": "operator",
+    "definition": "The organization that operates the subject (a facility, service, network, or vehicle): the subject is the operated thing, the object is the operating organization.",
+    "endpoint_signature": [
+     "subject MISC -> object ORG"
+    ],
+    "direction": "directed",
+    "signature_note": "Train gold: the modal endpoint pattern covers 76/192 (40%) of train triples for this relation. Other attested patterns: LOC->ORG (73), ORG->ORG (31), LOC->LOC (7)."
+   },
+   {
+    "type": "religion",
+    "definition": "The religion or religious denomination the subject person or group adheres to: the object is the religion.",
+    "endpoint_signature": [
+     "subject PER -> object ORG"
+    ],
+    "direction": "directed",
+    "signature_note": "Train gold: the modal endpoint pattern covers 232/357 (65%) of train triples for this relation. Other attested patterns: ORG->ORG (46), LOC->ORG (38), PER->LOC (16).",
+    "extraction_intent": "The object is the religion itself, not a place of worship and not a religious organization the person belongs to."
+   },
+   {
+    "type": "contains administrative territorial entity",
+    "definition": "An administrative territory contained in the subject: the subject is the larger territory, the object is the contained unit (place -> place).",
+    "endpoint_signature": [
+     "subject LOC -> object LOC"
+    ],
+    "direction": "directed",
+    "signature_note": "Train gold: the modal endpoint pattern covers 3277/3369 (97%) of train triples for this relation. Other attested patterns: ORG->LOC (46), LOC->ORG (24), MISC->LOC (9).",
+    "inverse_of": "located in the administrative territorial entity",
+    "extraction_intent": "Inverse of 'located in the administrative territorial entity'."
+   },
+   {
+    "type": "follows",
+    "definition": "The subject immediately follows the object in a sequence (in a series, in office, in a sequence of events): the subject comes after the object.",
+    "endpoint_signature": [
+     "subject MISC -> object MISC"
+    ],
+    "direction": "directed",
+    "signature_note": "Train gold: the modal endpoint pattern covers 393/506 (78%) of train triples for this relation. Other attested patterns: ORG->ORG (54), LOC->LOC (42), TIME->TIME (6).",
+    "inverse_of": "followed by",
+    "extraction_intent": "Inverse is 'followed by'. The subject is the later element."
+   },
+   {
+    "type": "followed by",
+    "definition": "The subject is immediately followed by the object in a sequence: the subject comes before the object.",
+    "endpoint_signature": [
+     "subject MISC -> object MISC"
+    ],
+    "direction": "directed",
+    "signature_note": "Train gold: the modal endpoint pattern covers 393/506 (78%) of train triples for this relation. Other attested patterns: ORG->ORG (54), LOC->LOC (42), TIME->TIME (6).",
+    "inverse_of": "follows",
+    "extraction_intent": "Inverse of 'follows'. The subject is the earlier element."
+   },
+   {
+    "type": "headquarters location",
+    "definition": "The place where the subject organization's headquarters is located: organization -> place (city or site).",
+    "endpoint_signature": [
+     "subject ORG -> object LOC"
+    ],
+    "direction": "directed",
+    "signature_note": "Train gold: the modal endpoint pattern covers 230/263 (87%) of train triples for this relation. Other attested patterns: LOC->LOC (14), MISC->LOC (12), LOC->ORG (2).",
+    "extraction_intent": "The stated headquarters place, not merely the country the organization is from — that is 'country' / 'country of origin'."
+   },
+   {
+    "type": "cast member",
+    "definition": "A cast member of the subject film, series, or production: the subject is the work, the object is the performing person.",
+    "endpoint_signature": [
+     "subject MISC -> object PER"
+    ],
+    "direction": "directed",
+    "signature_note": "Train gold: the modal endpoint pattern covers 882/919 (96%) of train triples for this relation. Other attested patterns: PER->PER (21), ORG->PER (7), LOC->PER (4)."
+   },
+   {
+    "type": "producer",
+    "definition": "A producer of the subject film or production: the subject is the work, the object is the person who produced it.",
+    "endpoint_signature": [
+     "subject MISC -> object PER"
+    ],
+    "direction": "directed",
+    "signature_note": "Train gold: the modal endpoint pattern covers 231/249 (93%) of train triples for this relation. Other attested patterns: MISC->ORG (10), ORG->PER (3), MISC->MISC (2)."
+   },
+   {
+    "type": "award received",
+    "definition": "An award the subject received: the subject is the person or work honored, the object is the award.",
+    "endpoint_signature": [
+     "subject PER -> object MISC"
+    ],
+    "direction": "directed",
+    "signature_note": "Train gold: the modal endpoint pattern covers 279/340 (82%) of train triples for this relation. Other attested patterns: MISC->MISC (43), PER->ORG (5), LOC->MISC (5)."
+   },
+   {
+    "type": "creator",
+    "definition": "The creator of the subject (a work, character, or thing): the subject is the created thing, the object is the person or organization that created it.",
+    "endpoint_signature": [
+     "subject PER -> object PER"
+    ],
+    "direction": "directed",
+    "signature_note": "Train gold: the modal endpoint pattern covers 193/410 (47%) of train triples for this relation. Other attested patterns: MISC->PER (173), PER->ORG (15), LOC->PER (15).",
+    "extraction_intent": "Prefer the specific role the text states when the inventory offers it (author, director, composer, screenwriter, lyrics by); creator is the general case."
+   },
+   {
+    "type": "parent taxon",
+    "definition": "The immediate parent taxon of the subject taxon in a biological classification: subject and object are both taxa.",
+    "endpoint_signature": [
+     "subject MISC -> object MISC"
+    ],
+    "direction": "directed",
+    "signature_note": "Train gold: the modal endpoint pattern covers 107/117 (91%) of train triples for this relation. Other attested patterns: LOC->MISC (5), MISC->LOC (4), LOC->LOC (1)."
+   },
+   {
+    "type": "ethnic group",
+    "definition": "The ethnic group the subject person belongs to: person -> ethnic group.",
+    "endpoint_signature": [
+     "subject LOC -> object LOC"
+    ],
+    "direction": "directed",
+    "signature_note": "Train gold: the modal endpoint pattern covers 56/155 (36%) of train triples for this relation. Other attested patterns: LOC->ORG (37), PER->LOC (32), PER->ORG (19)."
+   },
+   {
+    "type": "performer",
+    "definition": "A performer of the subject musical work or recording: the subject is the work or recording, the object is the performing person or group.",
+    "endpoint_signature": [
+     "subject MISC -> object ORG"
+    ],
+    "direction": "directed",
+    "signature_note": "Train gold: the modal endpoint pattern covers 800/1773 (45%) of train triples for this relation. Other attested patterns: MISC->PER (766), PER->PER (126), MISC->MISC (56)."
+   },
+   {
+    "type": "manufacturer",
+    "definition": "The manufacturer of the subject product or material: the subject is the product, the object is the manufacturing organization.",
+    "endpoint_signature": [
+     "subject MISC -> object ORG"
+    ],
+    "direction": "directed",
+    "signature_note": "Train gold: the modal endpoint pattern covers 134/144 (93%) of train triples for this relation. Other attested patterns: MISC->LOC (6), ORG->ORG (2), LOC->ORG (1)."
+   },
+   {
+    "type": "developer",
+    "definition": "The developer of the subject (software, product, or project): the subject is the thing developed, the object is the developing person or organization.",
+    "endpoint_signature": [
+     "subject MISC -> object ORG"
+    ],
+    "direction": "directed",
+    "signature_note": "Train gold: the modal endpoint pattern covers 368/402 (92%) of train triples for this relation. Other attested patterns: MISC->PER (21), ORG->ORG (7), PER->ORG (4)."
+   },
+   {
+    "type": "series",
+    "definition": "The series the subject work belongs to: the subject is a work (book, film, episode), the object is the series.",
+    "endpoint_signature": [
+     "subject MISC -> object MISC"
+    ],
+    "direction": "directed",
+    "signature_note": "Train gold: the modal endpoint pattern covers 224/245 (91%) of train triples for this relation. Other attested patterns: MISC->PER (11), ORG->MISC (3), MISC->LOC (2)."
+   },
+   {
+    "type": "sister city",
+    "definition": "A sister (twin) city of the subject place: place -> place. The relation is symmetric: either endpoint order is correct.",
+    "endpoint_signature": [
+     "subject LOC -> object LOC"
+    ],
+    "direction": "symmetric",
+    "signature_note": "Train gold: the modal endpoint pattern covers 8/8 (100%) of train triples for this relation."
+   },
+   {
+    "type": "legislative body",
+    "definition": "The legislative body of the subject polity (its parliament or legislature): the subject is the polity, the object is the legislative organization.",
+    "endpoint_signature": [
+     "subject LOC -> object ORG"
+    ],
+    "direction": "directed",
+    "signature_note": "Train gold: the modal endpoint pattern covers 277/305 (91%) of train triples for this relation. Other attested patterns: ORG->ORG (17), LOC->MISC (7), LOC->LOC (3)."
+   },
+   {
+    "type": "basin country",
+    "definition": "A country in the drainage basin of the subject watercourse or body of water: the subject is the river or water body, the object is a country it flows through or drains.",
+    "endpoint_signature": [
+     "subject LOC -> object LOC"
+    ],
+    "direction": "directed",
+    "signature_note": "Train gold: the modal endpoint pattern covers 169/174 (97%) of train triples for this relation. Other attested patterns: LOC->ORG (3), LOC->MISC (1), LOC->PER (1)."
+   },
+   {
+    "type": "located in or next to body of water",
+    "definition": "The body of water the subject place is located in or next to: the subject is a place, the object is the water body (place -> place).",
+    "endpoint_signature": [
+     "subject LOC -> object LOC"
+    ],
+    "direction": "directed",
+    "signature_note": "Train gold: the modal endpoint pattern covers 421/431 (98%) of train triples for this relation. Other attested patterns: ORG->LOC (5), MISC->LOC (2), LOC->PER (1).",
+    "extraction_intent": "Distinct from 'located in the administrative territorial entity': here the object is water, not an administrative unit."
+   },
+   {
+    "type": "military branch",
+    "definition": "The military branch (army, navy, air force, and similar) the subject (a unit, person, or organization) belongs to: the object is the branch.",
+    "endpoint_signature": [
+     "subject PER -> object ORG"
+    ],
+    "direction": "directed",
+    "signature_note": "Train gold: the modal endpoint pattern covers 160/191 (84%) of train triples for this relation. Other attested patterns: ORG->ORG (20), PER->LOC (4), ORG->LOC (2)."
+   },
+   {
+    "type": "record label",
+    "definition": "The record label of the subject recording, album, or performer: the object is the label organization.",
+    "endpoint_signature": [
+     "subject MISC -> object ORG"
+    ],
+    "direction": "directed",
+    "signature_note": "Train gold: the modal endpoint pattern covers 524/923 (57%) of train triples for this relation. Other attested patterns: PER->ORG (247), ORG->ORG (123), MISC->MISC (10).",
+    "extraction_intent": "The label must be stated for this subject. A song does not inherit the label of the album it appears on unless the text states it for the song (the gold audit's B-008 trap)."
+   },
+   {
+    "type": "production company",
+    "definition": "A production company behind the subject film or production: the subject is the work, the object is the company.",
+    "endpoint_signature": [
+     "subject MISC -> object ORG"
+    ],
+    "direction": "directed",
+    "signature_note": "Train gold: the modal endpoint pattern covers 134/152 (88%) of train triples for this relation. Other attested patterns: PER->ORG (6), ORG->ORG (5), MISC->MISC (3)."
+   },
+   {
+    "type": "location",
+    "definition": "The location of the subject (where a thing, event, or organization is situated) when no more specific location relation in this inventory applies: the object is the place.",
+    "endpoint_signature": [
+     "subject MISC -> object LOC"
+    ],
+    "direction": "directed",
+    "signature_note": "Train gold: the modal endpoint pattern covers 327/336 (97%) of train triples for this relation. Other attested patterns: MISC->ORG (4), MISC->MISC (3), LOC->ORG (1).",
+    "extraction_intent": "Prefer the specific relations when they fit: 'headquarters location' for headquarters, 'located in the administrative territorial entity' for administrative containment, 'narrative location' for a work's setting."
+   },
+   {
+    "type": "subclass of",
+    "definition": "The subject is a class that is a subclass of the object class: both endpoints are classes or types.",
+    "endpoint_signature": [
+     "subject MISC -> object MISC"
+    ],
+    "direction": "directed",
+    "signature_note": "Train gold: the modal endpoint pattern covers 92/152 (61%) of train triples for this relation. Other attested patterns: ORG->ORG (41), MISC->LOC (8), MISC->ORG (2).",
+    "extraction_intent": "Distinct from 'instance of', where the subject is an individual member of the class."
+   },
+   {
+    "type": "subsidiary",
+    "definition": "A subsidiary of the subject organization: the subject is the parent organization, the object is the subsidiary (organization -> organization).",
+    "endpoint_signature": [
+     "subject ORG -> object ORG"
+    ],
+    "direction": "directed",
+    "signature_note": "Train gold: the modal endpoint pattern covers 191/230 (83%) of train triples for this relation. Other attested patterns: ORG->MISC (25), ORG->LOC (4), LOC->ORG (3).",
+    "inverse_of": "parent organization",
+    "extraction_intent": "Inverse is 'parent organization', where the subsidiary is the subject."
+   },
+   {
+    "type": "part of",
+    "definition": "The subject is part of the object (a work in a series, a component in a whole, a unit in an organization): the object is the whole.",
+    "endpoint_signature": [
+     "subject PER -> object ORG"
+    ],
+    "direction": "directed",
+    "signature_note": "Train gold: the modal endpoint pattern covers 611/2112 (29%) of train triples for this relation. Other attested patterns: MISC->MISC (536), LOC->LOC (501), ORG->ORG (215).",
+    "inverse_of": "has part",
+    "extraction_intent": "Inverse is 'has part'."
+   },
+   {
+    "type": "original language of work",
+    "definition": "The original language of the subject creative work: the subject is a work, the object is the language.",
+    "endpoint_signature": [
+     "subject MISC -> object MISC"
+    ],
+    "direction": "directed",
+    "signature_note": "Train gold: the modal endpoint pattern covers 55/107 (51%) of train triples for this relation. Other attested patterns: MISC->LOC (43), LOC->MISC (3), PER->MISC (3)."
+   },
+   {
+    "type": "platform",
+    "definition": "A platform the subject software or video game runs on or was released for: the subject is the software, the object is the platform.",
+    "endpoint_signature": [
+     "subject MISC -> object MISC"
+    ],
+    "direction": "directed",
+    "signature_note": "Train gold: the modal endpoint pattern covers 438/460 (95%) of train triples for this relation. Other attested patterns: PER->MISC (10), MISC->ORG (9), MISC->NUM (1)."
+   },
+   {
+    "type": "mouth of the watercourse",
+    "definition": "The body of water into which the subject watercourse flows (its mouth): the subject is the river or stream, the object is the receiving water body.",
+    "endpoint_signature": [
+     "subject LOC -> object LOC"
+    ],
+    "direction": "directed",
+    "signature_note": "Train gold: the modal endpoint pattern covers 199/200 (100%) of train triples for this relation. Other attested patterns: ORG->LOC (1)."
+   },
+   {
+    "type": "original network",
+    "definition": "The original network or channel that first broadcast the subject television work: the subject is the work, the object is the network organization.",
+    "endpoint_signature": [
+     "subject MISC -> object ORG"
+    ],
+    "direction": "directed",
+    "signature_note": "Train gold: the modal endpoint pattern covers 211/264 (80%) of train triples for this relation. Other attested patterns: MISC->MISC (34), PER->ORG (10), LOC->ORG (4)."
+   },
+   {
+    "type": "member of",
+    "definition": "The subject is a member of the object organization or group: the object is the group.",
+    "endpoint_signature": [
+     "subject PER -> object ORG"
+    ],
+    "direction": "directed",
+    "signature_note": "Train gold: the modal endpoint pattern covers 933/1299 (72%) of train triples for this relation. Other attested patterns: LOC->ORG (245), ORG->ORG (32), PER->MISC (31).",
+    "extraction_intent": "Use the specific variants when they apply: 'member of sports team' for teams, 'member of political party' for parties."
+   },
+   {
+    "type": "chairperson",
+    "definition": "The chairperson of the subject organization: the subject is the organization, the object is the person who chairs it.",
+    "endpoint_signature": [
+     "subject ORG -> object PER"
+    ],
+    "direction": "directed",
+    "signature_note": "Train gold: the modal endpoint pattern covers 141/145 (97%) of train triples for this relation. Other attested patterns: MISC->PER (3), LOC->PER (1)."
+   },
+   {
+    "type": "country of origin",
+    "definition": "The country where the subject (a work, product, or organization) originates: the object is the country.",
+    "endpoint_signature": [
+     "subject MISC -> object LOC"
+    ],
+    "direction": "directed",
+    "signature_note": "Train gold: the modal endpoint pattern covers 931/948 (98%) of train triples for this relation. Other attested patterns: PER->LOC (13), MISC->MISC (3), MISC->ORG (1).",
+    "extraction_intent": "For creative works this is the producing country. Distinct from 'country' used for where a place or entity is located."
+   },
+   {
+    "type": "has part",
+    "definition": "The subject has the object as a part or component: the object is the part.",
+    "endpoint_signature": [
+     "subject MISC -> object MISC"
+    ],
+    "direction": "directed",
+    "signature_note": "Train gold: the modal endpoint pattern covers 716/2313 (31%) of train triples for this relation. Other attested patterns: ORG->PER (611), LOC->LOC (501), ORG->ORG (215).",
+    "inverse_of": "part of",
+    "extraction_intent": "Inverse of 'part of'."
+   },
+   {
+    "type": "residence",
+    "definition": "The place where the subject person resides or resided: person -> place.",
+    "endpoint_signature": [
+     "subject PER -> object LOC"
+    ],
+    "direction": "directed",
+    "signature_note": "Train gold: the modal endpoint pattern covers 62/66 (94%) of train triples for this relation. Other attested patterns: PER->ORG (2), ORG->LOC (2).",
+    "extraction_intent": "Residence is where a person lives; do not substitute birthplace ('place of birth') or where they work ('work location')."
+   },
+   {
+    "type": "date of birth",
+    "definition": "The date on which the subject person was born: the subject is a person, the object is the date itself.",
+    "endpoint_signature": [
+     "subject PER -> object TIME"
+    ],
+    "direction": "directed",
+    "signature_note": "Train gold: the modal endpoint pattern covers 1161/1172 (99%) of train triples for this relation. Other attested patterns: LOC->TIME (4), MISC->TIME (4), ORG->TIME (2)."
+   },
+   {
+    "type": "date of death",
+    "definition": "The date on which the subject person died: the subject is a person, the object is the date itself.",
+    "endpoint_signature": [
+     "subject PER -> object TIME"
+    ],
+    "direction": "directed",
+    "signature_note": "Train gold: the modal endpoint pattern covers 988/1000 (99%) of train triples for this relation. Other attested patterns: MISC->TIME (5), LOC->TIME (4), ORG->TIME (1)."
+   },
+   {
+    "type": "inception",
+    "definition": "The date the subject (an organization, work, or thing) was founded, created, or came into existence: the object is the date.",
+    "endpoint_signature": [
+     "subject ORG -> object TIME"
+    ],
+    "direction": "directed",
+    "signature_note": "Train gold: the modal endpoint pattern covers 461/868 (53%) of train triples for this relation. Other attested patterns: LOC->TIME (225), MISC->TIME (177), PER->TIME (3)."
+   },
+   {
+    "type": "dissolved, abolished or demolished",
+    "definition": "The date the subject organization or structure ceased to exist (was dissolved, abolished, or demolished): the object is the date.",
+    "endpoint_signature": [
+     "subject ORG -> object TIME"
+    ],
+    "direction": "directed",
+    "signature_note": "Train gold: the modal endpoint pattern covers 102/181 (56%) of train triples for this relation. Other attested patterns: LOC->TIME (60), MISC->TIME (18), PER->TIME (1)."
+   },
+   {
+    "type": "publication date",
+    "definition": "The date the subject work was published or released: the subject is a work, the object is the date.",
+    "endpoint_signature": [
+     "subject MISC -> object TIME"
+    ],
+    "direction": "directed",
+    "signature_note": "Train gold: the modal endpoint pattern covers 1596/1621 (98%) of train triples for this relation. Other attested patterns: ORG->TIME (13), PER->TIME (9), LOC->TIME (3)."
+   },
+   {
+    "type": "start time",
+    "definition": "The date or time at which the subject (an event, term, or period) started: the object is the time.",
+    "endpoint_signature": [
+     "subject MISC -> object TIME"
+    ],
+    "direction": "directed",
+    "signature_note": "Train gold: the modal endpoint pattern covers 204/222 (92%) of train triples for this relation. Other attested patterns: ORG->TIME (9), LOC->TIME (7), TIME->TIME (1)."
+   },
+   {
+    "type": "end time",
+    "definition": "The date or time at which the subject (an event, term, or period) ended: the object is the time.",
+    "endpoint_signature": [
+     "subject MISC -> object TIME"
+    ],
+    "direction": "directed",
+    "signature_note": "Train gold: the modal endpoint pattern covers 99/105 (94%) of train triples for this relation. Other attested patterns: ORG->TIME (5), TIME->TIME (1)."
+   },
+   {
+    "type": "point in time",
+    "definition": "The point in time at which the subject event occurred or a dated fact about the subject holds, when no more specific date relation in this inventory applies: the object is the time.",
+    "endpoint_signature": [
+     "subject MISC -> object TIME"
+    ],
+    "direction": "directed",
+    "signature_note": "Train gold: the modal endpoint pattern covers 174/191 (91%) of train triples for this relation. Other attested patterns: LOC->TIME (12), ORG->TIME (4), PER->TIME (1)."
+   },
+   {
+    "type": "conflict",
+    "definition": "A conflict or war the subject (a person, military unit, or vessel) took part in: the object is the conflict.",
+    "endpoint_signature": [
+     "subject PER -> object MISC"
+    ],
+    "direction": "directed",
+    "signature_note": "Train gold: the modal endpoint pattern covers 278/575 (48%) of train triples for this relation. Other attested patterns: ORG->MISC (231), MISC->MISC (31), LOC->MISC (24)."
+   },
+   {
+    "type": "characters",
+    "definition": "A character appearing in the subject work: the subject is the work, the object is the (usually fictional) character.",
+    "endpoint_signature": [
+     "subject MISC -> object PER"
+    ],
+    "direction": "directed",
+    "signature_note": "Train gold: the modal endpoint pattern covers 330/370 (89%) of train triples for this relation. Other attested patterns: MISC->MISC (14), PER->PER (11), LOC->PER (8)."
+   },
+   {
+    "type": "lyrics by",
+    "definition": "The lyricist of the subject song or musical work: the subject is the work, the object is the person who wrote the lyrics.",
+    "endpoint_signature": [
+     "subject MISC -> object PER"
+    ],
+    "direction": "directed",
+    "signature_note": "Train gold: the modal endpoint pattern covers 78/79 (99%) of train triples for this relation. Other attested patterns: MISC->ORG (1).",
+    "extraction_intent": "For the music itself use 'composer'; for the words, lyrics by."
+   },
+   {
+    "type": "located on terrain feature",
+    "definition": "The terrain feature (mountain, island, plain, and similar) on which the subject place is located: place -> place.",
+    "endpoint_signature": [
+     "subject LOC -> object LOC"
+    ],
+    "direction": "directed",
+    "signature_note": "Train gold: the modal endpoint pattern covers 279/293 (95%) of train triples for this relation. Other attested patterns: MISC->LOC (8), ORG->LOC (3), NUM->LOC (2).",
+    "extraction_intent": "Distinct from 'located in the administrative territorial entity': the object is a physical terrain feature, not an administrative unit."
+   },
+   {
+    "type": "participant",
+    "definition": "A participant in the subject event: the subject is the event, the object is the participating person or organization.",
+    "endpoint_signature": [
+     "subject MISC -> object PER"
+    ],
+    "direction": "directed",
+    "signature_note": "Train gold: the modal endpoint pattern covers 599/1168 (51%) of train triples for this relation. Other attested patterns: MISC->ORG (274), MISC->LOC (219), MISC->MISC (42).",
+    "inverse_of": "participant of",
+    "extraction_intent": "Inverse is 'participant of', where the participant is the subject."
+   },
+   {
+    "type": "influenced by",
+    "definition": "The subject was influenced by the object (a person, work, or movement): the object is the influence.",
+    "endpoint_signature": [
+     "subject PER -> object PER"
+    ],
+    "direction": "directed",
+    "signature_note": "Train gold: the modal endpoint pattern covers 15/22 (68%) of train triples for this relation. Other attested patterns: MISC->MISC (5), MISC->PER (1), ORG->ORG (1)."
+   },
+   {
+    "type": "location of formation",
+    "definition": "The place where the subject organization was formed or founded: organization -> place.",
+    "endpoint_signature": [
+     "subject ORG -> object LOC"
+    ],
+    "direction": "directed",
+    "signature_note": "Train gold: the modal endpoint pattern covers 91/102 (89%) of train triples for this relation. Other attested patterns: MISC->LOC (5), PER->LOC (2), LOC->LOC (2)."
+   },
+   {
+    "type": "parent organization",
+    "definition": "The parent organization of the subject organization: the subject is the subsidiary or member organization, the object is the parent (organization -> organization).",
+    "endpoint_signature": [
+     "subject ORG -> object ORG"
+    ],
+    "direction": "directed",
+    "signature_note": "Train gold: the modal endpoint pattern covers 191/230 (83%) of train triples for this relation. Other attested patterns: MISC->ORG (25), LOC->ORG (4), ORG->LOC (3).",
+    "inverse_of": "subsidiary",
+    "extraction_intent": "Inverse of 'subsidiary'."
+   },
+   {
+    "type": "notable work",
+    "definition": "A notable work of the subject person — a work they are known for: the subject is the person, the object is the work.",
+    "endpoint_signature": [
+     "subject PER -> object MISC"
+    ],
+    "direction": "directed",
+    "signature_note": "Train gold: the modal endpoint pattern covers 1975/3055 (65%) of train triples for this relation. Other attested patterns: ORG->MISC (808), PER->PER (151), MISC->MISC (62).",
+    "extraction_intent": "Roughly the reverse viewpoint of 'creator' / 'author', where the work is the subject."
+   },
+   {
+    "type": "separated from",
+    "definition": "The subject separated from the object (a territory, state, or organization that split off from another): the subject is the part that separated, the object is the entity it separated from.",
+    "endpoint_signature": [
+     "subject LOC -> object LOC"
+    ],
+    "direction": "directed",
+    "signature_note": "Train gold: the modal endpoint pattern covers 6/8 (75%) of train triples for this relation. Other attested patterns: ORG->ORG (2).",
+    "extraction_intent": "Direction follows the separation: the part that left is the subject."
+   },
+   {
+    "type": "narrative location",
+    "definition": "The place where the subject work's narrative is set: the subject is a (fictional) work, the object is the setting.",
+    "endpoint_signature": [
+     "subject MISC -> object LOC"
+    ],
+    "direction": "directed",
+    "signature_note": "Train gold: the modal endpoint pattern covers 76/83 (92%) of train triples for this relation. Other attested patterns: PER->LOC (2), ORG->LOC (2), LOC->LOC (2)."
+   },
+   {
+    "type": "work location",
+    "definition": "The place where the subject person works or worked (their workplace location): person -> place.",
+    "endpoint_signature": [
+     "subject PER -> object LOC"
+    ],
+    "direction": "directed",
+    "signature_note": "Train gold: the modal endpoint pattern covers 190/204 (93%) of train triples for this relation. Other attested patterns: PER->ORG (11), ORG->LOC (1), LOC->PER (1).",
+    "extraction_intent": "Distinct from 'residence', where the person lives."
+   },
+   {
+    "type": "applies to jurisdiction",
+    "definition": "The jurisdiction to which the subject (a law, tax, or rule) applies: the subject is the legal item, the object is the jurisdiction.",
+    "endpoint_signature": [
+     "subject PER -> object LOC"
+    ],
+    "direction": "directed",
+    "signature_note": "Train gold: the modal endpoint pattern covers 584/1207 (48%) of train triples for this relation. Other attested patterns: ORG->LOC (483), MISC->LOC (68), ORG->ORG (28)."
+   },
+   {
+    "type": "product or material produced",
+    "definition": "A product or material the subject organization produces: the subject is the producing organization (or place), the object is the product or material.",
+    "endpoint_signature": [
+     "subject ORG -> object MISC"
+    ],
+    "direction": "directed",
+    "signature_note": "Train gold: the modal endpoint pattern covers 59/65 (91%) of train triples for this relation. Other attested patterns: ORG->ORG (6)."
+   },
+   {
+    "type": "unemployment rate",
+    "definition": "The unemployment rate of the subject place (at the time the text states): the subject is a place, the object is the rate (a number).",
+    "endpoint_signature": [
+     "subject LOC -> object NUM"
+    ],
+    "direction": "directed",
+    "signature_note": "Train gold: the modal endpoint pattern covers 1/2 (50%) of train triples for this relation. Other attested patterns: LOC->TIME (1)."
+   },
+   {
+    "type": "territory claimed by",
+    "definition": "The subject territory is claimed by the object (the country or organization claiming it): the subject is the territory, the object is the claimant.",
+    "endpoint_signature": [
+     "subject LOC -> object LOC"
+    ],
+    "direction": "directed",
+    "signature_note": "Train gold: the modal endpoint pattern covers 51/59 (86%) of train triples for this relation. Other attested patterns: LOC->ORG (4), LOC->MISC (2), PER->LOC (1)."
+   },
+   {
+    "type": "participant of",
+    "definition": "The subject participated in the object event: the subject is the person or organization, the object is the event.",
+    "endpoint_signature": [
+     "subject PER -> object MISC"
+    ],
+    "direction": "directed",
+    "signature_note": "Train gold: the modal endpoint pattern covers 599/1168 (51%) of train triples for this relation. Other attested patterns: ORG->MISC (274), LOC->MISC (219), MISC->MISC (42).",
+    "inverse_of": "participant",
+    "extraction_intent": "Inverse of 'participant'."
+   },
+   {
+    "type": "replaces",
+    "definition": "The subject replaces the object (a predecessor in office, an earlier version, a superseded body): the subject is the successor, the object is what it replaces.",
+    "endpoint_signature": [
+     "subject LOC -> object LOC"
+    ],
+    "direction": "directed",
+    "signature_note": "Train gold: the modal endpoint pattern covers 70/96 (73%) of train triples for this relation. Other attested patterns: ORG->ORG (15), MISC->MISC (4), LOC->ORG (3).",
+    "inverse_of": "replaced by",
+    "extraction_intent": "Inverse is 'replaced by'."
+   },
+   {
+    "type": "replaced by",
+    "definition": "The subject was replaced by the object: the subject is the predecessor, the object is the successor.",
+    "endpoint_signature": [
+     "subject LOC -> object LOC"
+    ],
+    "direction": "directed",
+    "signature_note": "Train gold: the modal endpoint pattern covers 70/96 (73%) of train triples for this relation. Other attested patterns: ORG->ORG (15), MISC->MISC (4), ORG->LOC (3).",
+    "inverse_of": "replaces",
+    "extraction_intent": "Inverse of 'replaces'."
+   },
+   {
+    "type": "capital of",
+    "definition": "The subject is the capital of the object polity: the subject is the city, the object is the country or state (place -> place).",
+    "endpoint_signature": [
+     "subject LOC -> object LOC"
+    ],
+    "direction": "directed",
+    "signature_note": "Train gold: the modal endpoint pattern covers 171/178 (96%) of train triples for this relation. Other attested patterns: LOC->ORG (4), LOC->MISC (1), PER->LOC (1).",
+    "inverse_of": "capital",
+    "extraction_intent": "Inverse of 'capital'; the pair is the same, the direction decides the label."
+   },
+   {
+    "type": "languages spoken, written or signed",
+    "definition": "A language the subject person (or population) speaks, writes, or signs: the object is the language.",
+    "endpoint_signature": [
+     "subject PER -> object MISC"
+    ],
+    "direction": "directed",
+    "signature_note": "Train gold: the modal endpoint pattern covers 236/366 (64%) of train triples for this relation. Other attested patterns: PER->LOC (116), LOC->MISC (6), LOC->LOC (5)."
+   },
+   {
+    "type": "present in work",
+    "definition": "The subject (a person, place, or thing) is present in, or appears in, the object work: the subject is what appears, the object is the work it appears in.",
+    "endpoint_signature": [
+     "subject PER -> object MISC"
+    ],
+    "direction": "directed",
+    "signature_note": "Train gold: the modal endpoint pattern covers 580/669 (87%) of train triples for this relation. Other attested patterns: MISC->MISC (27), ORG->MISC (17), PER->PER (15).",
+    "extraction_intent": "Presence does not transfer between wholes and parts: a subject stated to appear in an album is not thereby present in each of its songs unless the text states it (the gold audit's B-008 trap)."
+   },
+   {
+    "type": "sibling",
+    "definition": "A sibling of the subject person: person -> person. The relation is symmetric: either endpoint order is correct.",
+    "endpoint_signature": [
+     "subject PER -> object PER"
+    ],
+    "direction": "symmetric",
+    "signature_note": "Train gold: the modal endpoint pattern covers 702/712 (99%) of train triples for this relation. Other attested patterns: ORG->ORG (2), PER->LOC (2), LOC->PER (2)."
+   }
+  ],
+  "merge_prohibitions": [
+   {
+    "id": "MP-1",
+    "rule": "Never merge entities of different schema types."
+   }
+  ],
+  "relation_directionality": "directed"
+ },
+ "profile_hash": "sha256:36460a1134ef7deda7bb7f4607d47f5855995a9da2e44a99f18288d50e82a068"
+}

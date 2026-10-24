@@ -1,0 +1,418 @@
+{
+ "fidelity": {
+  "reachable": true,
+  "converted": true,
+  "none_loss": true,
+  "emission_loss": true,
+  "eta": true,
+  "kept_candidates": true,
+  "kept_grounded": true,
+  "kept_exact_matched": true,
+  "candidate_gold_precision": true,
+  "flip_rows": true,
+  "wrong_relation_rows": true,
+  "converted_idx": true,
+  "pass": true
+ },
+ "FULL-500": {
+  "docs": 500,
+  "gold_total": 17284,
+  "tier1_rows": 3902,
+  "tier1_distinct": 3902,
+  "matched_extracted": 2233,
+  "matched_gold": 1838,
+  "raw_precision": {
+   "k": 2233,
+   "n": 3902,
+   "rate": 0.5723,
+   "wilson95": [
+    0.5567,
+    0.5877
+   ]
+  },
+  "raw_recall": {
+   "k": 1838,
+   "n": 17284,
+   "rate": 0.1063,
+   "wilson95": [
+    0.1018,
+    0.111
+   ]
+  },
+  "raw_f1": 0.1793,
+  "tn_precision": {
+   "k": 2238,
+   "n": 3902,
+   "rate": 0.5736,
+   "wilson95": [
+    0.558,
+    0.589
+   ]
+  },
+  "tn_recall": {
+   "k": 2125,
+   "n": 17284,
+   "rate": 0.1229,
+   "wilson95": [
+    0.1181,
+    0.1279
+   ]
+  },
+  "tn_f1": 0.2024,
+  "tn_matched_extracted": 2238,
+  "tn_matched_gold": 2125,
+  "eta_family": {
+   "reachable": 7280,
+   "converted": 1838,
+   "none_loss": 3683,
+   "emission_loss": 1759,
+   "eta": 0.2525,
+   "none_loss_share": 0.5059,
+   "kept_candidates": 3902,
+   "kept_grounded": 2576,
+   "kept_exact_matched": 2233,
+   "candidate_gold_precision": 0.8668,
+   "flip_rows": 46,
+   "wrong_relation_rows": 287
+  },
+  "flip_share_of_kept": 0.0118
+ },
+ "CONF-440": {
+  "docs": 440,
+  "gold_total": 15364,
+  "tier1_rows": 3449,
+  "tier1_distinct": 3449,
+  "matched_extracted": 1978,
+  "matched_gold": 1627,
+  "raw_precision": {
+   "k": 1978,
+   "n": 3449,
+   "rate": 0.5735,
+   "wilson95": [
+    0.5569,
+    0.5899
+   ]
+  },
+  "raw_recall": {
+   "k": 1627,
+   "n": 15364,
+   "rate": 0.1059,
+   "wilson95": [
+    0.1011,
+    0.1109
+   ]
+  },
+  "raw_f1": 0.1788,
+  "tn_precision": {
+   "k": 1983,
+   "n": 3449,
+   "rate": 0.5749,
+   "wilson95": [
+    0.5584,
+    0.5914
+   ]
+  },
+  "tn_recall": {
+   "k": 1885,
+   "n": 15364,
+   "rate": 0.1227,
+   "wilson95": [
+    0.1176,
+    0.128
+   ]
+  },
+  "tn_f1": 0.2022,
+  "tn_matched_extracted": 1983,
+  "tn_matched_gold": 1885,
+  "eta_family": {
+   "reachable": 6460,
+   "converted": 1627,
+   "none_loss": 3313,
+   "emission_loss": 1520,
+   "eta": 0.2519,
+   "none_loss_share": 0.5128,
+   "kept_candidates": 3449,
+   "kept_grounded": 2272,
+   "kept_exact_matched": 1978,
+   "candidate_gold_precision": 0.8706,
+   "flip_rows": 39,
+   "wrong_relation_rows": 247
+  },
+  "flip_share_of_kept": 0.0113
+ },
+ "fit60": {
+  "docs": 60,
+  "gold_total": 1920,
+  "tier1_rows": 453,
+  "tier1_distinct": 453,
+  "matched_extracted": 255,
+  "matched_gold": 211,
+  "raw_precision": {
+   "k": 255,
+   "n": 453,
+   "rate": 0.5629,
+   "wilson95": [
+    0.5169,
+    0.6079
+   ]
+  },
+  "raw_recall": {
+   "k": 211,
+   "n": 1920,
+   "rate": 0.1099,
+   "wilson95": [
+    0.0967,
+    0.1247
+   ]
+  },
+  "raw_f1": 0.1839,
+  "tn_precision": {
+   "k": 255,
+   "n": 453,
+   "rate": 0.5629,
+   "wilson95": [
+    0.5169,
+    0.6079
+   ]
+  },
+  "tn_recall": {
+   "k": 240,
+   "n": 1920,
+   "rate": 0.125,
+   "wilson95": [
+    0.111,
+    0.1405
+   ]
+  },
+  "tn_f1": 0.2046,
+  "tn_matched_extracted": 255,
+  "tn_matched_gold": 240,
+  "eta_family": {
+   "reachable": 820,
+   "converted": 211,
+   "none_loss": 370,
+   "emission_loss": 239,
+   "eta": 0.2573,
+   "none_loss_share": 0.4512,
+   "kept_candidates": 453,
+   "kept_grounded": 304,
+   "kept_exact_matched": 255,
+   "candidate_gold_precision": 0.8388,
+   "flip_rows": 7,
+   "wrong_relation_rows": 40
+  },
+  "flip_share_of_kept": 0.0155
+ },
+ "audit30": {
+  "docs": 30,
+  "gold_total": 1184,
+  "tier1_rows": 229,
+  "tier1_distinct": 229,
+  "matched_extracted": 133,
+  "matched_gold": 116,
+  "raw_precision": {
+   "k": 133,
+   "n": 229,
+   "rate": 0.5808,
+   "wilson95": [
+    0.5161,
+    0.6428
+   ]
+  },
+  "raw_recall": {
+   "k": 116,
+   "n": 1184,
+   "rate": 0.098,
+   "wilson95": [
+    0.0823,
+    0.1162
+   ]
+  },
+  "raw_f1": 0.1677,
+  "tn_precision": {
+   "k": 133,
+   "n": 229,
+   "rate": 0.5808,
+   "wilson95": [
+    0.5161,
+    0.6428
+   ]
+  },
+  "tn_recall": {
+   "k": 132,
+   "n": 1184,
+   "rate": 0.1115,
+   "wilson95": [
+    0.0948,
+    0.1307
+   ]
+  },
+  "tn_f1": 0.1871,
+  "tn_matched_extracted": 133,
+  "tn_matched_gold": 132,
+  "eta_family": {
+   "reachable": 519,
+   "converted": 116,
+   "none_loss": 275,
+   "emission_loss": 128,
+   "eta": 0.2235,
+   "none_loss_share": 0.5299,
+   "kept_candidates": 229,
+   "kept_grounded": 161,
+   "kept_exact_matched": 133,
+   "candidate_gold_precision": 0.8261,
+   "flip_rows": 2,
+   "wrong_relation_rows": 25
+  },
+  "flip_share_of_kept": 0.0087
+ },
+ "rest410": {
+  "docs": 410,
+  "gold_total": 14180,
+  "tier1_rows": 3220,
+  "tier1_distinct": 3220,
+  "matched_extracted": 1845,
+  "matched_gold": 1511,
+  "raw_precision": {
+   "k": 1845,
+   "n": 3220,
+   "rate": 0.573,
+   "wilson95": [
+    0.5558,
+    0.59
+   ]
+  },
+  "raw_recall": {
+   "k": 1511,
+   "n": 14180,
+   "rate": 0.1066,
+   "wilson95": [
+    0.1016,
+    0.1117
+   ]
+  },
+  "raw_f1": 0.1798,
+  "tn_precision": {
+   "k": 1850,
+   "n": 3220,
+   "rate": 0.5745,
+   "wilson95": [
+    0.5574,
+    0.5915
+   ]
+  },
+  "tn_recall": {
+   "k": 1753,
+   "n": 14180,
+   "rate": 0.1236,
+   "wilson95": [
+    0.1183,
+    0.1291
+   ]
+  },
+  "tn_f1": 0.2034,
+  "tn_matched_extracted": 1850,
+  "tn_matched_gold": 1753,
+  "eta_family": {
+   "reachable": 5941,
+   "converted": 1511,
+   "none_loss": 3038,
+   "emission_loss": 1392,
+   "eta": 0.2543,
+   "none_loss_share": 0.5114,
+   "kept_candidates": 3220,
+   "kept_grounded": 2111,
+   "kept_exact_matched": 1845,
+   "candidate_gold_precision": 0.874,
+   "flip_rows": 37,
+   "wrong_relation_rows": 222
+  },
+  "flip_share_of_kept": 0.0115
+ },
+ "orientation_accuracy_full500": {
+  "population": 2383,
+  "agree": 2315,
+  "accuracy": 0.9715,
+  "by_direction": {
+   "AB": {
+    "agree": 874,
+    "n": 903,
+    "accuracy": 0.9679
+   },
+   "BA": {
+    "agree": 1441,
+    "n": 1480,
+    "accuracy": 0.9736
+   }
+  },
+  "rule": "positive verdicts pair-matching a reachable gold pair under the gold (non-symmetric) relation name; counted once per verdict (lowest gold index); agreement iff the answered direction restores gold's order"
+ },
+ "loss_anatomy": {
+  "full500": {
+   "none_judged": 3677,
+   "matched": 1838,
+   "emission_blocked": 1759,
+   "never_enumerated": 6340,
+   "roster_missed": 3670
+  },
+  "CONF-440": {
+   "none_judged": 3307,
+   "matched": 1627,
+   "never_enumerated": 5742,
+   "roster_missed": 3168,
+   "emission_blocked": 1520
+  },
+  "fit60": {
+   "never_enumerated": 598,
+   "none_judged": 370,
+   "matched": 211,
+   "roster_missed": 502,
+   "emission_blocked": 239
+  },
+  "audit30": {
+   "none_judged": 275,
+   "matched": 116,
+   "never_enumerated": 479,
+   "roster_missed": 186,
+   "emission_blocked": 128
+  },
+  "rest410": {
+   "none_judged": 3032,
+   "matched": 1511,
+   "emission_blocked": 1392,
+   "never_enumerated": 5263,
+   "roster_missed": 2982
+  },
+  "by_population_and_fate": {
+   "fit60": {
+    "never_enumerated": 598,
+    "none_judged": 370,
+    "matched": 211,
+    "roster_missed": 502,
+    "emission_blocked": 239
+   },
+   "audit30": {
+    "none_judged": 275,
+    "matched": 116,
+    "never_enumerated": 479,
+    "roster_missed": 186,
+    "emission_blocked": 128
+   },
+   "rest410": {
+    "none_judged": 3032,
+    "matched": 1511,
+    "emission_blocked": 1392,
+    "never_enumerated": 5263,
+    "roster_missed": 2982
+   }
+  },
+  "reachable_cross_tab": {
+   "none_judged|reachable=True": 3677,
+   "matched|reachable=True": 1838,
+   "emission_blocked|reachable=True": 1759,
+   "never_enumerated|reachable=False": 6334,
+   "roster_missed|reachable=False": 3670,
+   "never_enumerated|reachable=True": 6
+  }
+ }
+}

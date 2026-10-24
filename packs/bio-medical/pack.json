@@ -1,0 +1,114 @@
+{
+  "assembled": "2026-10-19",
+  "candidates": [
+    {
+      "artefacts": [
+        {
+          "path": "batches/biored-r9-design/prompts/t1_guidance.txt",
+          "sha256": "17802fa8542883e493cd0af82ebd05a87d791cb23f2426838976a2bf3b8ec028"
+        },
+        {
+          "path": "batches/biored-r9-design/prompts/t1_schema_front_v5.json",
+          "sha256": "1b5353f263b1ea8508b865baad8c6d9a9a3525d1cdffc1bb2b2f238e8e1b41aa"
+        }
+      ],
+      "conformance": "CR-3",
+      "id": "T1",
+      "kind": "guidance_variant",
+      "note": "Profile v5 type guidance: boundary-contrast rewrites of the Association / Positive_Correlation / Negative_Correlation / Bind definitions + intents. Gate G-R9c FAIL — type agreement below control. Not in force; adoption would be a new pack version after a passing registered measurement.",
+      "status": "measured_not_adopted"
+    },
+    {
+      "artefacts": [
+        {
+          "path": "batches/biored-r9-design/prompts/t2_specialist_instruction.txt",
+          "sha256": "b64f3d8c684667825946bc020d4f145e5f8579869dcdab49a6ac15653e1e8577"
+        }
+      ],
+      "conformance": "CR-5",
+      "id": "T2a",
+      "kind": "specialist_instruction",
+      "note": "Association-specialist second pass carrying the boundary-contrast definitions. Sits on the F-R9-4 trade-off curve: correlation legs repaired, Association side broken, flip-audit uphold 0.30. Gate G-R9c2 FAIL. The operating point on that curve is a human decision, not a measurement result. Operating point DECIDED 2026-10-19: none — not adopted (see conformance CR-5).",
+      "status": "measured_not_adopted"
+    },
+    {
+      "artefacts": [
+        {
+          "path": "batches/biored-r9-design/prompts/t2b_specialist_instruction.txt",
+          "sha256": "e8c3931d47dba39e8a6fc3400c9fc9f5f4877b2e713d6c5aa59a1cbeb8a58210"
+        }
+      ],
+      "conformance": "CR-6",
+      "id": "T2b",
+      "kind": "specialist_instruction_control",
+      "note": "Definitions-free second-look control for T2a. 27 flips bought +1 net agreement — no separation from noise; not adopted.",
+      "status": "measured_not_adopted"
+    },
+    {
+      "artefacts": [
+        {
+          "path": "batches/biored-r9-design/prompts/t3_judge_template.txt",
+          "sha256": "dccfd169dc9f9ad6fa76a17c53555b49277a4108a1fa303244be1be31acea716"
+        }
+      ],
+      "conformance": "CR-4",
+      "id": "T3",
+      "kind": "judge_template_variant",
+      "note": "J3 plus a type-evidence paragraph. Gate G-R9c FAIL (agreement below control; kept-positive precision 0.5583 breaks the >= 0.60 leg). Not in force.",
+      "status": "measured_not_adopted"
+    },
+    {
+      "artefacts": [
+        {
+          "path": "batches/biored-r9-design/t4_picker.pkl",
+          "sha256": "d1871826e4c3307eb8863fbb7b3b270ddfa3bff6b3412e8fdce58a88b7d5abc0"
+        }
+      ],
+      "conformance": "CR-7",
+      "id": "T4",
+      "kind": "fitted_artefact",
+      "note": "Train-fitted type picker. Passed its Train-side gate G-R9b (CV 0.6264 vs majority 0.5193 / cue-rule 0.4328); the single registered Dev evaluation failed on every leg (net -32, 114 agreements broken) — closed. Recorded so the fitted-artefact route is not re-proposed without new evidence.",
+      "status": "closed"
+    }
+  ],
+  "conformance_record": "conformance.json",
+  "contents_index": {
+    "label_categories": "[] — triples-only by decision DP-B11; the slot channel is unused for this domain.",
+    "merge_prohibited_type_pairs": "The full cross-type set — all 10 unordered pairs among the 5 entity types (schema_front MP-1 expressed as pairs: never merge across types; same-type merges remain legal). Binds WRITE ER in both channels.",
+    "metadata_declarations": "Per-run parameter declarations mirrored in the payload (triple_threshold, review_band, er_threshold, er_cross_doc_min_p_same, embed_model, chunking, batch_cost_cap_usd, provider_sort). Declarations, not live values — BatchConfig governs the run (docs/PACK_DESIGN.md §3).",
+    "pair_judge": "pair_enumeration on, pair_window sentence, roster_pass on; pair judge variant J3 (pair_judge_context=abstract x pair_judge_instruction=evidence) selected by the factorial fitting (conformance CR-2).",
+    "schema_front": "Closed entity inventory (6 types: GeneOrGeneProduct, DiseaseOrPhenotypicFeature, ChemicalEntity, SequenceVariant, CellLine [entities]; OrganismTaxon [qualifier, never an entity]) with definitions + boundary examples, closed relation inventory (8 types: Association, Positive_Correlation, Negative_Correlation, Bind, Cotreatment, Comparison, Conversion, Drug_Interaction) with endpoint signatures + extraction intents, merge prohibitions MP-1/MP-2. Rendered into proposer guidance by the profile channel (derive_guidance)."
+  },
+  "convention_notes": [
+    {
+      "id": "CN-1",
+      "note": "Treatment language in the pair sentence patterns with gold Negative_Correlation (35.6% of the R9 NegCorr->Assoc failure sentences; 29.8% of Train gold NegCorr sentences vs an 11.1% explicit-negation-cue rate). Aggregate anatomy only (the round-9 design record, §2); never written into guidance — the one attempt to carry boundary content into instructions (candidate T1) measured negative (conformance CR-3).",
+      "status": "observed_not_in_force"
+    },
+    {
+      "id": "CN-2",
+      "note": "Membership / receptor language patterns with gold Bind (13 of 14 R9 Bind->Assoc failures; Train gold Bind carries it in 54.1% of sentences vs 24.6% explicit binding stems). The payload's Bind definition invites stated physical binding only — the mismatch is recorded, not silently repaired (the round-9 design record, §2).",
+      "status": "observed_not_in_force"
+    },
+    {
+      "id": "CN-3",
+      "note": "Cue presence never determines gold type on this corpus: 40.2% of Train gold Association sentences carry another type's cue. Any future convention content is therefore a prior, not a rule, and must be priced by the conformance spec (docs/PACK_DESIGN.md §2) before adoption.",
+      "status": "observed_not_in_force"
+    }
+  ],
+  "design": "docs/PACK_DESIGN.md",
+  "display_name": "Bio Medical",
+  "pack_format": 1,
+  "pack_id": "bio-medical",
+  "pack_version": "0.3.0",
+  "payload": {
+    "kind": "setup_config",
+    "note": "The loader file (profile/setup_config.json, beside this manifest) is byte-identical to this pinned file (asserted by the pack test and by the pack freeze). The pack binds the payload by pin; it never forks its content. Pack 0.2.0 (2026-10-19): the payload gained one declared key, pair_judge_generic_relation, carrying the generic-member name the pair judge's evidence template previously held as a core-code literal; no definition, switch, or prohibition changed and every rendered prompt is byte-identical (the domain-boundary test). Pin re-taken and pack_version bumped per docs/PACK_DESIGN.md SS1.2; the 0.1.0 payload bytes remain in git history.",
+    "path": "packs/bio-medical/profile/setup_config_v4.json",
+    "profile_version": 4,
+    "sha256": "80bd6f8b9a108cd4b36007347df602b2cb728299a726b6a201b2876882120711"
+  },
+  "profile_family": "biored",
+  "status": "in_force",
+  "validated_on": "BioRED"
+}

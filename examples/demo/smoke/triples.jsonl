@@ -1,0 +1,3 @@
+{"subject": "North Loop Cycles", "relation": "founded by", "object": "Dana Whitfield", "doc_id": "north-loop-history", "tier": 1, "p_true": 0.97, "quote": "North Loop Cycles is a community bicycle workshop founded in 2016 by Dana Whitfield and Rob Okafor."}
+{"subject": "Earn-a-Bike program", "relation": "coordinated by", "object": "Priya Raman", "doc_id": "north-loop-people", "tier": 1, "p_true": 0.95, "quote": "The Earn-a-Bike program is coordinated by Priya Raman."}
+{"subject": "winter maintenance clinic", "relation": "held at", "object": "Stone Way workshop", "doc_id": "north-loop-programs", "tier": 1, "p_true": 0.93, "quote": "The winter maintenance clinic is held at the Stone Way workshop."}

@@ -1,0 +1,19 @@
+{
+ "judge_model": "anthropic/claude-sonnet-5.5",
+ "judge_family": "Anthropic line (original panel family)",
+ "reference_family": "GPT-5.5 (ruled verdicts)",
+ "seed": 20261024,
+ "n_judged": 150,
+ "agreement_all_categories": 0.7727,
+ "kappa_all_categories": 0.4271,
+ "n_decisive_pairs": 106,
+ "agreement_decisive_only": 0.8019,
+ "kappa_decisive_only": 0.4723,
+ "spend_usd": 1.0443,
+ "confusion_decisive": {
+  "not_supported|not_supported": 15,
+  "supported|supported": 70,
+  "not_supported|supported": 18,
+  "supported|not_supported": 3
+ }
+}

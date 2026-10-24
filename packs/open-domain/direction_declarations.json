@@ -1,0 +1,442 @@
+{
+  "pack_id": "docred",
+  "pack_version": "0.2.0",
+  "kind": "direction_declarations",
+  "status": "in_force_emission_data_only",
+  "source": {
+    "payload": "profiles/redocred/setup_config_v2.json",
+    "payload_sha256": "d65d74e9abdc0e83a3e03302b31bf472a66e10b79cddb6d9ceeb18a445b22022",
+    "extracted_from": "schema_front.relation_inventory (direction / inverse_of fields)",
+    "extraction": "mechanical extraction, issue #66 stage 11 W-2 (docs/REDOCRED_MAIN_RUN_DESIGN_V2.md section 6)"
+  },
+  "relation_directionality": "directed",
+  "n_relations": 96,
+  "symmetric_relations": [
+    "sibling",
+    "sister city",
+    "spouse"
+  ],
+  "inverse_pairs": [
+    [
+      "capital",
+      "capital of"
+    ],
+    [
+      "located in the administrative territorial entity",
+      "contains administrative territorial entity"
+    ],
+    [
+      "follows",
+      "followed by"
+    ],
+    [
+      "subsidiary",
+      "parent organization"
+    ],
+    [
+      "part of",
+      "has part"
+    ],
+    [
+      "participant",
+      "participant of"
+    ],
+    [
+      "replaces",
+      "replaced by"
+    ]
+  ],
+  "relations": {
+    "head of government": {
+      "direction": "directed",
+      "inverse_of": null
+    },
+    "country": {
+      "direction": "directed",
+      "inverse_of": null
+    },
+    "place of birth": {
+      "direction": "directed",
+      "inverse_of": null
+    },
+    "place of death": {
+      "direction": "directed",
+      "inverse_of": null
+    },
+    "father": {
+      "direction": "directed",
+      "inverse_of": null
+    },
+    "mother": {
+      "direction": "directed",
+      "inverse_of": null
+    },
+    "spouse": {
+      "direction": "symmetric",
+      "inverse_of": null
+    },
+    "country of citizenship": {
+      "direction": "directed",
+      "inverse_of": null
+    },
+    "continent": {
+      "direction": "directed",
+      "inverse_of": null
+    },
+    "instance of": {
+      "direction": "directed",
+      "inverse_of": null
+    },
+    "head of state": {
+      "direction": "directed",
+      "inverse_of": null
+    },
+    "capital": {
+      "direction": "directed",
+      "inverse_of": "capital of"
+    },
+    "official language": {
+      "direction": "directed",
+      "inverse_of": null
+    },
+    "position held": {
+      "direction": "directed",
+      "inverse_of": null
+    },
+    "child": {
+      "direction": "directed",
+      "inverse_of": null
+    },
+    "author": {
+      "direction": "directed",
+      "inverse_of": null
+    },
+    "member of sports team": {
+      "direction": "directed",
+      "inverse_of": null
+    },
+    "director": {
+      "direction": "directed",
+      "inverse_of": null
+    },
+    "screenwriter": {
+      "direction": "directed",
+      "inverse_of": null
+    },
+    "educated at": {
+      "direction": "directed",
+      "inverse_of": null
+    },
+    "composer": {
+      "direction": "directed",
+      "inverse_of": null
+    },
+    "member of political party": {
+      "direction": "directed",
+      "inverse_of": null
+    },
+    "employer": {
+      "direction": "directed",
+      "inverse_of": null
+    },
+    "founded by": {
+      "direction": "directed",
+      "inverse_of": null
+    },
+    "league": {
+      "direction": "directed",
+      "inverse_of": null
+    },
+    "publisher": {
+      "direction": "directed",
+      "inverse_of": null
+    },
+    "owned by": {
+      "direction": "directed",
+      "inverse_of": null
+    },
+    "located in the administrative territorial entity": {
+      "direction": "directed",
+      "inverse_of": "contains administrative territorial entity"
+    },
+    "genre": {
+      "direction": "directed",
+      "inverse_of": null
+    },
+    "operator": {
+      "direction": "directed",
+      "inverse_of": null
+    },
+    "religion": {
+      "direction": "directed",
+      "inverse_of": null
+    },
+    "contains administrative territorial entity": {
+      "direction": "directed",
+      "inverse_of": "located in the administrative territorial entity"
+    },
+    "follows": {
+      "direction": "directed",
+      "inverse_of": "followed by"
+    },
+    "followed by": {
+      "direction": "directed",
+      "inverse_of": "follows"
+    },
+    "headquarters location": {
+      "direction": "directed",
+      "inverse_of": null
+    },
+    "cast member": {
+      "direction": "directed",
+      "inverse_of": null
+    },
+    "producer": {
+      "direction": "directed",
+      "inverse_of": null
+    },
+    "award received": {
+      "direction": "directed",
+      "inverse_of": null
+    },
+    "creator": {
+      "direction": "directed",
+      "inverse_of": null
+    },
+    "parent taxon": {
+      "direction": "directed",
+      "inverse_of": null
+    },
+    "ethnic group": {
+      "direction": "directed",
+      "inverse_of": null
+    },
+    "performer": {
+      "direction": "directed",
+      "inverse_of": null
+    },
+    "manufacturer": {
+      "direction": "directed",
+      "inverse_of": null
+    },
+    "developer": {
+      "direction": "directed",
+      "inverse_of": null
+    },
+    "series": {
+      "direction": "directed",
+      "inverse_of": null
+    },
+    "sister city": {
+      "direction": "symmetric",
+      "inverse_of": null
+    },
+    "legislative body": {
+      "direction": "directed",
+      "inverse_of": null
+    },
+    "basin country": {
+      "direction": "directed",
+      "inverse_of": null
+    },
+    "located in or next to body of water": {
+      "direction": "directed",
+      "inverse_of": null
+    },
+    "military branch": {
+      "direction": "directed",
+      "inverse_of": null
+    },
+    "record label": {
+      "direction": "directed",
+      "inverse_of": null
+    },
+    "production company": {
+      "direction": "directed",
+      "inverse_of": null
+    },
+    "location": {
+      "direction": "directed",
+      "inverse_of": null
+    },
+    "subclass of": {
+      "direction": "directed",
+      "inverse_of": null
+    },
+    "subsidiary": {
+      "direction": "directed",
+      "inverse_of": "parent organization"
+    },
+    "part of": {
+      "direction": "directed",
+      "inverse_of": "has part"
+    },
+    "original language of work": {
+      "direction": "directed",
+      "inverse_of": null
+    },
+    "platform": {
+      "direction": "directed",
+      "inverse_of": null
+    },
+    "mouth of the watercourse": {
+      "direction": "directed",
+      "inverse_of": null
+    },
+    "original network": {
+      "direction": "directed",
+      "inverse_of": null
+    },
+    "member of": {
+      "direction": "directed",
+      "inverse_of": null
+    },
+    "chairperson": {
+      "direction": "directed",
+      "inverse_of": null
+    },
+    "country of origin": {
+      "direction": "directed",
+      "inverse_of": null
+    },
+    "has part": {
+      "direction": "directed",
+      "inverse_of": "part of"
+    },
+    "residence": {
+      "direction": "directed",
+      "inverse_of": null
+    },
+    "date of birth": {
+      "direction": "directed",
+      "inverse_of": null
+    },
+    "date of death": {
+      "direction": "directed",
+      "inverse_of": null
+    },
+    "inception": {
+      "direction": "directed",
+      "inverse_of": null
+    },
+    "dissolved, abolished or demolished": {
+      "direction": "directed",
+      "inverse_of": null
+    },
+    "publication date": {
+      "direction": "directed",
+      "inverse_of": null
+    },
+    "start time": {
+      "direction": "directed",
+      "inverse_of": null
+    },
+    "end time": {
+      "direction": "directed",
+      "inverse_of": null
+    },
+    "point in time": {
+      "direction": "directed",
+      "inverse_of": null
+    },
+    "conflict": {
+      "direction": "directed",
+      "inverse_of": null
+    },
+    "characters": {
+      "direction": "directed",
+      "inverse_of": null
+    },
+    "lyrics by": {
+      "direction": "directed",
+      "inverse_of": null
+    },
+    "located on terrain feature": {
+      "direction": "directed",
+      "inverse_of": null
+    },
+    "participant": {
+      "direction": "directed",
+      "inverse_of": "participant of"
+    },
+    "influenced by": {
+      "direction": "directed",
+      "inverse_of": null
+    },
+    "location of formation": {
+      "direction": "directed",
+      "inverse_of": null
+    },
+    "parent organization": {
+      "direction": "directed",
+      "inverse_of": "subsidiary"
+    },
+    "notable work": {
+      "direction": "directed",
+      "inverse_of": null
+    },
+    "separated from": {
+      "direction": "directed",
+      "inverse_of": null
+    },
+    "narrative location": {
+      "direction": "directed",
+      "inverse_of": null
+    },
+    "work location": {
+      "direction": "directed",
+      "inverse_of": null
+    },
+    "applies to jurisdiction": {
+      "direction": "directed",
+      "inverse_of": null
+    },
+    "product or material produced": {
+      "direction": "directed",
+      "inverse_of": null
+    },
+    "unemployment rate": {
+      "direction": "directed",
+      "inverse_of": null
+    },
+    "territory claimed by": {
+      "direction": "directed",
+      "inverse_of": null
+    },
+    "participant of": {
+      "direction": "directed",
+      "inverse_of": "participant"
+    },
+    "replaces": {
+      "direction": "directed",
+      "inverse_of": "replaced by"
+    },
+    "replaced by": {
+      "direction": "directed",
+      "inverse_of": "replaces"
+    },
+    "capital of": {
+      "direction": "directed",
+      "inverse_of": "capital"
+    },
+    "languages spoken, written or signed": {
+      "direction": "directed",
+      "inverse_of": null
+    },
+    "present in work": {
+      "direction": "directed",
+      "inverse_of": null
+    },
+    "sibling": {
+      "direction": "symmetric",
+      "inverse_of": null
+    }
+  },
+  "known_gaps": [
+    "father, mother and child carry no inverse_of in the source payload; the directed-reading default applies. The gap is recorded, not filled by invention (design section 6)."
+  ],
+  "consumers": [
+    "pilot/batch_run.py stage_candidates — the JF-F1 symmetric set, resolved through the profile's registered pair_judge_symmetric_source key"
+  ],
+  "note": "Emission data only. This artefact is not a prompt surface; the directionality rendering stays candidate under PK-05 (packs/docred/directionality_rendering.md)."
+}

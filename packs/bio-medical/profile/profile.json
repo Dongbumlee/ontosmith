@@ -1,0 +1,316 @@
+{
+ "family": "biored",
+ "corpus_dir": "data/biored/BioRED",
+ "service_version": "setup-service/1.0 (hand-drafted in the service schema from a full local census; no API calls, no LLM drafting)",
+ "created_at": "2026-10-16T19:52:54.628614+00:00",
+ "status": "DRAFT_NOT_APPROVED",
+ "drafted_for": "Second-domain pilot P0 (issue #26): generalization proof per docs/SECOND_DOMAIN_PILOT.md — pre-registered criteria bind (CUAD thresholds pinned, profile+config only, no pipeline code changes).",
+ "census": "profiles/biored/CENSUS.md",
+ "sampling": {
+  "n_sampled": 600,
+  "rule": "no sampling — full-corpus census of all three splits (Train 400 / Dev 100 / Test 100)"
+ },
+ "inventory": {
+  "n_files": 3,
+  "n_docs": 600,
+  "splits": {
+   "Train": 400,
+   "Dev": 100,
+   "Test": 100
+  },
+  "passages_per_doc": 2,
+  "passage_structure": "passage 0 = title, passage 1 = abstract; no section structure beyond inline structured-abstract labels (e.g. 'OBJECTIVE:')",
+  "total_chars": 999922,
+  "total_words": 143246,
+  "mean_chars": 1667,
+  "median_chars_dev": 1769,
+  "pmid_overlap_across_splits": 0
+ },
+ "gold": "BioC JSON at data/biored/BioRED/{Train,Dev,Test}.BioC.JSON: passage-level entity annotations (type + database identifier infons) and document-level pair relations (endpoint gold IDs + type + novel flag). Gold identifiers are EVALUATION-ONLY under DP-B1 (pending approval).",
+ "claims": [
+  {
+   "id": "BR-01",
+   "section": "inventory",
+   "kind": "fact",
+   "statement": "The BioRED family holds 600 documents (Train 400 / Dev 100 / Test 100), exactly 2 passages each (title + abstract), 999,922 chars total; PMIDs are disjoint across splits.",
+   "source": "local census (profiles/biored/CENSUS.md)",
+   "verdict": "measured",
+   "decision_point": false,
+   "measured": {
+    "value": 600,
+    "detail": {
+     "total_chars": 999922,
+     "total_words": 143246,
+     "pmid_overlap_across_splits": 0
+    }
+   }
+  },
+  {
+   "id": "BR-02",
+   "section": "labels & metadata",
+   "kind": "fact",
+   "statement": "Gold holds 20,419 entity mentions across 6 types (GeneOrGeneProduct, DiseaseOrPhenotypicFeature, ChemicalEntity, OrganismTaxon, SequenceVariant, CellLine) and 6,503 document-level pair relations across 8 types; 99.69% of mentions carry a gold database identifier (NCBI Gene / MeSH / NCBI Taxonomy / dbSNP / HGVS / Cellosaurus).",
+   "source": "local census (profiles/biored/CENSUS.md)",
+   "verdict": "measured",
+   "decision_point": false,
+   "measured": {
+    "value": 6503,
+    "detail": {
+     "mentions": 20419,
+     "mentions_with_id": 20356,
+     "distinct_id_strings": 3962
+    }
+   }
+  },
+  {
+   "id": "BR-03",
+   "section": "relation terrain",
+   "kind": "fact",
+   "statement": "Association is 52.1% of gold relations and spans nearly every endpoint type pair; zero gold relations have an OrganismTaxon or CellLine endpoint; gold endpoint order is attested in both directions and is not semantic.",
+   "source": "local census (profiles/biored/CENSUS.md)",
+   "verdict": "measured",
+   "decision_point": false,
+   "measured": {
+    "value": 3387,
+    "detail": {
+     "association_share": 0.521,
+     "taxon_or_cellline_endpoint_relations": 0
+    }
+   }
+  },
+  {
+   "id": "BR-04",
+   "section": "identity & aliases",
+   "kind": "fact",
+   "statement": "Abbreviation density is high (81.7% of docs define >=1 short form in parentheses; 861 gold-attested in-doc multi-surface IDs) while surface ambiguity is also high (302 surfaces -> >1 gold ID; 103 case-fold collision groups). Case in gene symbols encodes species and must be preserved.",
+   "source": "local census (profiles/biored/CENSUS.md)",
+   "verdict": "measured",
+   "decision_point": false,
+   "measured": {
+    "value": 490,
+    "detail": {
+     "docs_with_paren_definition": 490,
+     "ambiguous_surfaces": 302,
+     "casefold_collision_groups": 103
+    }
+   }
+  },
+  {
+   "id": "BR-05",
+   "section": "identity & aliases",
+   "kind": "fact",
+   "statement": "529 mentions carry a comma-separated list of gold IDs (gene-family/group mentions). Every relation endpoint resolves to an in-document annotation once lists are split into components; zero endpoints are ungrounded.",
+   "source": "local census (profiles/biored/CENSUS.md)",
+   "verdict": "measured",
+   "decision_point": false,
+   "measured": {
+    "value": 529,
+    "detail": {
+     "relations_touching_list_components": 568,
+     "ungrounded_endpoints": 0
+    }
+   }
+  }
+ ],
+ "decision_points": [
+  {
+   "id": "DP-B1",
+   "topic": "gold database identifiers — build input or evaluation key",
+   "question": "99.69% of BioRED mentions carry a gold database identifier (NCBI Gene, MeSH, NCBI Taxonomy, dbSNP/HGVS, Cellosaurus). May the build use them, or are they evaluation-only?",
+   "options": [
+    "A: Evaluation-only — the build sees surfaces and text only; gold IDs are the sealed scoring key.",
+    "B: Build-time canonical anchor — ER resolved by gold-ID lookup.",
+    "C: Hybrid — build blind, but gold IDs may break ties inside the ER review band."
+   ],
+   "recommendation": "A: evaluation-only.",
+   "evidence": "With gold IDs as anchors, ER becomes a lookup: the G-33 guard and the Jev ER gate are never exercised and the pilot proves nothing about transfer — and production corpora do not ship gold IDs. C leaks through the review band, which is exactly where ER is decided. Kept sealed, the IDs buy something CUAD never had: every ER decision in the slice can be scored exactly (precision AND recall over merges), no sampling.",
+   "status": "drafted-not-approved"
+  },
+  {
+   "id": "DP-B2",
+   "topic": "entity-type inventory",
+   "question": "Which of the six gold entity types are in extraction scope?",
+   "options": [
+    "A: All six (GeneOrGeneProduct, DiseaseOrPhenotypicFeature, ChemicalEntity, OrganismTaxon, SequenceVariant, CellLine).",
+    "B: Only the four types that carry relations (drop OrganismTaxon and CellLine).",
+    "C: All six, but CellLine deferred to a later batch."
+   ],
+   "recommendation": "A: all six extracted (OrganismTaxon's graph role is decided separately in DP-B3). Dropping gold types at extraction would silently bias every recall accounting against gold; CellLine is small (175 mentions) but costs nothing to include.",
+   "evidence": "Census counts: Gene 6,697 / Disease 5,545 / Chemical 4,429 / OrganismTaxon 2,192 / SequenceVariant 1,381 / CellLine 175 mentions; all six types have >=99.4% identifier coverage.",
+   "status": "drafted-not-approved"
+  },
+  {
+   "id": "DP-B3",
+   "topic": "OrganismTaxon — graph entity or qualifier",
+   "question": "Species determines gene identity (human BRCA1 is not mouse Brca1), but should OrganismTaxon be minted as a first-class graph entity?",
+   "options": [
+    "A: Qualifier only — extracted and recorded as species context on gene/variant mentions (an ER feature), never minted as an entity, never a relation endpoint.",
+    "B: Full entity in the graph like any other type.",
+    "C: Dropped entirely (not extracted)."
+   ],
+   "recommendation": "A: qualifier. Gold itself never uses a taxon as a relation endpoint (0 of 6,503 relations), so a taxon node would carry no relational content — it would be a pure hub. Extraction still records it, and taxon recall is reported as a qualifier metric so the accounting against gold stays honest.",
+   "evidence": "Only 47 distinct taxon IDs across 600 docs; human+mouse+rat = 92% of 2,192 mentions; the most-mentioned gold ID in the corpus is 9606 'human' (1,364 mentions) whose surfaces are generic words ('patients', 'patient', 'man', 'woman'). As entities these are mega-hubs — the G-29 hub failure mode — with zero gold relations attached.",
+   "status": "drafted-not-approved"
+  },
+  {
+   "id": "DP-B4",
+   "topic": "Association — the 52% catch-all relation",
+   "question": "Association is 3,387 of 6,503 gold relations (52.1%) and is semantically a catch-all ('some relation holds'). How is it treated?",
+   "options": [
+    "A: First-class relation, Tier-1 eligible, pooled silently into the headline precision.",
+    "B: First-class and Tier-1 eligible, but flagged (specificity: generic) and reported separately — the P2 audit headline is stated with and without Association.",
+    "C: Excluded from Tier-1 eligibility (all Association demoted to Tier 2)."
+   ],
+   "recommendation": "B: keep, flag, split the reporting. The Jev gate judges attestation, not semantic specificity — an attested-but-vague triple is still a true triple. Excluding 52% of gold would make recall-vs-gold meaningless and hide the hardest judging problem; pooling it silently would let a vague relation inflate the precision headline.",
+   "evidence": "Association spans nearly every endpoint type pair (Disease~Gene 1,419; Gene~Gene 580; Disease~Variant 483; Chemical~Gene 317) — it is the annotation default bucket, not a specific claim type.",
+   "status": "drafted-not-approved"
+  },
+  {
+   "id": "DP-B5",
+   "topic": "relation directionality",
+   "question": "Are the 8 gold relation types directional (A->B distinct from B->A)?",
+   "options": [
+    "A: Undirected — Tier-1 identity is the canonical unordered pair + type; gold endpoint order is preserved in provenance only.",
+    "B: Directional as annotated — reversed pairs are distinct triples."
+   ],
+   "recommendation": "A: undirected. Gold attests both orders for the same relation types across the corpus, and 24 Association + 19 Positive_Correlation unordered pairs appear in BOTH orders — order is annotation serialization, not semantics. Treating pairs as directional would double-count reversed duplicates and corrupt QA construction.",
+   "evidence": "Pair-signature census: e.g. Positive_Correlation attests Variant~Disease and Disease~Variant in comparable numbers (Dev: 49 vs 48). Cotreatment / Drug_Interaction / Comparison are symmetric by definition; Conversion (n=4) follows the uniform convention, declared here.",
+   "status": "drafted-not-approved"
+  },
+  {
+   "id": "DP-B6",
+   "topic": "case handling — no case-folding",
+   "question": "CUAD's approved profile case-folds titles and applies fuzzy matching. Does any of that carry to BioRED surfaces?",
+   "options": [
+    "A: Case preserved exactly; matching normalizes only whitespace, hyphen variants, and Greek-letter spellings. No case-fold, no case-insensitive fuzzy merge. Case is a feature for the ER scorer, never a pre-merge.",
+    "B: Case-fold like CUAD for surface matching, case kept as a tiebreaker."
+   ],
+   "recommendation": "A. In this corpus case is the species signal in gene symbols — folding it away merges different genes. CUAD point 6 (case-fold + fuzzy for OCR/caps titles) does NOT carry over; abstracts are clean born-digital text with no OCR problem to solve.",
+   "evidence": "103 case-folded surface groups map to >1 surface AND >1 gold ID: human CCL2 (NCBI Gene 6347) vs mouse Ccl2 (20296) vs rat Ccl2 (24770); PTPN22 (human 26191) vs Ptpn22 (mouse 19260). Gene casing: ALLCAPS 53%, mixed 22%, lowercase 16%, Capitalized 8%.",
+   "status": "drafted-not-approved"
+  },
+  {
+   "id": "DP-B7",
+   "topic": "abbreviations & aliases — abstract-local definition chains",
+   "question": "How do short forms (abbreviations, symbols) bind to full names?",
+   "options": [
+    "A: Abstract-local only — a short form binds via a definition chain attested in the same abstract, or via Jev-gated ER; otherwise it stays its own surface (review band). No global symbol table.",
+    "B: Global symbol table built from the corpus's definition chains, applied across abstracts.",
+    "C: External dictionary (UMLS/MeSH) binding."
+   ],
+   "recommendation": "A — mirrors CUAD's approved per-document alias chains and fiction DP-F2 (text-attested only). A global table (B) bakes in wrong bindings because the same short form denotes different entities in different abstracts; C imports outside knowledge the certified method does not use.",
+   "evidence": "490/600 docs (81.7%) contain >=1 parenthetical definition (1,325 total); gold attests 861 in-document cases of one ID with multiple surfaces incl. a short form. But 302 surfaces map to >1 gold ID corpus-wide ('insulin' -> 7 IDs; 'CA3' -> a cell line and a gene), so cross-document symbol reuse is unsafe by default.",
+   "status": "drafted-not-approved"
+  },
+  {
+   "id": "DP-B8",
+   "topic": "ER scope & the G-33 guard under legitimate recurrence",
+   "question": "In CUAD, cross-document merges were the exception and mostly wrong (defined terms are per-document). In BioRED the same gene/disease legitimately recurs across abstracts. What is the ER scope and guard stance?",
+   "options": [
+    "A: One corpus-level registry (namespace 'biored'); cross-document merging is expected and in-scope; the G-33 guard stays PINNED (cross-doc auto-merge only at Jev ER p_same >= 0.85, else review band) — whether 0.85 holds under dense legitimate recurrence is part of the transfer test.",
+    "B: Per-document entities only (no cross-doc merge), corpus graph assembled at query time.",
+    "C: Cross-doc auto-merge at a lowered threshold for this corpus (e.g. 0.70) because recurrence is usually legitimate."
+   ],
+   "recommendation": "A. B abandons the corpus-graph claim the pilot exists to test; C retunes a pinned threshold mid-pilot, which the pre-registered criteria forbid — if 0.85 misbehaves, that is declared a finding, not silently adjusted. The gold IDs make ER exactly measurable here (DP-B1), so the guard's behavior will be visible in full, not sampled.",
+   "evidence": "879 gold IDs recur in >=2 documents, 44 in >=10; only 3,083 of 3,962 IDs are singletons. Recurrence is the norm, but so are the traps: 302 ambiguous surfaces and 103 case-collision groups sit in the same corpus.",
+   "status": "drafted-not-approved"
+  },
+  {
+   "id": "DP-B9",
+   "topic": "pilot slice choice",
+   "question": "Which split is the P1 working slice?",
+   "options": [
+    "A: Dev 100 as the working slice; Test 100 sealed untouched; Train untouched during P1-P3.",
+    "B: A 100-doc Train slice (Dev kept as validation).",
+    "C: All 600 docs (no held-out set)."
+   ],
+   "recommendation": "A: Dev. It is large enough for the ~100-item audit pack and ~100-question QA (1,162 gold relations, 3,533 mentions), and Test stays pristine for a later confirmatory run — a luxury CUAD never had (its whole corpus was the working set). Declared caveat: Dev holds zero Conversion and zero Drug_Interaction gold relations (Bind only 19), so rare-type behavior is unmeasurable on Dev and will be reported as such in P1.",
+   "evidence": "Splits are PMID-disjoint (overlap 0, verified). Dev: 100 docs / 172,553 chars / 1,162 relations. Train holds all 8 relation types (Conversion 3, Drug_Interaction 11) if a rare-type follow-up is ever approved.",
+   "status": "drafted-not-approved"
+  },
+  {
+   "id": "DP-B10",
+   "topic": "P3 QA construction protocol & contamination guard",
+   "question": "BioRED has no native QA. How is the P3 question set built, and how is it kept uncontaminated?",
+   "options": [
+    "A: Questions generated from Dev gold relations by a builder who has not seen pipeline output; the QA file is frozen and hashed BEFORE the P1 batch runs; answers are never edited after seeing arm outputs (corrections only via the ruling process, as with the CUAD QA).",
+    "B: QA built after the P1 run, from gold, by the same operator who ran the batch.",
+    "C: QA generated by an LLM from the abstracts, spot-checked by a human."
+   ],
+   "recommendation": "A. Protocol sketch: (1) source = Dev gold relations whose endpoints are both mentioned in the abstract passage (1,098 of 1,162 by span class, more after multi-ID splitting); (2) one templated question per sampled relation, keyed to relation type + endpoint types (e.g. Negative_Correlation Chemical~Disease: 'Which disease is reported to be reduced or inhibited by <chemical surface as attested in the abstract>?'); (3) answer = the gold endpoint's most frequent in-document surface, with the gold ID recorded as the scoring key; (4) ~100 questions, relation-type distribution = natural share, declared in the QA doc; (5) scored recall@20, four arms, production query path — the CUAD protocol unchanged.",
+   "evidence": "The CUAD headline QA (116 q) was built the same way — from gold, frozen before scoring. Option B lets run knowledge leak into question choice; C makes the QA itself an LLM artifact whose errors are indistinguishable from retrieval errors.",
+   "status": "drafted-not-approved"
+  },
+  {
+   "id": "DP-B11",
+   "topic": "triples-only configuration (no slot layer)",
+   "question": "CUAD's profile carries 41 clause-slot categories. BioRED gold has entities + pair relations only. What is the extraction configuration?",
+   "options": [
+    "A: Triples-only — label_categories = [] (the fiction-profile pattern); the proposer extracts the 8 gold relation types between the 6 entity types; no slot design work in this pilot.",
+    "B: Design a biomedical slot layer (e.g. dosage, direction-of-effect as slots) before P1."
+   ],
+   "recommendation": "A: triples-only. There is no slot analog in the gold, so any slot layer would be unscored invention — exactly what the setup service must not do (the CUAD c1_whitelist rule). Consequence to declare: the P2 audit pack has triples + ER strata only; the design doc's mention of a slot stratum is empty by construction for this domain. The relation whitelist (c1_whitelist) is derived from the first batch's relation census per playbook Part B #6, not invented here.",
+   "evidence": "BioRED annotation schema = passage-level entity annotations + document-level pair relations; no attribute/value annotations exist in any of the 600 documents (census-verified).",
+   "status": "drafted-not-approved"
+  }
+ ],
+ "spend": {
+  "api_spend_usd": 0.0,
+  "note": "local census + hand drafting; no API calls"
+ },
+ "setup_config": {
+  "family": "biored",
+  "triple_threshold": 0.25,
+  "review_band": [
+   0.25,
+   0.5
+  ],
+  "er_threshold": 0.4,
+  "er_cross_doc_min_p_same": 0.85,
+  "embed_model": "openai/text-embedding-3-large",
+  "chunk_window_chars": 1000,
+  "chunk_min_chars": 100,
+  "route_baseline": "arm_c",
+  "er_auto_merge": "form_variants_only",
+  "er_alias_sources": "text_attested_only",
+  "batch_cost_cap_usd": 10.0,
+  "provider_sort": "throughput",
+  "corpus_scope": {
+   "family": "biored",
+   "registry_namespace": "biored",
+   "working_slice": "Dev (100 docs)",
+   "sealed_splits": [
+    "Test"
+   ],
+   "untouched_splits": [
+    "Train"
+   ],
+   "cross_corpus_links": "reviewed_edges_only"
+  },
+  "c1_whitelist": null,
+  "c1_whitelist_note": "per-corpus: derive from the relation census of the first batch (playbook Part B #6); setup does not invent it",
+  "label_categories": [],
+  "label_categories_note": "BioRED has no slot/attribute schema in gold; triples-only configuration per DP-B11 (pending approval).",
+  "entity_types": [
+   "GeneOrGeneProduct",
+   "DiseaseOrPhenotypicFeature",
+   "ChemicalEntity",
+   "OrganismTaxon",
+   "SequenceVariant",
+   "CellLine"
+  ],
+  "relation_types": [
+   "Association",
+   "Positive_Correlation",
+   "Negative_Correlation",
+   "Bind",
+   "Cotreatment",
+   "Comparison",
+   "Conversion",
+   "Drug_Interaction"
+  ],
+  "thresholds_note": "All thresholds PINNED from the certified CUAD configuration per the pilot's pre-registered criteria; any retuning is a declared finding, never a silent adjustment."
+ },
+ "profile_hash": "sha256:c99b5c618b349cb2a2daf3dc38459c84e34b2e8da1facf70f50f03d0e3ad68f9",
+ "profile_hash_note": "Draft hash: sha256 over the canonical (sorted-keys) JSON of this profile excluding profile_hash itself; recomputed if the setup service's convention differs at approval time."
+}

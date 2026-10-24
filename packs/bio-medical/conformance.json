@@ -1,0 +1,100 @@
+{
+  "entries": [
+    {
+      "baseline": "Profile v1 (vocabularies declared, guidance channel not yet wired — the declared types were consumed by nothing)",
+      "content": "Profile payload v2 — schema_front (closed entity/relation inventories with definitions, boundary examples, merge prohibitions) rendered into proposer guidance via the EG-R2-1 channel; typed endpoints through CANDIDATES -> GATES -> WRITE -> ER (EG-R2-2)",
+      "date": "2026-10-17",
+      "delta": "Endpoint grounding 14.8% -> 74.6%; recall 0.0620 -> 0.2091; grounded precision 0.7048 -> 0.7619",
+      "gate": "The pilot's pre-registered criteria (declared before the run)",
+      "id": "CR-1",
+      "instrument": "BioRED Dev-100 gold scoring (the round-1 and round-2 batches' gold scoring), re-verified exact by the measurement audit",
+      "population": "BioRED Dev (100 abstracts), held out from the profile authoring, which was fitted on corpus documentation + Train-side inspection",
+      "status": "adopted",
+      "treatment": "Profile v2 payload (schema_front guidance on)",
+      "verdict": "ADOPTED — the schema-first guidance channel is the pack's founding content; v3 (pair enumeration + merge prohibitions) and v4 (J3 judge switches) extended the same payload line."
+    },
+    {
+      "baseline": "Pair judge J0 (sentence context x standard instruction)",
+      "content": "Profile payload v4 — pair judge variant switches (pair_judge_context=abstract, pair_judge_instruction=evidence), i.e. judge J3",
+      "date": "2026-10-18",
+      "delta": "eta 0.5412 -> 0.7412 on the frozen slice census (context +0.112, instruction +0.088, independent and additive); NONE losses 25 -> 4",
+      "gate": "Factorial gates (the pilot's factorial design record)",
+      "id": "CR-2",
+      "instrument": "2x2 factorial on the frozen slice census; guard audit upheld 0.70",
+      "population": "BioRED slice census frozen for the factorial (the pilot design record); Stage D full-Dev run under v4 followed (recall 0.5120 PASS / Association 0.4768 PASS against pre-registered criteria)",
+      "status": "adopted",
+      "treatment": "J3 switches on",
+      "verdict": "ADOPTED as profile v4 — the payload this pack pins."
+    },
+    {
+      "baseline": "Control = J3 re-roll under v4 guidance (ctrl): type agreement 0.5714 modal / 0.6032 any (36/63)",
+      "content": "Candidate T1 — profile v5 type guidance (boundary-contrast rewrites of the Association / Positive_Correlation / Negative_Correlation / Bind definitions and intents)",
+      "date": "2026-10-19",
+      "delta": "Type agreement 0.5079 modal / 0.5397 any (32/63): -0.0635 vs control. eta unchanged (0.7412); precision 0.6197 vs ctrl 0.6268",
+      "gate": "G-R9c (agreement >= ctrl + 0.10 paired; eta -0.02 floor; precision >= 0.60)",
+      "id": "CR-3",
+      "instrument": "Slice scorer ( J0 fidelity exact: eta 0.5412 / precision 0.6842 / converted 46)",
+      "population": "Pilot slice — 591 pairs, 63 converted endpoint-correct pairs (the pilot design record)",
+      "status": "measured_not_adopted",
+      "treatment": "Candidate T1 arm (guidance text only differs)",
+      "verdict": "FAIL — NOT ADOPTED. The definitions as written for the front-of-prompt slot do not move the Assoc<->Correlation boundary in the right direction (F-R9-1, negative form). Recorded as the v5 guidance content's measured state: negative at this slot, on this slice, at the Haiku tier."
+    },
+    {
+      "baseline": "Control = J3 re-roll under v4 guidance (ctrl): type agreement 0.5714 modal; precision 0.6268",
+      "content": "Candidate T3 — J3 judge template plus a type-evidence paragraph (a correlation verdict must quote its directional cue)",
+      "date": "2026-10-19",
+      "delta": "Type agreement 0.4923 modal (32/65): -0.079 vs control; precision 0.5583 (breaks the >= 0.60 leg); eta +0.0235 (0.7647) does not rescue it",
+      "gate": "G-R9c (same legs as CR-3)",
+      "id": "CR-4",
+      "instrument": "Slice scorer (as CR-3)",
+      "population": "Pilot slice — 591 pairs (the pilot design record)",
+      "status": "measured_not_adopted",
+      "treatment": "Candidate T3 arm",
+      "verdict": "FAIL — NOT ADOPTED (F-R9-1)."
+    },
+    {
+      "baseline": "Control agreements on the slice: Positive_Correlation 7/17, Negative_Correlation 4/15, Association 24/30",
+      "content": "Candidate T2a — Association-specialist second pass carrying the boundary-contrast definitions, applied to ctrl's Association affirmations",
+      "date": "2026-10-19",
+      "decision": "2026-10-19 — operating point none (not adopted); the round-9 design record (§13)",
+      "delta": "Correlation legs nearly repaired (PosCorr 16/17, NegCorr 12/15) paid for on the mirror: gold Association agreement collapses 24/30 -> 6/30 (18 agrees broken); net agreement vs ctrl -1; flip audit uphold 0.30 (3 correct / 7 incorrect / 0 cannot-tell, seeded sample of 10 of 172 flips)",
+      "gate": "G-R9c2 (net >= +5 and >= T2b + 3; Association agrees broken <= 2; flip-audit uphold >= 0.50)",
+      "id": "CR-5",
+      "instrument": "Slice scorer + quote-required flip audit",
+      "population": "Pilot slice — ctrl's 254 Association affirmations; slice readings on ctrl's 63 converted pairs (the pilot design record)",
+      "status": "measured_not_adopted",
+      "treatment": "Candidate T2a arm (172 of 254 affirmations flipped)",
+      "verdict": "FAIL on every leg — NOT ADOPTED (F-R9-4, mirror symmetry). The definitions carry real correlation signal and demonstrably break the Association side at this tier: the boundary is a trade-off curve, and choosing an operating point on it is a human decision, not a measurement result. No winner is picked from this curve. DECIDED 2026-10-19 under the recorded close-out instruction (wrap the open decisions without human intervention/review): operating point = NONE — T2a is not adopted at any point on the curve; the pipeline keeps the single J3 judge as-is. Basis: G-R9c2 failed every leg and the flip-audit uphold was 0.30; no measured point on the curve clears the round's own registered gate."
+    },
+    {
+      "baseline": "Control = ctrl agreements (as CR-5)",
+      "content": "Candidate T2b — definitions-free second-look specialist (control arm for T2a)",
+      "date": "2026-10-19",
+      "delta": "27 flips; net agreement +1 vs ctrl",
+      "gate": "G-R9c2 (as the control leg of CR-5)",
+      "id": "CR-6",
+      "instrument": "Slice scorer (as CR-3)",
+      "population": "Pilot slice — ctrl's 254 Association affirmations",
+      "status": "measured_not_adopted",
+      "treatment": "Candidate T2b arm",
+      "verdict": "FAIL — NOT ADOPTED. A definitions-free second look does not separate from noise; the T2a effect in CR-5 is therefore attributable to the definitions, in both directions."
+    },
+    {
+      "baseline": "Majority-class baseline CV 0.5193; declared cue-rule baseline CV 0.4328",
+      "content": "Candidate T4 — Train-fitted type picker (fitted artefact; features = functions of sentence + endpoint types only)",
+      "date": "2026-10-19",
+      "delta": "Train-side gate passed (grouped CV 0.6264: +19.4pt over cue-rule, +10.7pt over majority). The single registered Dev evaluation: type agreement 390 -> 358 (net -32 against a >= +30 leg; 114 agreements broken against a <= 5 leg; Association agreements lost 27 against a <= 5 leg)",
+      "gate": "G-R9b (Train-side) then the registered single Dev evaluation legs (net >= +30; lost <= 5; Assoc lost <= 5)",
+      "id": "CR-7",
+      "instrument": "Stage B construction + diagnostics; Dev evaluation on the frozen Stage-D row population",
+      "population": "Train-400 for fitting (3,632 examples); Dev-100 for the single registered evaluation",
+      "status": "closed",
+      "treatment": "Candidate T4 picker re-typing the judge's affirmations",
+      "verdict": "CLOSED — the transfer failure reproduced for type: conventions fitted on Train gold do not transfer to the judge's Dev affirmation population. The fitted-artefact route into the pack requires new evidence before re-proposal."
+    }
+  ],
+  "pack_id": "bio-medical",
+  "pack_version": "0.3.0",
+  "record_format": 1,
+  "spec": "docs/PACK_DESIGN.md §2"
+}

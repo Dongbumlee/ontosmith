@@ -1,0 +1,132 @@
+{
+ "stage": "S3-prep (issue #66)",
+ "design": "docs/REDOCRED_MAIN_RUN_DESIGN_V2.md section 3 (as amended 2026-10-21) + section 4",
+ "api_spend_usd": 0,
+ "fidelity_gate": {
+  "reachable": true,
+  "converted": true,
+  "none_loss": true,
+  "emission_loss": true,
+  "eta": true,
+  "kept_candidates": true,
+  "kept_grounded": true,
+  "kept_exact_matched": true,
+  "candidate_gold_precision": true,
+  "flip_rows": true,
+  "wrong_relation_rows": true,
+  "converted_idx": true,
+  "pass": true
+ },
+ "sample_a": {
+  "purpose": "Direction A — corrected precision (design 3.1/3.3)",
+  "population_definition": "Tier-1 distinct triples (doc_index, norm(subject), relation, norm(object)) over routed tier==1 rows with NO exact gold match under the frozen instrument (redocred_scoring.match_arm, raw arm). The control stratum is drawn from the exact-matched distinct triples.",
+  "frame": {
+   "tier1_rows": 3902,
+   "tier1_distinct": 3902,
+   "matched_distinct": 2233,
+   "unmatched_pool": 1669,
+   "strata": {
+    "pair_matched": 333,
+    "no_gold_pair": 1336
+   },
+   "stratum_detail_pair_matched": {
+    "diff_relation": 266,
+    "rev_same_relation": 67
+   },
+   "control_pool": 2233
+  },
+  "allocation": {
+   "pair_matched": 60,
+   "no_gold_pair": 240
+  },
+  "allocation_rule": "proportional (largest remainder) with a floor of 60 in the smaller stratum (design 3.1)",
+  "n": 300,
+  "n_control": 40,
+  "seeds": {
+   "sample": 20261022,
+   "control": 20261024,
+   "queue_shuffle": 20261025
+  },
+  "conf440_subset_n_pool_items": 269,
+  "conf440_corrected_precision_reportable": true,
+  "judge_file": "s3_sample_a_items.jsonl",
+  "key_file": "s3_sample_a_key.jsonl",
+  "blinding": "judge records carry no gold status, stratum or control flag; controls are mixed into the queue unlabeled (queue order = seeded shuffle) and are reported beside the estimate, never inside it (design 3.1)"
+ },
+ "sample_b": {
+  "purpose": "Direction B — pair-supported fraction g_B for ceiling-adjusted recall (design 3.1/3.3)",
+  "population_definition": "ALL dev gold triples (the design's registered frame: g_B is a property of gold overall). Each item's run fate is recorded in the key file only, so loss-stratum readouts remain computable at aggregation.",
+  "frame": {
+   "gold_total": 17284,
+   "by_population": {
+    "fit60": 1920,
+    "audit30": 1184,
+    "rest410": 14180
+   },
+   "by_run_fate": {
+    "none_judged": 3677,
+    "matched": 1838,
+    "emission_blocked": 1759,
+    "never_enumerated": 6340,
+    "roster_missed": 3670
+   },
+   "by_population_and_fate": {
+    "fit60": {
+     "never_enumerated": 598,
+     "none_judged": 370,
+     "matched": 211,
+     "roster_missed": 502,
+     "emission_blocked": 239
+    },
+    "audit30": {
+     "none_judged": 275,
+     "matched": 116,
+     "never_enumerated": 479,
+     "roster_missed": 186,
+     "emission_blocked": 128
+    },
+    "rest410": {
+     "none_judged": 3032,
+     "matched": 1511,
+     "emission_blocked": 1392,
+     "never_enumerated": 5263,
+     "roster_missed": 2982
+    }
+   }
+  },
+  "allocation": {
+   "fit60": 44,
+   "audit30": 27,
+   "rest410": 329
+  },
+  "allocation_rule": "proportional floors (44/27/328) with the remaining seat to the largest stratum (rest410) = the design's stated 44/27/329",
+  "n": 400,
+  "seeds": {
+   "sample": 20261023
+  },
+  "conf440_items": 356,
+  "judge_file": "s3_sample_b_items.jsonl",
+  "key_file": "s3_sample_b_key.jsonl",
+  "blinding": "judge records carry no run fate or reachability; both live only in the key file"
+ },
+ "estimators": {
+  "corrected_precision": {
+   "formula": "(exact_matches + p_A_hat * |unmatched_pool|) / |Tier-1 distinct|",
+   "p_A_hat": "stratified supported-as-typed fraction over Direction A: sum_h (N_h / N_pool) * p_h over decisive judged items per stratum h (unknown / unverifiable-quote verdicts excluded from denominators, design 3.2); control items NEVER enter the estimator",
+   "interval": "stratified standard error on p_A_hat (Wilson-style 95%), propagated through the formula (design 3.3); census constants from s3_raw_scores.json FULL-500 (and CONF-440 when its subset n >= 150)"
+  },
+  "ceiling_adjusted_recall": {
+   "formula": "matched_gold / (|gold| * g_B_hat) per population (FULL-500, CONF-440)",
+   "g_B_hat": "stratified pair-supported fraction over Direction B: sum_h (N_h / N) * p_h with h = document population; decisive items only; the type-incorrect rate among pair-supported items is reported beside it and changes no denominator (design 3.3)",
+   "interval": "Wilson interval on g_B_hat inverted through the denominator (design 3.3)"
+  },
+  "final_verdict_rule": "pass-2 verdict stands where an item was escalated, else pass-1 (design 3.2); unresolved items are counted as unlabeled and excluded from denominators"
+ },
+ "files": {
+  "raw_scores": "s3_raw_scores.json",
+  "sample_a_items": "s3_sample_a_items.jsonl",
+  "sample_a_key": "s3_sample_a_key.jsonl",
+  "sample_b_items": "s3_sample_b_items.jsonl",
+  "sample_b_key": "s3_sample_b_key.jsonl"
+ }
+}

@@ -1,0 +1,60 @@
+{
+  "entries": [
+    {
+      "baseline": "n/a \u2014 the family's first payload",
+      "content": "Setup-service profile for the CUAD family: deterministic corpus census (510 files, 509 unique-content documents, 26.8M chars; 41 label categories over 20,910 gold QAs) with 30 scanner-verified draft claims and 16 decision points (identity/alias rules, text-hygiene traps, category-to-task mappings DR-24..DR-30).",
+      "date": "2026-10-16",
+      "delta": "All 16 decision points approved as recommended; three follow-ups created (master_clauses.csv audit, amendment-title supersession handling, Term slot design). The payload this pack pins descends from this approval; its profile_hash is sha256:f46cd0efb7b4b85c.",
+      "gate": "Setup-service approval (human decision points, joint session 2026-10-16) \u2014 outcome recorded in the session's approval record",
+      "id": "CC-1",
+      "instrument": "Setup service census + scanners (profile.json claims DR-01..DR-30 / SC-01..SC-11, each with measured values)",
+      "population": "CUAD v1 full corpus (510 documents)",
+      "status": "adopted",
+      "treatment": "Profile payload v1 (the setup_config lineage this pack pins)",
+      "verdict": "APPROVED \u2014 payload in force. Recorded here because the profile document's own status field still reads PENDING_APPROVAL: under the setup service's design the approval lives in the separate record, and the staged profile document is a hash-pinned artefact that this pack does not edit."
+    },
+    {
+      "baseline": "DeepSeek arm of the same harness (presence precision 0.886, span-gate drops 81)",
+      "content": "Clause-slot extraction bake-off: identical harness, DeepSeek vs Haiku 5.5 (anthropic/claude-haiku-5.5), span-gated fills.",
+      "date": "2026-10-14",
+      "delta": "Presence precision (micro) 0.886 -> 0.963; presence recall 0.845 -> 0.841; span-gate drops 81 (5.0%) -> 0; governing-law value match 0.906 -> 0.938; the models find the same real facts (TP 886 vs 890) \u2014 the difference is discipline: DeepSeek over-fires (FP 114 vs 34). Cost $0.7809 -> $0.6507 (80 contracts). Graph+hybrid recall@20 0.797 -> 0.819. Follow-on: the full-corpus Haiku clause run scored micro precision 0.938 / recall 0.840 (the full-corpus clause-scoring record).",
+      "gate": "Bake-off verdict (the cuad-legal-v1 evaluation readout, Addendum 2)",
+      "id": "CC-2",
+      "instrument": "Clause extraction harness over the cuad-legal-v1 build (span gate + attestation); full-corpus scoring on the cuad-legal-full build",
+      "population": "80 contracts (bake-off); full 510-document corpus (follow-on Haiku run)",
+      "status": "adopted",
+      "treatment": "Haiku 5.5-class extraction seat for this family, span-gated, Jev-judged downstream",
+      "verdict": "ADOPTED \u2014 Haiku 5.5 wins the extraction bake-off for this family; the extraction-seat default recorded in the readout is Haiku 5.5-class."
+    },
+    {
+      "baseline": "n/a \u2014 the certification gate's first full run on the final store",
+      "content": "Promotion record of the served graph lineage built under this payload: batch cuad-legal-full, run p3b-v6, profile_hash sha256:f46cd0efb7b4b85c, gated by pipeline/promotion.py (audit record + pinned-QA eval from the production path + touched doc-check issues closed). The lineage carries the recorded ER census / cleanup / cross-document merge guard history.",
+      "date": "2026-10-16",
+      "delta": "Audit: precision 0.7185 (140 sampled, 135 decided, blind labels; the round-2 human rulings 43/43 sustained, 0 overruled; the 14 sustained ER splits executed). Pinned QA (116 questions): recall@20 graph 0.6516, graph+hybrid 0.7115.",
+      "gate": "Promotion gate, final re-run 2026-10-16T17:08Z: (a) audit record PASS, (b) pinned-QA PASS, (c) doc-check issues closed PASS (after the last doc-check issue closed) -> PROMOTABLE",
+      "id": "CC-3",
+      "instrument": "The full build's promotion record (p3b-v6) + its pinned-QA evaluation (p3b_ab)",
+      "population": "Full CUAD corpus (the p3b-v6 store, 18,710 attestation edges after the P4 attestation-level re-projection)",
+      "status": "adopted",
+      "treatment": "The payload in force, end to end (extraction -> gates -> WRITE -> registry -> projection -> serving)",
+      "verdict": "PROMOTABLE \u2014 the certified lineage this payload produced; the pack's quality record for the family."
+    },
+    {
+      "baseline": "Core prompt literals carrying CUAD framing (pre-fix leak: the 'generic' proposer base prompt named the commercial-contract domain)",
+      "content": "Domain-boundary leak fix: the family's domain framing moved out of core prompt text into the payload as declared data \u2014 proposer_framing ('Extract factual relations from this commercial contract excerpt.'), slot_framing, slot_rules, and the framing_note recording the move.",
+      "date": "2026-10-19",
+      "delta": "Rendered prompts byte-identical before/after for this family (the domain-boundary test); the core templates are domain-neutral and this family's framing reproduces from payload data alone.",
+      "gate": "The domain-boundary rule (docs/PACK_DESIGN.md): domain content as data only; byte-equality proof required",
+      "id": "CC-4",
+      "instrument": "Payload framing_note + the domain-boundary test",
+      "population": "The family's proposer and slot prompt surfaces",
+      "status": "adopted",
+      "treatment": "Post-fix payload bytes (the bytes this pack pins)",
+      "verdict": "ADOPTED \u2014 recorded as a conformance entry because the lab amended setup_config.json in place (pre-pack habit, no versioned sibling file): the sha256 pin taken at assembly fixes the amended bytes as pack 0.1.0's payload, and any future payload change follows PACK_DESIGN.md \u00a71.2 (superseded file kept, version bumped)."
+    }
+  ],
+  "pack_id": "legal-contract",
+  "pack_version": "0.2.0",
+  "record_format": 1,
+  "spec": "docs/PACK_DESIGN.md \u00a72"
+}

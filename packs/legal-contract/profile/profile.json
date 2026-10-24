@@ -1,0 +1,1525 @@
+{
+ "family": "cuad",
+ "corpus_dir": "data/cuad_v1/CUAD_v1",
+ "service_version": "setup-service/1.0",
+ "created_at": "2026-10-15T19:26:01.231213+00:00",
+ "status": "PENDING_APPROVAL",
+ "draft_model": "openai/gpt-5",
+ "sampling": {
+  "n_sampled": 12,
+  "rule": "length-quartile strata, even spread",
+  "sample_docs": [
+   "InvendaCorp_20000828_S-1A_EX-10.2_2588206_EX-10.2_Co-Branding Agreement",
+   "LegacyEducationAllianceInc_20200330_10-K_EX-10.18_12090678_EX-10.18_Development Agreement",
+   "MANUFACTURERSSERVICESLTD_06_05_2000-EX-10.14-OUTSOURCING AGREEMENT",
+   "PROFOUNDMEDICALCORP_08_29_2019-EX-4.5-SUPPLY AGREEMENT",
+   "PareteumCorp_20081001_8-K_EX-99.1_2654808_EX-99.1_Hosting Agreement",
+   "RISEEDUCATIONCAYMANLTD_04_17_2020-EX-4.23-SERVICE AGREEMENT",
+   "RMRGROUPINC_01_22_2020-EX-99.1-JOINT FILING AGREEMENT",
+   "SCOUTCAMINC_05_12_2020-EX-10.22-SERVICES AGREEMENT",
+   "SLINGERBAGINC_05_27_2020-EX-10.7-CONSULTING AGREEMENT",
+   "SightLife Surgical, Inc. - STRATEGIC SALES _ MARKETING AGREEMENT",
+   "THERAVANCEBIOPHARMA,INC_05_08_2020-EX-10.2-SERVICE AGREEMENT",
+   "WESTERN COPPER - NON-COMPETITION AGREEMENT"
+  ]
+ },
+ "inventory": {
+  "n_files": 510,
+  "n_unique_content": 509,
+  "duplicate_groups": [
+   [
+    "ADUROBIOTECH,INC_06_02_2020-EX-10.7-CONSULTING AGREEMENT",
+    "ADUROBIOTECH,INC_06_02_2020-EX-10.7-CONSULTING AGREEMENT(1)"
+   ]
+  ],
+  "total_chars": 26807133,
+  "mean_chars": 52563,
+  "median_chars": 33425,
+  "min_chars": 645,
+  "max_chars": 338211
+ },
+ "excluded_meta_files": [
+  "data/cuad_v1/CUAD_v1/CUAD_v1_README.txt"
+ ],
+ "gold": "SQuAD-shaped span gold at data/cuad_v1/CUAD_v1/CUAD_v1.json (510 titles, 41 label categories)",
+ "derived_files": "master_clauses.csv (derived table — audit before trusting)",
+ "claims": [
+  {
+   "id": "DR-01",
+   "section": "inventory",
+   "statement": "The CUAD family contains 510 files representing 509 unique-content documents in the full deterministic inventory.",
+   "kind": "fact",
+   "source": "draft",
+   "verify": {
+    "scanner": "inventory",
+    "params": {}
+   },
+   "expected": null,
+   "decision_point": false,
+   "measured": {
+    "value": 509,
+    "detail": {
+     "n_files": 510,
+     "n_unique_content": 509,
+     "duplicate_groups": [
+      [
+       "ADUROBIOTECH,INC_06_02_2020-EX-10.7-CONSULTING AGREEMENT",
+       "ADUROBIOTECH,INC_06_02_2020-EX-10.7-CONSULTING AGREEMENT(1)"
+      ]
+     ],
+     "total_chars": 26807133,
+     "mean_chars": 52563,
+     "median_chars": 33425,
+     "min_chars": 645,
+     "max_chars": 338211
+    }
+   },
+   "verdict": "confirmed",
+   "grade": "FULL"
+  },
+  {
+   "id": "DR-02",
+   "section": "inventory",
+   "statement": "There is exactly one duplicate-content group in the inventory (e.g., two versions of the Aduro Biotech consulting agreement).",
+   "kind": "fact",
+   "source": "draft",
+   "verify": {
+    "scanner": "inventory",
+    "params": {}
+   },
+   "expected": null,
+   "decision_point": false,
+   "measured": {
+    "value": 509,
+    "detail": {
+     "n_files": 510,
+     "n_unique_content": 509,
+     "duplicate_groups": [
+      [
+       "ADUROBIOTECH,INC_06_02_2020-EX-10.7-CONSULTING AGREEMENT",
+       "ADUROBIOTECH,INC_06_02_2020-EX-10.7-CONSULTING AGREEMENT(1)"
+      ]
+     ],
+     "total_chars": 26807133,
+     "mean_chars": 52563,
+     "median_chars": 33425,
+     "min_chars": 645,
+     "max_chars": 338211
+    }
+   },
+   "verdict": "confirmed",
+   "grade": "FULL"
+  },
+  {
+   "id": "DR-03",
+   "section": "labels & metadata",
+   "statement": "The gold annotations file declares 41 label categories with titles for 510 documents.",
+   "kind": "fact",
+   "source": "draft",
+   "verify": {
+    "scanner": "category_census",
+    "params": {}
+   },
+   "expected": null,
+   "decision_point": false,
+   "measured": {
+    "value": 41,
+    "detail": {
+     "n_categories": 41,
+     "categories": [
+      "Affiliate License-Licensee",
+      "Affiliate License-Licensor",
+      "Agreement Date",
+      "Anti-Assignment",
+      "Audit Rights",
+      "Cap On Liability",
+      "Change Of Control",
+      "Competitive Restriction Exception",
+      "Covenant Not To Sue",
+      "Document Name",
+      "Effective Date",
+      "Exclusivity",
+      "Expiration Date",
+      "Governing Law",
+      "Insurance",
+      "Ip Ownership Assignment",
+      "Irrevocable Or Perpetual License",
+      "Joint Ip Ownership",
+      "License Grant",
+      "Liquidated Damages",
+      "Minimum Commitment",
+      "Most Favored Nation",
+      "No-Solicit Of Customers",
+      "No-Solicit Of Employees",
+      "Non-Compete",
+      "Non-Disparagement",
+      "Non-Transferable License",
+      "Notice Period To Terminate Renewal",
+      "Parties",
+      "Post-Termination Services",
+      "Price Restrictions",
+      "Renewal Term",
+      "Revenue/Profit Sharing",
+      "Rofr/Rofo/Rofn",
+      "Source Code Escrow",
+      "Termination For Convenience",
+      "Third Party Beneficiary",
+      "Uncapped Liability",
+      "Unlimited/All-You-Can-Eat-License",
+      "Volume Restriction",
+      "Warranty Duration"
+     ],
+     "presence_docs": {
+      "Affiliate License-Licensee": 59,
+      "Affiliate License-Licensor": 23,
+      "Agreement Date": 470,
+      "Anti-Assignment": 374,
+      "Audit Rights": 214,
+      "Cap On Liability": 275,
+      "Change Of Control": 121,
+      "Competitive Restriction Exception": 76,
+      "Covenant Not To Sue": 100,
+      "Document Name": 510,
+      "Effective Date": 390,
+      "Exclusivity": 180,
+      "Expiration Date": 413,
+      "Governing Law": 437,
+      "Insurance": 166,
+      "Ip Ownership Assignment": 124,
+      "Irrevocable Or Perpetual License": 70,
+      "Joint Ip Ownership": 46,
+      "License Grant": 255,
+      "Liquidated Damages": 61,
+      "Minimum Commitment": 165,
+      "Most Favored Nation": 28,
+      "No-Solicit Of Customers": 34,
+      "No-Solicit Of Employees": 59,
+      "Non-Compete": 119,
+      "Non-Disparagement": 38,
+      "Non-Transferable License": 138,
+      "Notice Period To Terminate Renewal": 111,
+      "Parties": 509,
+      "Post-Termination Services": 182,
+      "Price Restrictions": 15,
+      "Renewal Term": 176,
+      "Revenue/Profit Sharing": 166,
+      "Rofr/Rofo/Rofn": 85,
+      "Source Code Escrow": 13,
+      "Termination For Convenience": 183,
+      "Third Party Beneficiary": 32,
+      "Uncapped Liability": 111,
+      "Unlimited/All-You-Can-Eat-License": 17,
+      "Volume Restriction": 82,
+      "Warranty Duration": 75
+     },
+     "total_qas": 20910,
+     "impossible_counts": {
+      "Affiliate License-Licensee": 451,
+      "Affiliate License-Licensor": 487,
+      "Agreement Date": 40,
+      "Anti-Assignment": 136,
+      "Audit Rights": 296,
+      "Cap On Liability": 235,
+      "Change Of Control": 389,
+      "Competitive Restriction Exception": 434,
+      "Covenant Not To Sue": 410,
+      "Effective Date": 120,
+      "Exclusivity": 330,
+      "Expiration Date": 97,
+      "Governing Law": 73,
+      "Insurance": 344,
+      "Ip Ownership Assignment": 386,
+      "Irrevocable Or Perpetual License": 440,
+      "Joint Ip Ownership": 464,
+      "License Grant": 255,
+      "Liquidated Damages": 449,
+      "Minimum Commitment": 345,
+      "Most Favored Nation": 482,
+      "No-Solicit Of Customers": 476,
+      "No-Solicit Of Employees": 451,
+      "Non-Compete": 391,
+      "Non-Disparagement": 472,
+      "Non-Transferable License": 372,
+      "Notice Period To Terminate Renewal": 399,
+      "Parties": 1,
+      "Post-Termination Services": 328,
+      "Price Restrictions": 495,
+      "Renewal Term": 334,
+      "Revenue/Profit Sharing": 344,
+      "Rofr/Rofo/Rofn": 425,
+      "Source Code Escrow": 497,
+      "Termination For Convenience": 327,
+      "Third Party Beneficiary": 478,
+      "Uncapped Liability": 399,
+      "Unlimited/All-You-Can-Eat-License": 493,
+      "Volume Restriction": 428,
+      "Warranty Duration": 435
+     }
+    }
+   },
+   "verdict": "confirmed",
+   "grade": "FULL"
+  },
+  {
+   "id": "DR-04",
+   "section": "labels & metadata",
+   "statement": "Audit the derived master_clauses.csv before trusting values because it is not a source-of-truth and may contain propagation errors from span gold.",
+   "kind": "rule",
+   "source": "draft",
+   "verify": {
+    "scanner": "csv_flag_audit",
+    "params": {}
+   },
+   "expected": null,
+   "decision_point": true,
+   "measured": {
+    "value": 0.8587,
+    "detail": {
+     "rows": 510,
+     "answer_columns": 40,
+     "non_empty_cells": 19599,
+     "yes_no_cells": 16830,
+     "yes_no_share": 0.8587,
+     "distinct_other_values": 1605,
+     "other_examples": {
+      "New York": 97,
+      "perpetual": 69,
+      "successive 1 year": 60,
+      "California": 55,
+      "Delaware": 40,
+      "Texas": 28,
+      "SPONSORSHIP AGREEMENT": 20,
+      "Florida": 17
+     },
+     "columns_with_non_flag_values": 7,
+     "mixed_column_examples": {
+      "Document Name-Answer": {
+       "non_empty": 510,
+       "yes_no": 0
+      },
+      "Parties-Answer": {
+       "non_empty": 509,
+       "yes_no": 0
+      },
+      "Agreement Date-Answer": {
+       "non_empty": 465,
+       "yes_no": 0
+      },
+      "Expiration Date-Answer": {
+       "non_empty": 329,
+       "yes_no": 0
+      },
+      "Renewal Term-Answer": {
+       "non_empty": 163,
+       "yes_no": 0
+      },
+      "Governing Law-Answer": {
+       "non_empty": 434,
+       "yes_no": 0
+      }
+     }
+    }
+   },
+   "verdict": "confirmed",
+   "grade": "JUDGMENT"
+  },
+  {
+   "id": "DR-05",
+   "section": "labels & metadata",
+   "statement": "Validate that all 510 gold annotation titles can be matched to files after normalization of whitespace, case, and exhibit numbering.",
+   "kind": "rule",
+   "source": "draft",
+   "verify": {
+    "scanner": "annotation_titles",
+    "params": {}
+   },
+   "expected": null,
+   "decision_point": true,
+   "measured": {
+    "value": 1,
+    "detail": {
+     "n_gold_titles": 510,
+     "n_unmatched_exact": 1,
+     "unmatched_exact": [
+      "LECLANCHÉ S.A. - JOINT DEVELOPMENT AND MARKETING AGREEMENT"
+     ],
+     "n_unmatched_normalized": 1,
+     "unmatched_normalized": [
+      "LECLANCHÉ S.A. - JOINT DEVELOPMENT AND MARKETING AGREEMENT"
+     ],
+     "n_files_without_gold_title": 1,
+     "files_without_gold_title": [
+      "LECLANCH#U00c9 S.A. - JOINT DEVELOPMENT AND MARKETING AGREEMENT"
+     ]
+    }
+   },
+   "verdict": "confirmed",
+   "grade": "JUDGMENT"
+  },
+  {
+   "id": "DR-06",
+   "section": "entity terrain",
+   "statement": "Across the full 510-document corpus, 396 documents (77.65%) include an 'Exhibit' header with a number.",
+   "kind": "fact",
+   "source": "draft",
+   "verify": {
+    "scanner": "pattern_prevalence",
+    "params": {
+     "regex": "(?i)\\bExhibit\\s+\\d"
+    }
+   },
+   "expected": 11,
+   "decision_point": false,
+   "measured": {
+    "value": 396,
+    "detail": {
+     "pattern": "(?i)\\bExhibit\\s+\\d",
+     "docs_with": 396,
+     "docs_total": 510,
+     "share": 0.7765,
+     "total_matches": 907
+    }
+   },
+   "verdict": "revised",
+   "grade": "FULL"
+  },
+  {
+   "id": "DR-07",
+   "section": "entity terrain",
+   "statement": "Parenthetical defined-term patterns (e.g., Company, Service Provider) are pervasive in this corpus.",
+   "kind": "fact",
+   "source": "draft",
+   "verify": {
+    "scanner": "defined_terms",
+    "params": {}
+   },
+   "expected": null,
+   "decision_point": false,
+   "measured": {
+    "value": 6001,
+    "detail": {
+     "docs_with": 471,
+     "docs_total": 510,
+     "total_captures": 6001
+    }
+   },
+   "verdict": "confirmed",
+   "grade": "FULL"
+  },
+  {
+   "id": "DR-08",
+   "section": "identity & aliases",
+   "statement": "Role nouns such as Company, Consultant, Employer, Executive, Service Provider, Service Recipient, Party, Parties, Party A/B, and Affiliate are not identities and must be resolved to their defining named entities within each document.",
+   "kind": "rule",
+   "source": "draft",
+   "verify": null,
+   "expected": null,
+   "decision_point": true,
+   "measured": null,
+   "verdict": "unverifiable",
+   "grade": "JUDGMENT"
+  },
+  {
+   "id": "DR-09",
+   "section": "identity & aliases",
+   "statement": "Alias chains that define multiple labels for the same party (e.g., 'Application Provider' or 'e-centives') should be unified to a single canonical node per document.",
+   "kind": "rule",
+   "source": "draft",
+   "verify": null,
+   "expected": null,
+   "decision_point": true,
+   "measured": null,
+   "verdict": "unverifiable",
+   "grade": "JUDGMENT"
+  },
+  {
+   "id": "DR-10",
+   "section": "relation terrain",
+   "statement": "Governing law clauses are expected to be common and should be detected via headings or phrases like 'This Agreement shall be governed by'.",
+   "kind": "rule",
+   "source": "draft",
+   "verify": {
+    "scanner": "pattern_prevalence",
+    "params": {
+     "regex": "(?i)governing\\s+law|shall\\s+be\\s+governed\\s+by"
+    }
+   },
+   "expected": null,
+   "decision_point": false,
+   "measured": {
+    "value": 367,
+    "detail": {
+     "pattern": "(?i)governing\\s+law|shall\\s+be\\s+governed\\s+by",
+     "docs_with": 367,
+     "docs_total": 510,
+     "share": 0.7196,
+     "total_matches": 689
+    }
+   },
+   "verdict": "confirmed",
+   "grade": "JUDGMENT"
+  },
+  {
+   "id": "DR-11",
+   "section": "relation terrain",
+   "statement": "Across the full 510-document corpus, 272 documents (53.33%) contain the token 'WHEREAS'.",
+   "kind": "fact",
+   "source": "draft",
+   "verify": {
+    "scanner": "pattern_prevalence",
+    "params": {
+     "regex": "(?i)\\bwhereas\\b"
+    }
+   },
+   "expected": 7,
+   "decision_point": false,
+   "measured": {
+    "value": 272,
+    "detail": {
+     "pattern": "(?i)\\bwhereas\\b",
+     "docs_with": 272,
+     "docs_total": 510,
+     "share": 0.5333,
+     "total_matches": 949
+    }
+   },
+   "verdict": "revised",
+   "grade": "FULL"
+  },
+  {
+   "id": "DR-12",
+   "section": "attribution terrain",
+   "statement": "Typed signature markers using '/s/' appear in some filings and should be recognized as signature attributions.",
+   "kind": "rule",
+   "source": "draft",
+   "verify": {
+    "scanner": "pattern_prevalence",
+    "params": {
+     "regex": "/s/\\s"
+    }
+   },
+   "expected": null,
+   "decision_point": false,
+   "measured": {
+    "value": 350,
+    "detail": {
+     "pattern": "/s/\\s",
+     "docs_with": 350,
+     "docs_total": 510,
+     "share": 0.6863,
+     "total_matches": 1066
+    }
+   },
+   "verdict": "confirmed",
+   "grade": "JUDGMENT"
+  },
+  {
+   "id": "DR-13",
+   "section": "value formats",
+   "statement": "Across the full corpus, effective-date spans are parseable at a 59.28% rate (265 of 447 spans), indicating substantial variation in date expressions.",
+   "kind": "fact",
+   "source": "draft",
+   "verify": {
+    "scanner": "date_parse_rate",
+    "params": {
+     "category": "Effective Date"
+    }
+   },
+   "expected": 4,
+   "decision_point": false,
+   "measured": {
+    "value": 0.5928,
+    "detail": {
+     "category": "Effective Date",
+     "spans": 447,
+     "parseable": 265,
+     "parse_rate": 0.5928,
+     "unparseable_examples": [
+      "The term of this  Agreement  shall be ten (10)                            years (the \"Term\")  which shall  commence on the date                            upon which the Company  delivers to  Distributor  the                            last Sample, as defined  hereinafter.",
+      "Unless  earlier   terminated   otherwise  provided                   therein,  this  Agreement,  subject to the  commencement  date                   established  in Section 1.3,  shall be effective  immediately.",
+      "This Amendment shall only become effective upon the VNBJ Closing with respect to Article 1.1 and the VNBZ Closing with respect to Article 1.2, and shall terminate without any force or effect in the event that the VNBJ SPA and the VNBZ SPA are terminated in accordance with the terms thereof.",
+      "\"Effective Date\" shall have the meaning set forth in the preamble to this Agreement.",
+      "17t h day of February 2016"
+     ]
+    }
+   },
+   "verdict": "revised",
+   "grade": "FULL"
+  },
+  {
+   "id": "DR-14",
+   "section": "value formats",
+   "statement": "Currency values generally use a dollar sign and thousands separators (e.g., '$1,000') and may appear in monthly or annualized compensation contexts.",
+   "kind": "rule",
+   "source": "draft",
+   "verify": {
+    "scanner": "pattern_prevalence",
+    "params": {
+     "regex": "\\$\\s?\\d{1,3}(,\\d{3})*(\\.\\d+)?"
+    }
+   },
+   "expected": null,
+   "decision_point": false,
+   "measured": {
+    "value": 273,
+    "detail": {
+     "pattern": "\\$\\s?\\d{1,3}(,\\d{3})*(\\.\\d+)?",
+     "docs_with": 273,
+     "docs_total": 510,
+     "share": 0.5353,
+     "total_matches": 1912
+    }
+   },
+   "verdict": "confirmed",
+   "grade": "JUDGMENT"
+  },
+  {
+   "id": "DR-15",
+   "section": "document families",
+   "statement": "Across the full 510-document corpus, 508 documents (99.61%) contain an agreement-type cue such as 'agreement', 'non-competition', or 'joint filing'.",
+   "kind": "fact",
+   "source": "draft",
+   "verify": {
+    "scanner": "pattern_prevalence",
+    "params": {
+     "regex": "(?i)agreement|non[-\\s]?competition|joint\\s+filing"
+    }
+   },
+   "expected": 10,
+   "decision_point": false,
+   "measured": {
+    "value": 508,
+    "detail": {
+     "pattern": "(?i)agreement|non[-\\s]?competition|joint\\s+filing",
+     "docs_with": 508,
+     "docs_total": 510,
+     "share": 0.9961,
+     "total_matches": 46042
+    }
+   },
+   "verdict": "revised",
+   "grade": "FULL"
+  },
+  {
+   "id": "DR-16",
+   "section": "text-hygiene traps",
+   "statement": "Redactions and placeholders appear in multiple styles, including '[*****]', '[*]', '***', '[•]', and '[address removed]', and should be normalized to a single redaction token rather than extracted as values.",
+   "kind": "trap",
+   "source": "draft",
+   "verify": {
+    "scanner": "pattern_prevalence",
+    "params": {
+     "regex": "\\[\\*{1,}\\]|\\*\\*\\*|\\[•\\]|\\[address removed\\]"
+    }
+   },
+   "expected": null,
+   "decision_point": true,
+   "measured": {
+    "value": 144,
+    "detail": {
+     "pattern": "\\[\\*{1,}\\]|\\*\\*\\*|\\[•\\]|\\[address removed\\]",
+     "docs_with": 144,
+     "docs_total": 510,
+     "share": 0.2824,
+     "total_matches": 21177
+    }
+   },
+   "verdict": "confirmed",
+   "grade": "JUDGMENT"
+  },
+  {
+   "id": "DR-17",
+   "section": "text-hygiene traps",
+   "statement": "SEC-source boilerplate like 'Source: [COMPANY], [FILING], [DATE]' lines and repeated exhibit headers should be stripped before span alignment.",
+   "kind": "trap",
+   "source": "draft",
+   "verify": {
+    "scanner": "pattern_prevalence",
+    "params": {
+     "regex": "(?i)^\\s*Source:\\s|^\\s*Exhibit\\s+\\d"
+    }
+   },
+   "expected": null,
+   "decision_point": true,
+   "measured": {
+    "value": 351,
+    "detail": {
+     "pattern": "(?i)^\\s*Source:\\s|^\\s*Exhibit\\s+\\d",
+     "docs_with": 351,
+     "docs_total": 510,
+     "share": 0.6882,
+     "total_matches": 351
+    }
+   },
+   "verdict": "confirmed",
+   "grade": "JUDGMENT"
+  },
+  {
+   "id": "DR-18",
+   "section": "text-hygiene traps",
+   "statement": "OCR artifacts and all-caps headings (e.g., 'TIHS' for 'THIS', random digit/letter noise) occur in certain PDFs and can confound literal matching unless case-folding and fuzzy tolerance are applied.",
+   "kind": "trap",
+   "source": "draft",
+   "verify": null,
+   "expected": null,
+   "decision_point": true,
+   "measured": null,
+   "verdict": "unverifiable",
+   "grade": "JUDGMENT"
+  },
+  {
+   "id": "DR-19",
+   "section": "entity terrain",
+   "statement": "Parties named in this corpus are predominantly organizations (e.g., International Business Machines Corporation, Philips Medical Systems Nederland B.V., T-Mobile Netherlands B.V.) with occasional individuals in officer or signatory roles.",
+   "kind": "fact",
+   "source": "draft",
+   "verify": {
+    "scanner": "party_recurrence",
+    "params": {
+     "spot_check": [
+      "International Business Machines Corporation",
+      "Philips Medical Systems Nederland B.V.",
+      "T-Mobile Netherlands B.V.",
+      "Theravance Biopharma UK Limited",
+      "Western Copper Corporation",
+      "Glamis Gold Ltd."
+     ]
+    }
+   },
+   "expected": null,
+   "decision_point": false,
+   "measured": {
+    "value": 156,
+    "detail": {
+     "distinct_parties": 1895,
+     "parties_in_ge2_docs": 156,
+     "top_recurring": {
+      "DISTRIBUTOR": 25,
+      "LICENSEE": 18,
+      "LICENSOR": 14,
+      "CUSTOMER": 13,
+      "SPONSOR": 12,
+      "CONSULTANT": 11,
+      "CLIENT": 11,
+      "PARTY A": 11,
+      "PARTY B": 11,
+      "AGENT": 9
+     },
+     "spot_check": {
+      "International Business Machines Corporation": 0,
+      "Philips Medical Systems Nederland B.V.": 0,
+      "T-Mobile Netherlands B.V.": 0,
+      "Theravance Biopharma UK Limited": 0,
+      "Western Copper Corporation": 0,
+      "Glamis Gold Ltd.": 0
+     }
+    }
+   },
+   "verdict": "confirmed",
+   "grade": "FULL"
+  },
+  {
+   "id": "DR-20",
+   "section": "relation terrain",
+   "statement": "Termination, confidentiality, IP ownership, limitation of liability, force majeure, data protection/privacy, and governing law/dispute resolution are recurrent clause families in this corpus and should be targeted for relation extraction.",
+   "kind": "rule",
+   "source": "draft",
+   "verify": {
+    "scanner": "pattern_prevalence",
+    "params": {
+     "regex": "(?i)termination|confidentialit(y|ies)|intellectual\\s+property|limitation\\s+of\\s+liability|force\\s+majeure|data\\s+protection|privacy|governing\\s+law|dispute\\s+resolution|arbitration|jurisdiction"
+    }
+   },
+   "expected": null,
+   "decision_point": false,
+   "measured": {
+    "value": 467,
+    "detail": {
+     "pattern": "(?i)termination|confidentialit(y|ies)|intellectual\\s+property|limitation\\s+of\\s+liability|force\\s+majeure|data\\s+protection|privacy|governing\\s+law|dispute\\s+resolution|arbitration|jurisdiction",
+     "docs_with": 467,
+     "docs_total": 510,
+     "share": 0.9157,
+     "total_matches": 16545
+    }
+   },
+   "verdict": "confirmed",
+   "grade": "JUDGMENT"
+  },
+  {
+   "id": "DR-21",
+   "section": "labels & metadata",
+   "statement": "Some titles contain the word 'Amendment' and should be flagged for special handling of scope and supersession.",
+   "kind": "rule",
+   "source": "draft",
+   "verify": {
+    "scanner": "amendment_titles",
+    "params": {}
+   },
+   "expected": null,
+   "decision_point": true,
+   "measured": {
+    "value": 7,
+    "detail": {
+     "docs_with_amendment_in_title": 7,
+     "examples": [
+      "ADMA BioManufacturing, LLC -  Amendment #3 to Manufacturing Agreement ",
+      "BIOAMBERINC_04_10_2013-EX-10.34-DEVELOPMENT AGREEMENT - First Amendment",
+      "FEDERATEDGOVERNMENTINCOMESECURITIESINC_04_28_2020-EX-99.SERV AGREE-SERVICES AGREEMENT_AMENDMENT",
+      "FEDERATEDGOVERNMENTINCOMESECURITIESINC_04_28_2020-EX-99.SERV AGREE-SERVICES AGREEMENT_SECONDAMENDMENT",
+      "NEONSYSTEMSINC_03_01_1999-EX-10.5-DISTRIBUTOR AGREEMENT_Amendment"
+     ]
+    }
+   },
+   "verdict": "confirmed",
+   "grade": "JUDGMENT"
+  },
+  {
+   "id": "DR-22",
+   "section": "value formats",
+   "statement": "Section numbering varies between arabic levels (1., 1.1., 1.1.1) and lettered schedules/appendices, so hierarchical parsing must support mixed schemes.",
+   "kind": "rule",
+   "source": "draft",
+   "verify": null,
+   "expected": null,
+   "decision_point": true,
+   "measured": null,
+   "verdict": "unverifiable",
+   "grade": "JUDGMENT"
+  },
+  {
+   "id": "DR-23",
+   "section": "relation terrain",
+   "statement": "Headings like 'Non-Competition', 'Exclusivity', and 'Right of First Offer' appear as dedicated sections and can be mapped to competitive restriction relations.",
+   "kind": "rule",
+   "source": "draft",
+   "verify": {
+    "scanner": "pattern_prevalence",
+    "params": {
+     "regex": "(?i)non[-\\s]?competition|exclusivit(y|ies)|right\\s+of\\s+first\\s+(offer|refusal)"
+    }
+   },
+   "expected": null,
+   "decision_point": false,
+   "measured": {
+    "value": 154,
+    "detail": {
+     "pattern": "(?i)non[-\\s]?competition|exclusivit(y|ies)|right\\s+of\\s+first\\s+(offer|refusal)",
+     "docs_with": 154,
+     "docs_total": 510,
+     "share": 0.302,
+     "total_matches": 519
+    }
+   },
+   "verdict": "confirmed",
+   "grade": "JUDGMENT"
+  },
+  {
+   "id": "DR-24",
+   "section": "category-to-task mapping",
+   "statement": "Map CUAD 'Effective Date' to a single normalized date value extracted from definitions or the cover heading, tolerating ordinal and DMY/M DY/Y-M-D formats.",
+   "kind": "mapping",
+   "source": "draft",
+   "verify": null,
+   "expected": null,
+   "decision_point": true,
+   "measured": null,
+   "verdict": "unverifiable",
+   "grade": "JUDGMENT"
+  },
+  {
+   "id": "DR-25",
+   "section": "category-to-task mapping",
+   "statement": "Map CUAD 'Parties' to named-entity extraction of legal names and jurisdictions from the preamble, with aliases bound to canonical per-document nodes.",
+   "kind": "mapping",
+   "source": "draft",
+   "verify": null,
+   "expected": null,
+   "decision_point": true,
+   "measured": null,
+   "verdict": "unverifiable",
+   "grade": "JUDGMENT"
+  },
+  {
+   "id": "DR-26",
+   "section": "category-to-task mapping",
+   "statement": "Map CUAD 'Governing Law' to jurisdiction extraction from the governing law or dispute resolution section heading/body.",
+   "kind": "mapping",
+   "source": "draft",
+   "verify": null,
+   "expected": null,
+   "decision_point": true,
+   "measured": null,
+   "verdict": "unverifiable",
+   "grade": "JUDGMENT"
+  },
+  {
+   "id": "DR-27",
+   "section": "category-to-task mapping",
+   "statement": "Map CUAD 'Term' to a duration relation capturing start trigger, end trigger, and renewal/auto-renewal conditions from the Term section.",
+   "kind": "mapping",
+   "source": "draft",
+   "verify": null,
+   "expected": null,
+   "decision_point": true,
+   "measured": null,
+   "verdict": "unverifiable",
+   "grade": "JUDGMENT"
+  },
+  {
+   "id": "DR-28",
+   "section": "category-to-task mapping",
+   "statement": "Map CUAD 'Confidentiality' to a clause-presence boolean plus scope (parties, affiliates, data types) and carve-outs if spans are available.",
+   "kind": "mapping",
+   "source": "draft",
+   "verify": null,
+   "expected": null,
+   "decision_point": true,
+   "measured": null,
+   "verdict": "unverifiable",
+   "grade": "JUDGMENT"
+  },
+  {
+   "id": "DR-29",
+   "section": "category-to-task mapping",
+   "statement": "Map CUAD 'IP Ownership' to a directional relation (assignor->assignee, background vs. foreground IP) extracted from IP sections and definitions.",
+   "kind": "mapping",
+   "source": "draft",
+   "verify": null,
+   "expected": null,
+   "decision_point": true,
+   "measured": null,
+   "verdict": "unverifiable",
+   "grade": "JUDGMENT"
+  },
+  {
+   "id": "DR-30",
+   "section": "category-to-task mapping",
+   "statement": "Map CUAD 'Limitation of Liability' to a numeric/qualifier capture (cap amount, exclusions, 'consequential damages' carve-outs).",
+   "kind": "mapping",
+   "source": "draft",
+   "verify": null,
+   "expected": null,
+   "decision_point": true,
+   "measured": null,
+   "verdict": "unverifiable",
+   "grade": "JUDGMENT"
+  },
+  {
+   "id": "SC-01",
+   "section": "inventory",
+   "kind": "fact",
+   "statement": "Corpus holds 510 document files, 509 unique by content, 26807133 chars total.",
+   "source": "scanner",
+   "verify": {
+    "scanner": "inventory",
+    "params": {}
+   },
+   "expected": null,
+   "measured": {
+    "value": 509,
+    "detail": {
+     "n_files": 510,
+     "n_unique_content": 509,
+     "duplicate_groups": [
+      [
+       "ADUROBIOTECH,INC_06_02_2020-EX-10.7-CONSULTING AGREEMENT",
+       "ADUROBIOTECH,INC_06_02_2020-EX-10.7-CONSULTING AGREEMENT(1)"
+      ]
+     ],
+     "total_chars": 26807133,
+     "mean_chars": 52563,
+     "median_chars": 33425,
+     "min_chars": 645,
+     "max_chars": 338211
+    }
+   },
+   "verdict": "measured",
+   "decision_point": false,
+   "grade": "FULL"
+  },
+  {
+   "id": "SC-02",
+   "section": "labels",
+   "kind": "fact",
+   "statement": "[labels] category_census: {\"n_categories\": 41, \"categories\": [\"Affiliate License-Licensee\", \"Affiliate License-Licensor\", \"Agreement Date\", \"Anti-Assignment\", \"Audit Rights\", \"Cap On Liability\", \"Change Of Control\", \"Competitive Restriction Exception\", \"Covenant Not To Sue\", \"Document Name\", \"Effective Date\", \"Exclusivity\", ",
+   "source": "scanner",
+   "verify": {
+    "scanner": "category_census",
+    "params": {}
+   },
+   "expected": null,
+   "measured": {
+    "value": 41,
+    "detail": {
+     "n_categories": 41,
+     "categories": [
+      "Affiliate License-Licensee",
+      "Affiliate License-Licensor",
+      "Agreement Date",
+      "Anti-Assignment",
+      "Audit Rights",
+      "Cap On Liability",
+      "Change Of Control",
+      "Competitive Restriction Exception",
+      "Covenant Not To Sue",
+      "Document Name",
+      "Effective Date",
+      "Exclusivity",
+      "Expiration Date",
+      "Governing Law",
+      "Insurance",
+      "Ip Ownership Assignment",
+      "Irrevocable Or Perpetual License",
+      "Joint Ip Ownership",
+      "License Grant",
+      "Liquidated Damages",
+      "Minimum Commitment",
+      "Most Favored Nation",
+      "No-Solicit Of Customers",
+      "No-Solicit Of Employees",
+      "Non-Compete",
+      "Non-Disparagement",
+      "Non-Transferable License",
+      "Notice Period To Terminate Renewal",
+      "Parties",
+      "Post-Termination Services",
+      "Price Restrictions",
+      "Renewal Term",
+      "Revenue/Profit Sharing",
+      "Rofr/Rofo/Rofn",
+      "Source Code Escrow",
+      "Termination For Convenience",
+      "Third Party Beneficiary",
+      "Uncapped Liability",
+      "Unlimited/All-You-Can-Eat-License",
+      "Volume Restriction",
+      "Warranty Duration"
+     ],
+     "presence_docs": {
+      "Affiliate License-Licensee": 59,
+      "Affiliate License-Licensor": 23,
+      "Agreement Date": 470,
+      "Anti-Assignment": 374,
+      "Audit Rights": 214,
+      "Cap On Liability": 275,
+      "Change Of Control": 121,
+      "Competitive Restriction Exception": 76,
+      "Covenant Not To Sue": 100,
+      "Document Name": 510,
+      "Effective Date": 390,
+      "Exclusivity": 180,
+      "Expiration Date": 413,
+      "Governing Law": 437,
+      "Insurance": 166,
+      "Ip Ownership Assignment": 124,
+      "Irrevocable Or Perpetual License": 70,
+      "Joint Ip Ownership": 46,
+      "License Grant": 255,
+      "Liquidated Damages": 61,
+      "Minimum Commitment": 165,
+      "Most Favored Nation": 28,
+      "No-Solicit Of Customers": 34,
+      "No-Solicit Of Employees": 59,
+      "Non-Compete": 119,
+      "Non-Disparagement": 38,
+      "Non-Transferable License": 138,
+      "Notice Period To Terminate Renewal": 111,
+      "Parties": 509,
+      "Post-Termination Services": 182,
+      "Price Restrictions": 15,
+      "Renewal Term": 176,
+      "Revenue/Profit Sharing": 166,
+      "Rofr/Rofo/Rofn": 85,
+      "Source Code Escrow": 13,
+      "Termination For Convenience": 183,
+      "Third Party Beneficiary": 32,
+      "Uncapped Liability": 111,
+      "Unlimited/All-You-Can-Eat-License": 17,
+      "Volume Restriction": 82,
+      "Warranty Duration": 75
+     },
+     "total_qas": 20910,
+     "impossible_counts": {
+      "Affiliate License-Licensee": 451,
+      "Affiliate License-Licensor": 487,
+      "Agreement Date": 40,
+      "Anti-Assignment": 136,
+      "Audit Rights": 296,
+      "Cap On Liability": 235,
+      "Change Of Control": 389,
+      "Competitive Restriction Exception": 434,
+      "Covenant Not To Sue": 410,
+      "Effective Date": 120,
+      "Exclusivity": 330,
+      "Expiration Date": 97,
+      "Governing Law": 73,
+      "Insurance": 344,
+      "Ip Ownership Assignment": 386,
+      "Irrevocable Or Perpetual License": 440,
+      "Joint Ip Ownership": 464,
+      "License Grant": 255,
+      "Liquidated Damages": 449,
+      "Minimum Commitment": 345,
+      "Most Favored Nation": 482,
+      "No-Solicit Of Customers": 476,
+      "No-Solicit Of Employees": 451,
+      "Non-Compete": 391,
+      "Non-Disparagement": 472,
+      "Non-Transferable License": 372,
+      "Notice Period To Terminate Renewal": 399,
+      "Parties": 1,
+      "Post-Termination Services": 328,
+      "Price Restrictions": 495,
+      "Renewal Term": 334,
+      "Revenue/Profit Sharing": 344,
+      "Rofr/Rofo/Rofn": 425,
+      "Source Code Escrow": 497,
+      "Termination For Convenience": 327,
+      "Third Party Beneficiary": 478,
+      "Uncapped Liability": 399,
+      "Unlimited/All-You-Can-Eat-License": 493,
+      "Volume Restriction": 428,
+      "Warranty Duration": 435
+     }
+    }
+   },
+   "verdict": "measured",
+   "decision_point": false,
+   "grade": "FULL"
+  },
+  {
+   "id": "SC-03",
+   "section": "hygiene",
+   "kind": "fact",
+   "statement": "Redaction marker [***] appears in 65 of 510 documents (12089 occurrences).",
+   "source": "scanner",
+   "verify": {
+    "scanner": "pattern_prevalence",
+    "params": {
+     "regex": "\\[\\*\\*\\*\\]"
+    }
+   },
+   "expected": null,
+   "measured": {
+    "value": 65,
+    "detail": {
+     "pattern": "\\[\\*\\*\\*\\]",
+     "docs_with": 65,
+     "docs_total": 510,
+     "share": 0.1275,
+     "total_matches": 12089
+    }
+   },
+   "verdict": "measured",
+   "decision_point": false,
+   "grade": "FULL"
+  },
+  {
+   "id": "SC-04",
+   "section": "hygiene",
+   "kind": "fact",
+   "statement": "Spaced redaction marker [ * * * ] appears in 2 documents (16 occurrences).",
+   "source": "scanner",
+   "verify": {
+    "scanner": "pattern_prevalence",
+    "params": {
+     "regex": "\\[\\s\\*\\s\\*\\s\\*\\s\\]"
+    }
+   },
+   "expected": null,
+   "measured": {
+    "value": 2,
+    "detail": {
+     "pattern": "\\[\\s\\*\\s\\*\\s\\*\\s\\]",
+     "docs_with": 2,
+     "docs_total": 510,
+     "share": 0.0039,
+     "total_matches": 16
+    }
+   },
+   "verdict": "measured",
+   "decision_point": false,
+   "grade": "FULL"
+  },
+  {
+   "id": "SC-05",
+   "section": "identity",
+   "kind": "fact",
+   "statement": "[identity] defined_terms: {\"docs_with\": 471, \"docs_total\": 510, \"total_captures\": 6001}",
+   "source": "scanner",
+   "verify": {
+    "scanner": "defined_terms",
+    "params": {}
+   },
+   "expected": null,
+   "measured": {
+    "value": 6001,
+    "detail": {
+     "docs_with": 471,
+     "docs_total": 510,
+     "total_captures": 6001
+    }
+   },
+   "verdict": "measured",
+   "decision_point": false,
+   "grade": "FULL"
+  },
+  {
+   "id": "SC-06",
+   "section": "identity",
+   "kind": "fact",
+   "statement": "[identity] defined_term_scope: {\"terms_total\": 3581, \"terms_in_ge2_docs\": 502, \"terms_with_differing_bindings\": 459, \"share_differing\": 0.9143, \"examples\": [{\"term\": \".pdf\", \"bindings\": [\"SIGNATURES TO THIS AGREEMENT TRANSMITTED BY FACSIMILE BY ELECTRONIC MAIL IN PORTABLE DOCUMENT FORMAT\", \"THE DELIVERY OF SIGNED COUNTERPARTS BY ",
+   "source": "scanner",
+   "verify": {
+    "scanner": "defined_term_scope",
+    "params": {}
+   },
+   "expected": null,
+   "measured": {
+    "value": 459,
+    "detail": {
+     "terms_total": 3581,
+     "terms_in_ge2_docs": 502,
+     "terms_with_differing_bindings": 459,
+     "share_differing": 0.9143,
+     "examples": [
+      {
+       "term": ".pdf",
+       "bindings": [
+        "SIGNATURES TO THIS AGREEMENT TRANSMITTED BY FACSIMILE BY ELECTRONIC MAIL IN PORTABLE DOCUMENT FORMAT",
+        "THE DELIVERY OF SIGNED COUNTERPARTS BY FACSIMILE TRANSMISSION OR ELECTRONIC MAIL IN PORTABLE DOCUMENT FORMAT"
+       ]
+      },
+      {
+       "term": "1933 Act",
+       "bindings": [
+        "",
+        "33",
+        "ENT PROSPECTUS AND STATEMENT OF ADDITIONAL INFORMATION THEN IN EFFECT OF THE FUND",
+        "ISSUER REPRESENTS THAT THE ANNUITY CONTRACTS SHALL COMPLY WITH THE REGISTRATION AND OTHER APPLICABLE REQUIREMENTS OF THE SECURITIES ACT OF 1933"
+       ]
+      },
+      {
+       "term": "1933 Act Regulations",
+       "bindings": [
+        "ECTUS EXCEPT THAT IF ANY PROSPECTUS IS FILED BY THE PURSUANT TO RULE 424",
+        "EXCEPT THAT IF ANY PROSPECTUS IS FILED BY THE HOLDING PURSUANT TO RULE 424"
+       ]
+      },
+      {
+       "term": "1934 Act",
+       "bindings": [
+        "",
+        "ER PROSPECTUS RELATED TO THIS OFFERING IS REQUIRED TO BE DELIVERED UNDER THE 1933 ACT OR THE SECURITIES EXCHANGE ACT OF 1934",
+        "HILLS PARTIES AND ITS SUBSIDIARIES COMPLY IN ALL MATERIAL RESPECTS WITH THE REQUIREMENTS OF SECTION 13",
+        "OFFERING PROSPECTUS"
+       ]
+      },
+      {
+       "term": "1934 Act Regulations",
+       "bindings": [
+        "ABLY REQUEST FOR THE PURPOSES CONTEMPLATED BY THE 1933 ACT THE 1933 ACT REGULATIONS THE 1934 ACT OR THE RULES AND REGULATIONS PROMULGATED UNDER THE 1934 ACT",
+        "NABLY REQUEST FOR THE PURPOSES CONTEMPLATED BY THE 1933 ACT THE 1933 ACT REGULATIONS THE 1934 ACT OR THE RULES AND REGULATIONS PROMULGATED UNDER THE 1934 ACT",
+        "ONTEMPLATED BY THE 1933 ACT THE 1933 ACT REGULATIONS THE 1934 ACT OR THE RULES AND REGULATIONS PROMULGATED UNDER THE 1934 ACT"
+       ]
+      }
+     ]
+    }
+   },
+   "verdict": "measured",
+   "decision_point": false,
+   "grade": "FULL"
+  },
+  {
+   "id": "SC-07",
+   "section": "labels",
+   "kind": "fact",
+   "statement": "[labels] csv_flag_audit: {\"rows\": 510, \"answer_columns\": 40, \"non_empty_cells\": 19599, \"yes_no_cells\": 16830, \"yes_no_share\": 0.8587, \"distinct_other_values\": 1605, \"other_examples\": {\"New York\": 97, \"perpetual\": 69, \"successive 1 year\": 60, \"California\": 55, \"Delaware\": 40, \"Texas\": 28, \"SPONSORSHIP AGREEMENT\": 20, \"Florid",
+   "source": "scanner",
+   "verify": {
+    "scanner": "csv_flag_audit",
+    "params": {}
+   },
+   "expected": null,
+   "measured": {
+    "value": 0.8587,
+    "detail": {
+     "rows": 510,
+     "answer_columns": 40,
+     "non_empty_cells": 19599,
+     "yes_no_cells": 16830,
+     "yes_no_share": 0.8587,
+     "distinct_other_values": 1605,
+     "other_examples": {
+      "New York": 97,
+      "perpetual": 69,
+      "successive 1 year": 60,
+      "California": 55,
+      "Delaware": 40,
+      "Texas": 28,
+      "SPONSORSHIP AGREEMENT": 20,
+      "Florida": 17
+     },
+     "columns_with_non_flag_values": 7,
+     "mixed_column_examples": {
+      "Document Name-Answer": {
+       "non_empty": 510,
+       "yes_no": 0
+      },
+      "Parties-Answer": {
+       "non_empty": 509,
+       "yes_no": 0
+      },
+      "Agreement Date-Answer": {
+       "non_empty": 465,
+       "yes_no": 0
+      },
+      "Expiration Date-Answer": {
+       "non_empty": 329,
+       "yes_no": 0
+      },
+      "Renewal Term-Answer": {
+       "non_empty": 163,
+       "yes_no": 0
+      },
+      "Governing Law-Answer": {
+       "non_empty": 434,
+       "yes_no": 0
+      }
+     }
+    }
+   },
+   "verdict": "measured",
+   "decision_point": false,
+   "grade": "FULL"
+  },
+  {
+   "id": "SC-08",
+   "section": "identity",
+   "kind": "fact",
+   "statement": "[identity] party_recurrence: {\"distinct_parties\": 1895, \"parties_in_ge2_docs\": 156, \"top_recurring\": {\"DISTRIBUTOR\": 25, \"LICENSEE\": 18, \"LICENSOR\": 14, \"CUSTOMER\": 13, \"SPONSOR\": 12, \"CONSULTANT\": 11, \"CLIENT\": 11, \"PARTY A\": 11, \"PARTY B\": 11, \"AGENT\": 9}, \"spot_check\": {}}",
+   "source": "scanner",
+   "verify": {
+    "scanner": "party_recurrence",
+    "params": {}
+   },
+   "expected": null,
+   "measured": {
+    "value": 156,
+    "detail": {
+     "distinct_parties": 1895,
+     "parties_in_ge2_docs": 156,
+     "top_recurring": {
+      "DISTRIBUTOR": 25,
+      "LICENSEE": 18,
+      "LICENSOR": 14,
+      "CUSTOMER": 13,
+      "SPONSOR": 12,
+      "CONSULTANT": 11,
+      "CLIENT": 11,
+      "PARTY A": 11,
+      "PARTY B": 11,
+      "AGENT": 9
+     },
+     "spot_check": {}
+    }
+   },
+   "verdict": "measured",
+   "decision_point": false,
+   "grade": "FULL"
+  },
+  {
+   "id": "SC-09",
+   "section": "values",
+   "kind": "fact",
+   "statement": "[values] date_parse_rate: {\"category\": \"Expiration Date\", \"spans\": 467, \"parseable\": 102, \"parse_rate\": 0.2184, \"unparseable_examples\": [\"The term of this  Agreement  shall be ten (10)                            years (the \\\"Term\\\")  which shall  commence on the date                            upon which the Company  deliver",
+   "source": "scanner",
+   "verify": {
+    "scanner": "date_parse_rate",
+    "params": {
+     "category": "Expiration Date"
+    }
+   },
+   "expected": null,
+   "measured": {
+    "value": 0.2184,
+    "detail": {
+     "category": "Expiration Date",
+     "spans": 467,
+     "parseable": 102,
+     "parse_rate": 0.2184,
+     "unparseable_examples": [
+      "The term of this  Agreement  shall be ten (10)                            years (the \"Term\")  which shall  commence on the date                            upon which the Company  delivers to  Distributor  the                            last Sample, as defined  hereinafter.",
+      "This Agreement shall commence on the Effective Date and, unless earlier terminated as set out in this Agreement, shall continue  for the Term.",
+      "The Contract is valid for 5 years, beginning from and ended on .",
+      "This Agreement will commence on the Effective Date and will continue until termination as provided below.",
+      "This Amendment shall only become effective upon the VNBJ Closing with respect to Article 1.1 and the VNBZ Closing with respect to Article 1.2, and shall terminate without any force or effect in the event that the VNBJ SPA and the VNBZ SPA are terminated in accordance with the terms thereof."
+     ]
+    }
+   },
+   "verdict": "measured",
+   "decision_point": false,
+   "grade": "FULL"
+  },
+  {
+   "id": "SC-10",
+   "section": "families",
+   "kind": "fact",
+   "statement": "[families] amendment_titles: {\"docs_with_amendment_in_title\": 7, \"examples\": [\"ADMA BioManufacturing, LLC -  Amendment #3 to Manufacturing Agreement \", \"BIOAMBERINC_04_10_2013-EX-10.34-DEVELOPMENT AGREEMENT - First Amendment\", \"FEDERATEDGOVERNMENTINCOMESECURITIESINC_04_28_2020-EX-99.SERV AGREE-SERVICES AGREEMENT_AMENDMENT\", \"FE",
+   "source": "scanner",
+   "verify": {
+    "scanner": "amendment_titles",
+    "params": {}
+   },
+   "expected": null,
+   "measured": {
+    "value": 7,
+    "detail": {
+     "docs_with_amendment_in_title": 7,
+     "examples": [
+      "ADMA BioManufacturing, LLC -  Amendment #3 to Manufacturing Agreement ",
+      "BIOAMBERINC_04_10_2013-EX-10.34-DEVELOPMENT AGREEMENT - First Amendment",
+      "FEDERATEDGOVERNMENTINCOMESECURITIESINC_04_28_2020-EX-99.SERV AGREE-SERVICES AGREEMENT_AMENDMENT",
+      "FEDERATEDGOVERNMENTINCOMESECURITIESINC_04_28_2020-EX-99.SERV AGREE-SERVICES AGREEMENT_SECONDAMENDMENT",
+      "NEONSYSTEMSINC_03_01_1999-EX-10.5-DISTRIBUTOR AGREEMENT_Amendment"
+     ]
+    }
+   },
+   "verdict": "measured",
+   "decision_point": false,
+   "grade": "FULL"
+  },
+  {
+   "id": "SC-11",
+   "section": "labels",
+   "kind": "fact",
+   "statement": "[labels] annotation_titles: {\"n_gold_titles\": 510, \"n_unmatched_exact\": 1, \"unmatched_exact\": [\"LECLANCHE\\u0301 S.A. - JOINT DEVELOPMENT AND MARKETING AGREEMENT\"], \"n_unmatched_normalized\": 1, \"unmatched_normalized\": [\"LECLANCHE\\u0301 S.A. - JOINT DEVELOPMENT AND MARKETING AGREEMENT\"], \"n_files_without_gold_title\": 1, \"files_w",
+   "source": "scanner",
+   "verify": {
+    "scanner": "annotation_titles",
+    "params": {}
+   },
+   "expected": null,
+   "measured": {
+    "value": 1,
+    "detail": {
+     "n_gold_titles": 510,
+     "n_unmatched_exact": 1,
+     "unmatched_exact": [
+      "LECLANCHÉ S.A. - JOINT DEVELOPMENT AND MARKETING AGREEMENT"
+     ],
+     "n_unmatched_normalized": 1,
+     "unmatched_normalized": [
+      "LECLANCHÉ S.A. - JOINT DEVELOPMENT AND MARKETING AGREEMENT"
+     ],
+     "n_files_without_gold_title": 1,
+     "files_without_gold_title": [
+      "LECLANCH#U00c9 S.A. - JOINT DEVELOPMENT AND MARKETING AGREEMENT"
+     ]
+    }
+   },
+   "verdict": "measured",
+   "decision_point": false,
+   "grade": "FULL"
+  }
+ ],
+ "decision_points": [
+  "Audit the derived master_clauses.csv before trusting values because it is not a source-of-truth and may contain propagation errors from span gold.",
+  "Validate that all 510 gold annotation titles can be matched to files after normalization of whitespace, case, and exhibit numbering.",
+  "Role nouns such as Company, Consultant, Employer, Executive, Service Provider, Service Recipient, Party, Parties, Party A/B, and Affiliate are not identities and must be resolved to their defining named entities within each document.",
+  "Alias chains that define multiple labels for the same party (e.g., 'Application Provider' or 'e-centives') should be unified to a single canonical node per document.",
+  "Redactions and placeholders appear in multiple styles, including '[*****]', '[*]', '***', '[•]', and '[address removed]', and should be normalized to a single redaction token rather than extracted as values.",
+  "SEC-source boilerplate like 'Source: [COMPANY], [FILING], [DATE]' lines and repeated exhibit headers should be stripped before span alignment.",
+  "OCR artifacts and all-caps headings (e.g., 'TIHS' for 'THIS', random digit/letter noise) occur in certain PDFs and can confound literal matching unless case-folding and fuzzy tolerance are applied.",
+  "Some titles contain the word 'Amendment' and should be flagged for special handling of scope and supersession.",
+  "Section numbering varies between arabic levels (1., 1.1., 1.1.1) and lettered schedules/appendices, so hierarchical parsing must support mixed schemes.",
+  "Map CUAD 'Effective Date' to a single normalized date value extracted from definitions or the cover heading, tolerating ordinal and DMY/M DY/Y-M-D formats.",
+  "Map CUAD 'Parties' to named-entity extraction of legal names and jurisdictions from the preamble, with aliases bound to canonical per-document nodes.",
+  "Map CUAD 'Governing Law' to jurisdiction extraction from the governing law or dispute resolution section heading/body.",
+  "Map CUAD 'Term' to a duration relation capturing start trigger, end trigger, and renewal/auto-renewal conditions from the Term section.",
+  "Map CUAD 'Confidentiality' to a clause-presence boolean plus scope (parties, affiliates, data types) and carve-outs if spans are available.",
+  "Map CUAD 'IP Ownership' to a directional relation (assignor->assignee, background vs. foreground IP) extracted from IP sections and definitions.",
+  "Map CUAD 'Limitation of Liability' to a numeric/qualifier capture (cap amount, exclusions, 'consequential damages' carve-outs)."
+ ],
+ "spend": {
+  "draft_usd": 0.06485225,
+  "bounce_usd": 0.01098125,
+  "total_usd": 0.0758
+ },
+ "profile_hash": "sha256:f46cd0efb7b4b85c",
+ "setup_config": {
+  "family": "cuad",
+  "profile_hash": "sha256:f46cd0efb7b4b85c",
+  "triple_threshold": 0.25,
+  "review_band": [
+   0.25,
+   0.5
+  ],
+  "er_threshold": 0.4,
+  "embed_model": "openai/text-embedding-3-large",
+  "chunk_window_chars": 1000,
+  "chunk_min_chars": 100,
+  "route_baseline": "arm_c",
+  "er_auto_merge": "form_variants_only",
+  "er_alias_sources": "text_attested_only",
+  "batch_cost_cap_usd": 10.0,
+  "provider_sort": "throughput",
+  "corpus_scope": {
+   "family": "cuad",
+   "registry_namespace": "cuad",
+   "cross_corpus_links": "reviewed_edges_only"
+  },
+  "c1_whitelist": null,
+  "c1_whitelist_note": "per-corpus: derive from the relation census of the first batch (playbook Part B #6); setup does not invent it",
+  "redaction_markers_observed": [
+   "\\[\\*\\*\\*\\]",
+   "\\[\\s\\*\\s\\*\\s\\*\\s\\]"
+  ],
+  "label_categories": [
+   "Affiliate License-Licensee",
+   "Affiliate License-Licensor",
+   "Agreement Date",
+   "Anti-Assignment",
+   "Audit Rights",
+   "Cap On Liability",
+   "Change Of Control",
+   "Competitive Restriction Exception",
+   "Covenant Not To Sue",
+   "Document Name",
+   "Effective Date",
+   "Exclusivity",
+   "Expiration Date",
+   "Governing Law",
+   "Insurance",
+   "Ip Ownership Assignment",
+   "Irrevocable Or Perpetual License",
+   "Joint Ip Ownership",
+   "License Grant",
+   "Liquidated Damages",
+   "Minimum Commitment",
+   "Most Favored Nation",
+   "No-Solicit Of Customers",
+   "No-Solicit Of Employees",
+   "Non-Compete",
+   "Non-Disparagement",
+   "Non-Transferable License",
+   "Notice Period To Terminate Renewal",
+   "Parties",
+   "Post-Termination Services",
+   "Price Restrictions",
+   "Renewal Term",
+   "Revenue/Profit Sharing",
+   "Rofr/Rofo/Rofn",
+   "Source Code Escrow",
+   "Termination For Convenience",
+   "Third Party Beneficiary",
+   "Uncapped Liability",
+   "Unlimited/All-You-Can-Eat-License",
+   "Volume Restriction",
+   "Warranty Duration"
+  ],
+  "role_word_rules_from_profile": [
+   "Role nouns such as Company, Consultant, Employer, Executive, Service Provider, Service Recipient, Party, Parties, Party A/B, and Affiliate are not identities and must be resolved to their defining named entities within each document."
+  ]
+ }
+}

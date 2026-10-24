@@ -1,0 +1,101 @@
+{
+ "table_id": "docred-tn",
+ "version": 1,
+ "status": "FROZEN before the stage-4 pilot (precondition P-3); any change re-opens its measurement as a new registered evaluation (docs/REDOCRED_MAIN_RUN_DESIGN.md §3.1)",
+ "design": "docs/REDOCRED_MAIN_RUN_DESIGN.md §3.1 (G-AUD-2 consequence)",
+ "source_payload": {
+  "pack_id": "docred",
+  "pack_version": "0.1.0",
+  "payload_path": "profiles/redocred/setup_config_v2.json",
+  "payload_sha256": "d65d74e9abdc0e83a3e03302b31bf472a66e10b79cddb6d9ceeb18a445b22022",
+  "derivation": "TN-1 and TN-2 are transcribed mechanically from the payload's direction / inverse_of declarations; the scorer's proof script asserts the table equals the payload's declarations"
+ },
+ "matching_normalization": "same document; endpoint strings compared casefolded with whitespace collapsed (the audit's rule); direction as annotated except where TN-1/TN-2 canonicalize",
+ "tn1_symmetric_types": [
+  "sibling",
+  "sister city",
+  "spouse"
+ ],
+ "tn1_rule": "for these declared-symmetric types, endpoint order is ignored in matching (the schema's own semantics, applied deliberately)",
+ "tn2_inverse_pairs": [
+  {
+   "primary": "capital",
+   "inverse": "capital of"
+  },
+  {
+   "primary": "contains administrative territorial entity",
+   "inverse": "located in the administrative territorial entity"
+  },
+  {
+   "primary": "followed by",
+   "inverse": "follows"
+  },
+  {
+   "primary": "has part",
+   "inverse": "part of"
+  },
+  {
+   "primary": "parent organization",
+   "inverse": "subsidiary"
+  },
+  {
+   "primary": "participant",
+   "inverse": "participant of"
+  },
+  {
+   "primary": "replaced by",
+   "inverse": "replaces"
+  }
+ ],
+ "tn2_primary_rule": "primary = the alphabetically first label of the pair, frozen here as the pair's canonical representative; a triple stated under the inverse label is canonicalized to (object, primary, subject) before matching, on BOTH the extracted and the gold side",
+ "never_map": [
+  {
+   "labels": [
+    "capital",
+    "headquarters location"
+   ],
+   "rule": "distinct properties that merely share an endpoint pattern — never equated"
+  },
+  {
+   "labels": [
+    "country",
+    "country of citizenship",
+    "country of origin"
+   ],
+   "rule": "distinct properties — never equated (basin country likewise stays distinct)"
+  },
+  {
+   "labels": [
+    "member of",
+    "member of political party",
+    "member of sports team"
+   ],
+   "rule": "the member-of family: the generic and its specializations are never equated"
+  },
+  {
+   "labels": [
+    "instance of",
+    "subclass of"
+   ],
+   "rule": "never equated"
+  },
+  {
+   "labels": [
+    "located in the administrative territorial entity",
+    "location",
+    "narrative location",
+    "located on terrain feature"
+   ],
+   "rule": "the located/location family: never equated"
+  },
+  {
+   "labels": [],
+   "rule": "direction on any directed type outside TN-2's joint label+direction canonical form is never normalized away"
+  },
+  {
+   "labels": [],
+   "rule": "a demonym adjective endpoint never normalizes into a place"
+  }
+ ],
+ "effect_reporting": "raw and TN figures are both printed wherever either appears; the TN delta is a labeled line, never folded into the corrected-precision figure"
+}

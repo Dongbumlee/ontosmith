@@ -1,0 +1,33 @@
+{
+ "pack": "biored",
+ "kind": "fitted_qualifiers",
+ "note": "PK-03 (2026-10-19): the A4 qualifier-extension rule's fitted qualifier set, moved out of core code (harness/canonicalization.py) into pack content. The set was fitted on BioRED text for the round-4 decomposition instrument; it is experiment data, not a core constant. harness/canonicalization.py loads it from here and accepts an injected set; no production module imports it.",
+ "qualifiers": [
+  "antibody",
+  "antigen",
+  "channel",
+  "channels",
+  "deficiency",
+  "disease",
+  "dna",
+  "enzyme",
+  "expression",
+  "factor",
+  "gene",
+  "genes",
+  "kinase",
+  "mrna",
+  "mutation",
+  "polymorphism",
+  "protein",
+  "proteins",
+  "receptor",
+  "receptors",
+  "rna",
+  "snp",
+  "symporter",
+  "syndrome",
+  "transporter",
+  "variant"
+ ]
+}

@@ -1,0 +1,57 @@
+{
+  "artefacts": [
+    {
+      "kind": "role_words",
+      "note": "The role-word guard vocabulary: the normalized role nouns the payload's role_word_rules_from_profile declaration prose names, carried as pack DATA — the set was previously a literal in core proposer code. Consumed through pipeline.profile_config.pack_role_words and frozen into resolved configs under the role_words key; guard behavior is byte-identical to the core-literal era (the golden tests). Not a prompt surface.",
+      "path": "packs/legal-contract/role_words.json",
+      "sha256": "349c03240b7a17da6b05fb570dddb99f21e63a675f88ae7403d7308c5e16eb4b",
+      "status": "in_force"
+    }
+  ],
+  "assembled": "2026-10-21",
+  "conformance_record": "conformance.json",
+  "contents_index": {
+    "corpus_scope": "registry_namespace cuad; cross-corpus links reviewed_edges_only (payload corpus_scope). CUAD contracts are per-agreement worlds: defined terms and role nouns bind inside one document (profile rules DR-08/DR-09).",
+    "label_categories": "The 41 CUAD clause categories carried as slot labels (payload label_categories) \u2014 this family's extraction inventory: Parties, the date categories (Agreement Date / Effective Date / Expiration Date), Governing Law, license grants and their restrictions, liability caps (Cap On Liability / Uncapped Liability), termination (Termination For Convenience, Notice Period To Terminate Renewal), Non-Compete / No-Solicit, and the rest of the CUAD v1 label set. Slot channel, not a relation inventory: the family extracts a clause value per category; category-to-task mappings are recorded as profile decision points DR-24..DR-30.",
+    "metadata_declarations": "Per-run parameter declarations mirrored in the payload (triple_threshold 0.25, review_band 0.25-0.50, er_threshold 0.40, embed_model, chunk_window_chars 1000 / chunk_min_chars 100, route_baseline arm_c, er_auto_merge form_variants_only, er_alias_sources text_attested_only, batch_cost_cap_usd 10.0, provider_sort throughput). Declarations, not live values \u2014 BatchConfig governs the run (docs/PACK_DESIGN.md \u00a73).",
+    "redaction_markers": "Two observed redaction marker patterns declared in the payload (redaction_markers_observed, measured SC-03/SC-04) so redacted spans normalize instead of extracting as values; the wider style list is convention note CN-2.",
+    "role_word_rules": "Role nouns (Company, Consultant, Employer, Executive, Service Provider, Service Recipient, Party, Parties, Party A/B, Affiliate) are not identities: they resolve to their defining named entities within each document (payload role_word_rules_from_profile; profile rule DR-08). Alias chains defining several labels for one party unify to a single canonical node per document (DR-09)."
+  },
+  "convention_notes": [
+    {
+      "id": "CN-1",
+      "note": "The derived master_clauses.csv is not a source of truth and may carry propagation errors from the span gold \u2014 audit before trusting its values (profile decision point, DR-04: 85.87% of non-empty cells are yes/no flags; 7 answer columns carry real values).",
+      "status": "observed_not_in_force"
+    },
+    {
+      "id": "CN-2",
+      "note": "Redactions and placeholders appear in multiple styles ('[*****]', '[*]', '***', '[\u2022]', '[address removed]') and normalize to a single redaction token rather than extracting as values (profile trap DR-16; the two regex-observed styles are declared in the payload).",
+      "status": "observed_not_in_force"
+    },
+    {
+      "id": "CN-3",
+      "note": "SEC-source boilerplate ('Source: [COMPANY], [FILING], [DATE]' lines) and repeated exhibit headers are stripped before span alignment (profile trap DR-17; exhibit headers appear in 396 of 510 documents, DR-06).",
+      "status": "observed_not_in_force"
+    },
+    {
+      "id": "CN-4",
+      "note": "One gold title never matches its file even after whitespace/case normalization \u2014 an encoding artifact ('LECLANCH\u00c9 S.A.' in gold vs 'LECLANCH#U00c9 S.A.' as the filename); title-to-file joins on this corpus carry that known defect (profile DR-05 / SC-11).",
+      "status": "observed_not_in_force"
+    }
+  ],
+  "design": "docs/PACK_DESIGN.md",
+  "display_name": "Legal Contract",
+  "pack_format": 1,
+  "pack_id": "legal-contract",
+  "pack_version": "0.2.0",
+  "payload": {
+    "kind": "setup_config",
+    "note": "In force. The family's production setup_config: profile approved 2026-10-16 (all 16 decision points approved as recommended; the approval record itself stays in the lab as governance). The pinned bytes are the post-fix payload \u2014 the family's domain framing rides in the payload as data (framing_note, proposer_framing, slot_framing, slot_rules), reproducing the pre-fix CUAD prompts byte-for-byte (the domain-boundary test; conformance CC-4). The profile document's inline draft setup_config is NOT this payload: the standalone file is what the channel consumes, and it is the configuration the promoted p3b-v6 lineage ran under (profile_hash sha256:f46cd0efb7b4b85c, declared inside the payload).",
+    "path": "packs/legal-contract/profile/setup_config.json",
+    "profile_version": 1,
+    "sha256": "906b2d003aca674ed2d95aa6b27df534e825901833e8d20499eae7f9742aee11"
+  },
+  "profile_family": "cuad",
+  "status": "in_force",
+  "validated_on": "CUAD"
+}
