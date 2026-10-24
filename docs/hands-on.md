@@ -52,11 +52,19 @@ appears.
   name if it is not serving; the keyless steps never
   touch it.
 
-Install from a clone of this repository (at launch this
-becomes `pip install ontosmith` on PyPI):
+Install the package from PyPI:
 
 ```console
-$ pip install .
+$ pip install ontosmith
+```
+
+The tracks run against files in this repository —
+the example corpora and demo tooling — so clone it
+as well and work from the clone's root:
+
+```console
+$ git clone https://github.com/Dongbumlee/ontosmith.git
+$ cd ontosmith
 ```
 
 The extraction extra — GLiNER and spaCy — is required
@@ -73,7 +81,7 @@ by **one candidate path only**:
   needed; installing it changes nothing on this path.
 
 ```console
-$ pip install ".[nlp]"        # pipeline candidate path only
+$ pip install "ontosmith[nlp]"   # pipeline candidate path only
 $ python -m spacy download en_core_web_sm
 ```
 

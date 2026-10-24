@@ -149,7 +149,7 @@ seat, the judge included
 ([Connections](docs/connections.md) explains the route
 and how to bind your own provider instead);
 install the NLP extra and its model for the full local
-pipeline (`pip install ".[nlp]"`, then
+pipeline (`pip install "ontosmith[nlp]"`, then
 `python -m spacy download en_core_web_sm`). The extra
 is a heavy install — it pulls the CUDA torch stack,
 several gigabytes — and it serves the default
@@ -455,13 +455,12 @@ whose search runs the lexical and graph arms only
 
 ## Status
 
-Pre-release assembly (0.1.0). The pipeline, profiler,
-ontology builder, inspect viewer, verification cores,
-packs, and the serving surface (search command +
-sample API) in this tree are measured, tested
-components, as is the minimal demo app served with
-the API. What remains is the public launch itself:
-PyPI publication lands with it.
+Release 0.1.0, published on PyPI. The pipeline,
+profiler, ontology builder, inspect viewer,
+verification cores, packs, and the serving surface
+(search command + sample API) in this tree are
+measured, tested components, as is the minimal demo
+app served with the API.
 
 ## License
 
