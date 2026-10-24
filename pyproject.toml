@@ -1,0 +1,168 @@
+# OntoSmith — packaging metadata (R1: distributable).
+#
+# Layout note: the product ships two top-level packages
+# (pipeline, harness) plus the pack data tree. The packs are
+# data, not code: they are installed as data files under
+# share/ontosmith/packs/ so an installed layout can resolve
+# them by path (sysconfig 'data' path + share/ontosmith/packs),
+# and the pack loader (pipeline.profile_config) takes the
+# pack directory by path, as it does in the source tree.
+# The file lists below are explicit on purpose: a pack file
+# that is not listed here does not ship.
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "ontosmith"
+version = "0.1.0"
+description = "Ontology-driven knowledge-graph builder: design the ontology, build the graph under it, and serve it — search, API, and app — from one pipeline."
+readme = "README.md"
+requires-python = ">=3.11"
+license = "MIT"
+license-files = ["LICENSE"]
+authors = [
+    { name = "Dongbum Lee" },
+]
+keywords = [
+    "knowledge-graph",
+    "ontology",
+    "graphrag",
+    "information-extraction",
+    "entity-resolution",
+    "llm",
+    "provenance",
+    "benchmark",
+    "nlp",
+]
+# Note: no "License :: OSI Approved :: MIT License" classifier
+# — with the SPDX license expression above, setuptools
+# (PEP 639) rejects license classifiers outright; PyPI
+# renders the license from the expression.
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Science/Research",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Topic :: Text Processing :: Linguistic",
+]
+# Core dependencies: what the pipeline/harness modules import
+# unconditionally (numpy in the gate/eval math, requests in
+# the model transports). Everything heavier is an extra tied
+# to the surface that imports it.
+dependencies = [
+    "numpy",
+    "requests",
+]
+
+[project.urls]
+Homepage = "https://github.com/Dongbumlee/ontosmith"
+Documentation = "https://github.com/Dongbumlee/ontosmith#readme"
+Repository = "https://github.com/Dongbumlee/ontosmith"
+Issues = "https://github.com/Dongbumlee/ontosmith/issues"
+Changelog = "https://github.com/Dongbumlee/ontosmith/blob/main/CHANGELOG.md"
+
+[project.optional-dependencies]
+# Graph write / Neo4j-backed store surface
+# (pipeline.graph_write, neo4j_store, retrieval paths).
+neo4j = ["neo4j"]
+# NER / structural extraction surface: GLiNER (batch
+# NER stage) + spaCy (structural pass) — lazy imports
+# in batch_run / rer.
+nlp = ["spacy", "gliner"]
+# Graph image / community-detection harness surface.
+viz = ["matplotlib", "networkx", "python-louvain"]
+
+[project.scripts]
+ontosmith = "pipeline.__main__:main"
+
+[tool.setuptools]
+packages = ["pipeline", "harness", "harness.verification", "api"]
+
+[tool.setuptools.package-data]
+# The bindings template ships INSIDE the package (FE3-1):
+# `ontosmith configure --emit-template` resolves it via
+# importlib.resources, so the door works from a wheel
+# install, not only from a source tree. docs/
+# bindings-template.env is the documented copy; a test
+# pins the two byte-identical.
+pipeline = ["bindings-template.env"]
+
+[tool.setuptools.data-files]
+# The demo app (R18): static files only, served by
+# `ontosmith serve` at / — resolved by the same
+# candidate discipline as the example build below
+# (api.server.app_candidates).
+"share/ontosmith/app" = [
+    "app/app.css",
+    "app/app.js",
+    "app/favicon.svg",
+    "app/index.html",
+    "app/logo-mark.svg",
+]
+# The shipped example build: the sample serving path's
+# out-of-the-box graph (R16/R17) — `ontosmith search` /
+# `ontosmith serve` with no source argument serve exactly
+# this, from a checkout or an installed wheel alike.
+"share/ontosmith/examples" = [
+    "examples/README.md",
+    "examples/triples.jsonl",
+]
+"share/ontosmith/examples/corpus" = [
+    "examples/corpus/alder-finch-history.txt",
+    "examples/corpus/alder-finch-people.txt",
+    "examples/corpus/alder-finch-products.txt",
+    "examples/corpus/alder-finch-workshops.txt",
+]
+"share/ontosmith/packs" = [
+    "packs/conformance.schema.json",
+    "packs/fetch_btt.py",
+    "packs/fetch_gutenberg.py",
+    "packs/pack.schema.json",
+]
+"share/ontosmith/packs/bio-medical" = [
+    "packs/bio-medical/conformance.json",
+    "packs/bio-medical/fitted_qualifiers.json",
+    "packs/bio-medical/pack.json",
+]
+"share/ontosmith/packs/bio-medical/profile" = [
+    "packs/bio-medical/profile/CENSUS.md",
+    "packs/bio-medical/profile/profile.json",
+    "packs/bio-medical/profile/profile_v2.json",
+    "packs/bio-medical/profile/setup_config.json",
+    "packs/bio-medical/profile/setup_config_v3.json",
+    "packs/bio-medical/profile/setup_config_v4.json",
+]
+"share/ontosmith/packs/core" = [
+    "packs/core/conformance.json",
+    "packs/core/pack.json",
+]
+"share/ontosmith/packs/core/profile" = [
+    "packs/core/profile/setup_config.json",
+]
+"share/ontosmith/packs/open-domain" = [
+    "packs/open-domain/conformance.json",
+    "packs/open-domain/direction_declarations.json",
+    "packs/open-domain/pack.json",
+    "packs/open-domain/tn_table.json",
+]
+"share/ontosmith/packs/open-domain/profile" = [
+    "packs/open-domain/profile/profile.json",
+    "packs/open-domain/profile/setup_config.json",
+    "packs/open-domain/profile/setup_config_v2.json",
+]
+"share/ontosmith/packs/legal-contract" = [
+    "packs/legal-contract/conformance.json",
+    "packs/legal-contract/pack.json",
+    "packs/legal-contract/role_words.json",
+]
+"share/ontosmith/packs/legal-contract/profile" = [
+    "packs/legal-contract/profile/profile.json",
+    "packs/legal-contract/profile/profile.md",
+    "packs/legal-contract/profile/setup_config.json",
+]

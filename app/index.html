@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>OntoSmith — demo app</title>
+<link rel="icon" href="/app/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/app/app.css">
+</head>
+<body>
+<header class="topbar">
+  <div class="brand">
+    <img class="brand-logo" src="/app/logo-mark.svg" alt="">
+    <span class="brand-mark">OntoSmith</span>
+    <span class="brand-sub">demo app — test-drive the built graph</span>
+  </div>
+  <div id="store-status" class="store-status">connecting…</div>
+</header>
+
+<main class="layout">
+  <section class="column main-column">
+    <form id="search-form" class="search-box">
+      <label for="q">Ask the graph</label>
+      <div class="search-row">
+        <input id="q" name="q" type="search" autocomplete="off"
+               value="Who founded Alder &amp; Finch?">
+        <button type="submit">Search</button>
+      </div>
+      <p class="hint">Hybrid search over the served build: ranked
+        documents, linked entities, and evidence-carrying triples.
+        No generative answers — what you see is what the graph
+        holds, each fact one click from its evidence.</p>
+    </form>
+    <div id="search-meta" class="search-meta" hidden></div>
+    <div id="results"></div>
+  </section>
+
+  <aside class="column side-column">
+    <section class="panel">
+      <h2>Graph overview</h2>
+      <div id="overview-body">
+        <p class="muted">Loading the store description…</p>
+      </div>
+      <div id="explore-block"></div>
+    </section>
+    <section class="panel">
+      <h2>Triple inspector</h2>
+      <div id="inspector-body">
+        <p class="muted">Select a triple to read its evidence
+          span and provenance.</p>
+      </div>
+    </section>
+    <section class="panel">
+      <h2>Entity report</h2>
+      <div id="entity-body">
+        <p class="muted">Select an entity to see every fact it
+          takes part in — and to walk its neighborhood.</p>
+      </div>
+    </section>
+  </aside>
+</main>
+
+<footer class="foot">
+  <p>Served by the OntoSmith sample API (<code>ontosmith
+    serve</code>) — a read-only demo surface over
+    <code>/search</code>, <code>/entity</code>,
+    <code>/neighborhood</code>, <code>/triple</code> and
+    <code>/health</code>. See <code>docs/serving.md</code>.</p>
+</footer>
+<script src="/app/app.js"></script>
+</body>
+</html>

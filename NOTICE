@@ -1,0 +1,31 @@
+NOTICE — third-party terms and attributions
+
+OntoSmith is licensed under the MIT License (see LICENSE;
+Copyright (c) 2026 Dongbum Lee). The datasets and texts that
+the packs and benchmarks reference remain under their own
+terms. OntoSmith redistributes dataset text only as stated
+below; everything else is fetched from its source at run
+time and is not bundled in this repository.
+
+- Re-DocRED — MIT License. Its document text derives from
+  Wikipedia and remains under CC BY-SA. OntoSmith ships no
+  Re-DocRED corpus; the sole exception is the adjudication
+  appendix (benchmarks/appendix/): the sampled items'
+  contexts — the sampled documents' Wikipedia-derived
+  abstracts — shipped as measurement evidence for the
+  quality record and labeled machine judgments.
+- CUAD — CC BY 4.0 (attribution). Fetch-only: the corpus
+  is downloaded from its source and is not redistributed
+  here.
+- BioRED — distributed by its source (NCBI) under its own
+  terms. OntoSmith ships no BioRED text.
+- Project Gutenberg — public domain. packs/fetch_gutenberg.py
+  downloads texts from gutenberg.org at run time; no
+  Gutenberg text is bundled.
+- Behind the Tech with Kevin Scott transcripts —
+  packs/fetch_btt.py fetches them at run time from the
+  public podscripts.co mirror; no transcript text is
+  bundled.
+- Example and demo corpora (examples/) — self-authored for
+  this project (fictional studios and workshops); they
+  contain no third-party text.

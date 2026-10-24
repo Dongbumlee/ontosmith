@@ -1,0 +1,59 @@
+# OntoSmith lint standard (ruff). CI gates on this file
+# (.github/workflows/ci.yml runs the same `ruff check .`).
+#
+# Rule set: pyflakes + pycodestyle errors, import order,
+# pyupgrade, bugbear, and the RUF family. Line length 100.
+# Per-file ignores below are REVIEWED DEFERRALS, each with its
+# reason; they are lint debt, tracked in the project's internal log — new code
+# gets no deferrals.
+target-version = "py311"
+line-length = 100
+
+[lint]
+select = ["E", "F", "I", "UP", "B", "RUF"]
+ignore = [
+    # Docstrings deliberately use typographic punctuation
+    # (en dashes, section signs) in engineering prose.
+    "RUF002",
+]
+
+[lint.per-file-ignores]
+# batch_run: B023 — the _add closure is defined and called
+# synchronously inside one document's iteration (reviewed
+# 2026-10-21); it never escapes the iteration. E741 — legacy
+# one-letter loop names in the measured engine; renaming is
+# churn against frozen measurement code. B905 — the WRITE
+# stage's zip(triples, tier1) truncation behavior is today's
+# semantics; strictness is a Phase B design question.
+"pipeline/batch_run.py" = ["B023", "E741", "B905"]
+# batch: UP042 — BatchStatus(str, Enum) is the persisted batch
+# status representation; StrEnum changes str() semantics.
+"pipeline/batch.py" = ["UP042"]
+# roster_pass: E501 — proposer prompt literals are byte-pinned
+# behavior (prompt text is measured configuration).
+"pipeline/roster_pass.py" = ["E501"]
+# query_stack: measured retrieval code, productization is
+# Phase G1 — zip strictness, long literal lines, legacy names
+# are reviewed there, not in the tidying pass.
+"pipeline/query_stack.py" = ["B905", "E741", "E501", "RUF059", "B007"]
+"pipeline/review.py" = ["E741"]
+"pipeline/retrieval_eval.py" = ["E501"]
+"pipeline/graph_store.py" = ["B905"]
+# registry: B027 — the base registry's record_er_decision is
+# intentionally an empty convention method; decorating it
+# @abstractmethod changes instantiation semantics (deferred
+# design call, recorded in the project's internal log).
+"pipeline/registry.py" = ["B027"]
+# harness eval scripts bootstrap sys.path before importing
+# project modules by design (standalone lab tools); their
+# remaining style findings are itemized lint debt (internal log).
+"harness/rag_eval_hybrid_search.py" = ["E402", "I001", "E501", "E702", "E741", "B007"]
+"harness/rag_eval.py" = ["E402", "E501", "E702", "E741", "B007"]
+"harness/rag_eval_embedder.py" = ["B007"]
+"harness/make_graph_image.py" = ["E402"]
+"packs/fetch_btt.py" = ["E741"]
+# run_e6: the E-6 cross-family measurement runner, archived
+# verbatim as executed (2026-10-23; appendix README records
+# its sha256). Renaming its legacy loop names would falsify
+# the run record; the deferral covers the archive copy only.
+"benchmarks/appendix/judgments_e6/run_e6.py" = ["E741", "B007"]
