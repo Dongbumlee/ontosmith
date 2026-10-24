@@ -1,5 +1,5 @@
-"""Ontology builder (pipeline/ontology_builder.py; plan §7 R6,
-issue #73): the draft -> validate -> approve -> emit loop.
+"""Ontology builder (pipeline/ontology_builder.py): the
+draft -> validate -> approve -> emit loop.
 
 Covered: deterministic + tier-drafted schema production;
 fail-closed validation with named findings (missing definitions
@@ -121,7 +121,7 @@ class TestDrafting(unittest.TestCase):
         self.assertIn("BAD_ENDPOINT_SIGNATURE", codes)
 
     def test_brief_object_entries_refuse_loudly(self):
-        # E-F3 (Phase E clean room): a brief whose type
+        # : a brief whose type
         # fields carry objects instead of name strings must
         # be refused by name — not str()-coerced into a
         # repr-shaped type name the validator then reports
@@ -388,7 +388,7 @@ class TestBioRedRoundTrip(unittest.TestCase):
 class TestCli(unittest.TestCase):
 
     def test_llm_draft_without_bound_model_refuses(self):
-        # Run 26: the drafting seat ships unbound. `draft
+        # The drafting seat ships unbound. `draft
         # --llm` with no --model and no ONTOSMITH_DRAFTING_
         # MODEL refuses with the named error (exit 2)
         # before any request — and writes no draft.

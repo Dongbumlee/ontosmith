@@ -1,10 +1,12 @@
-"""De-lab tests: no lab identifiers in the tree, secrets only
-via environment names, product identifiers in place.
+"""Tree hygiene tests: no internal identifiers in the tree,
+secrets only via environment names, product identifiers in
+place.
 
-Covers the run-2 de-lab edits: neo4j_store._password (env-only),
-export_graph (imports without any lab file; env-derived endpoint
-and auth), turtle_export (product base IRI + pure helpers),
-promotion (ledger repo named by environment, never baked in).
+Covers the hygiene edits: neo4j_store._password (env-only),
+export_graph (imports without any internal file; env-derived
+endpoint and auth), turtle_export (product base IRI + pure
+helpers), promotion (ledger repo named by environment, never
+baked in).
 """
 import base64
 import json

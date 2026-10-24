@@ -1,6 +1,6 @@
 """SqliteEntityRegistry — the registry as a durable source of truth.
 
-PRODUCTION_DESIGN.md §4 (E3) / GAP_REGISTER G-13: the registry is the
+The registry is the
 system of record for entities, aliases, and ER decisions, and the
 Neo4j graph is a rebuildable projection of it. Until now the only
 registry implementation lived *inside* Neo4j (`Neo4jEntityRegistry`),
@@ -8,7 +8,7 @@ so dropping the projection would destroy the source of truth.
 
 Backend choice — SQLite (one file, WAL mode): it is the store the
 codebase already operates for exactly this shape of data (the stage
-queue, pilot/queue.py — transactional claims, crash-safe, stdlib
+queue, pipeline/queue.py — transactional claims, crash-safe, stdlib
 only), it gives the registry real transactions and a uniqueness
 PRIMARY KEY (which is what makes minted-ID collision checks, G-12,
 enforceable rather than advisory), and it keeps the deployable
@@ -17,7 +17,7 @@ EntityRegistry interface, so the backend can be swapped without
 touching the batch pipeline. Files live in the workspace
 (default `<repo>/data/registry.db`), never inside Neo4j.
 
-Identity (G-12): create() mints `ent:<uuid4hex>` IDs, collision-checked
+Identity: create() mints `ent:<uuid4hex>` IDs, collision-checked
 against the PRIMARY KEY — IDs are never derived from names, so two
 entities whose names slugify identically stay distinct. Candidate
 lookup runs over a normalized-name index (index_normalize: case /
@@ -25,7 +25,7 @@ diacritic folding, honorific stripping) plus per-token rows, so
 form variants surface as candidates. The index proposes; the ER gate
 (or an exact-name shortcut) decides — the index never merges.
 
-Namespaces (G-14): every entity carries a corpus. find_candidates /
+Namespaces: every entity carries a corpus. find_candidates /
 resolve with a corpus argument return only that corpus unless the
 caller explicitly passes cross_corpus=True.
 """
@@ -103,7 +103,7 @@ class SqliteEntityRegistry(EntityRegistry):
         self._con.execute("PRAGMA journal_mode=WAL")
         self._con.execute("PRAGMA synchronous=NORMAL")
         self._con.executescript(_SCHEMA)
-        # er_decisions.outcome (G-10 review band): rows are 'merged'
+        # er_decisions.outcome: rows are 'merged'
         # (an actual merge) or 'review' (pair recorded, NOT merged).
         # Pre-existing DBs predate the column — add it guarded.
         cols = {r[1] for r in self._con.execute(
@@ -112,7 +112,7 @@ class SqliteEntityRegistry(EntityRegistry):
             self._con.execute(
                 "ALTER TABLE er_decisions ADD COLUMN outcome TEXT "
                 "NOT NULL DEFAULT 'merged'")
-        # er_decisions.reason (EG-R2-2): names the deterministic
+        # er_decisions.reason : names the deterministic
         # rule behind a decision when one made the call (a type-pair
         # merge prohibition). Pre-existing DBs predate the column —
         # add it guarded, exactly like outcome above.
@@ -197,7 +197,7 @@ class SqliteEntityRegistry(EntityRegistry):
 
     def _decision_exists(self, batch_id: str, merged_name: str,
                          surviving_id: str, outcome: str) -> bool:
-        """IA-05 (#43): True iff this (pair, batch, outcome)
+        """True iff this (pair, batch, outcome)
         decision is already recorded. This is the idempotency key
         that keeps a WRITE-stage resume from appending duplicate
         er_decisions rows for pairs already decided in that batch
@@ -222,9 +222,9 @@ class SqliteEntityRegistry(EntityRegistry):
         was considered and deliberately NOT merged (G-10 review
         band), with the gate's p_same/model when a gate was
         consulted and `reason` when a deterministic rule (e.g. an
-        EG-R2-2 type-pair merge prohibition) made the call.
+        type-pair merge prohibition) made the call.
         Idempotent per (batch_id, merged_name, surviving_id,
-        outcome) — IA-05 (#43): a repeat call for a pair already
+        outcome): a repeat call for a pair already
         decided in this batch records nothing."""
         with self._lock:
             if self._decision_exists(batch_id, merged_name,
@@ -269,7 +269,7 @@ class SqliteEntityRegistry(EntityRegistry):
                 "UPDATE entities SET name = ?, aliases = ? "
                 "WHERE entity_id = ?",
                 (best, json.dumps(aliases), existing_id))
-            # IA-05 (#43): the entity update above is idempotent
+            # The entity update above is idempotent
             # (alias dedupe); the decision row is written only if
             # this (pair, batch) merge is not already recorded, so
             # a WRITE-stage resume does not duplicate it.
@@ -331,7 +331,7 @@ class SqliteEntityRegistry(EntityRegistry):
     def _score(ent: Entity, qkey: str, qtoks: set,
                qnorm: str) -> float:
         """Deterministic candidate score. Ranking only — the ER gate
-        decides; the index never merges (G-10 guardrail)."""
+        decides; the index never merges."""
         name_key = index_normalize(ent.name)
         if name_key == qkey and qkey:
             return 100.0
@@ -369,7 +369,7 @@ class SqliteEntityRegistry(EntityRegistry):
                      partition: dict[str, list[str]],
                      batch_id: str = "", run_id: str = "",
                      model: str = "") -> dict:
-        """Split surfaces off an entity into new entities (G-29).
+        """Split surfaces off an entity into new entities.
 
         partition maps a new canonical name -> the surfaces that
         move to a newly minted entity under that name. The source
@@ -437,7 +437,7 @@ class SqliteEntityRegistry(EntityRegistry):
     def detach_surface(self, entity_id: str, surface: str,
                        batch_id: str = "", run_id: str = "",
                        model: str = "", reason: str = "") -> dict:
-        """Detach one alias residence from an entity (issue #64).
+        """Detach one alias residence from an entity.
 
         The owned-elsewhere repair: a surface adjudicated to NOT
         belong on this entity, while the same surface also resides
@@ -448,12 +448,12 @@ class SqliteEntityRegistry(EntityRegistry):
         of the surface in the entity's alias list — and records an
         er_decisions row with outcome='detach' via
         record_er_decision, so the removal is auditable and the
-        IA-05 (batch, pair, outcome) idempotency rule applies: a
+        (batch, pair, outcome) idempotency rule applies: a
         repeat call for a pair already recorded under this batch
         is a no-op reporting already_detached=True. No entity is
         created or deleted; the precedent shape is the 2026-10-16
         ruling that detached `Steering Committee` from the Joint
-        Commercial Committee entity (G-33).
+        Commercial Committee entity.
 
         Refusals (ValueError; nothing is written): the surface is
         the entity's canonical name (a name surface never detaches
@@ -510,7 +510,7 @@ class SqliteEntityRegistry(EntityRegistry):
                     "remaining_aliases": len(remaining)}
 
     # ------------------------------------------------------------------
-    # ER review-band settlement (issue #45)
+    # ER review-band settlement
     # ------------------------------------------------------------------
     # A held pair is an er_decisions row with outcome='review'.
     # A HUMAN settlement of that pair is a LATER row for the
@@ -591,7 +591,7 @@ class SqliteEntityRegistry(EntityRegistry):
                        batch_id: str = "", run_id: str = "",
                        model: str = "", p_same: float | None = None,
                        reason: str = "") -> dict:
-        """Fold one EXISTING entity into another (issue #45).
+        """Fold one EXISTING entity into another.
 
         The settlement-time counterpart of merge() (which folds
         a not-yet-registered mention at WRITE time): both rows
@@ -604,7 +604,7 @@ class SqliteEntityRegistry(EntityRegistry):
         deleted, the fold is recorded as an er_decisions row
         with outcome='merged' (written directly, split_entity's
         precedent — the record of a settlement must not be
-        droppable by the IA-05 replay guard), and the
+        droppable by the replay guard), and the
         id_mapping table records merged_id -> surviving_id:
         the remap the graph re-projection consumes. Triples
         are NOT touched here — the registry is the source of

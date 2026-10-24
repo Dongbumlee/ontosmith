@@ -5,7 +5,7 @@ QA pairs from DocRED gold triples (1-hop and 2-hop). Compares:
   - hybrid: top-3 docs -> entities -> Neo4j 1..2 hop traversal;
             hit if answer entity in traversed subgraph
 
-Usage: python -m pilot.retrieval_eval [--n1 100] [--n2 100] [--out results/retrieval.json]
+Usage: python -m pipeline.retrieval_eval [--n1 100] [--n2 100] [--out results/retrieval.json]
 """
 from __future__ import annotations
 

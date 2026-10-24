@@ -1,4 +1,4 @@
-"""The pre-registered adoption-cell runner (plan §2.2).
+"""The pre-registered adoption-cell runner.
 
 The lab ran its configuration decisions as *cells*: a design
 registered in advance (hypothesis, counted projection, gates,

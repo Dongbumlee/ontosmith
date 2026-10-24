@@ -1,6 +1,6 @@
-"""Sample API server (plan §7 R17): ``ontosmith serve``.
+"""Sample API server: ``ontosmith serve``.
 
-A reference HTTP API over the R16 hybrid search
+A reference HTTP API over the hybrid search
 (:mod:`pipeline.search`) and the built graph:
 
   GET /health        store identity + inventory
@@ -12,10 +12,10 @@ A reference HTTP API over the R16 hybrid search
   GET /neighborhood  REL neighborhood of an entity
                      (``?id=...&hops=1..4``)
   GET /triple        one triple with its evidence spans
-                     and provenance — the R9 report as
+                     and provenance — the inspection report as
                      JSON (``?subject=&relation=&object=``
                      or ``?index=N``)
-  GET /              the demo app (plan §7 R18): the
+  GET /              the demo app: the
                      static page in ``app/`` — search box,
                      triple/evidence inspector, entity
                      report + neighborhood walker
@@ -24,7 +24,7 @@ A reference HTTP API over the R16 hybrid search
 Framework: the Python standard library
 (``http.server.ThreadingHTTPServer``) — a deliberate
 choice for a *reference* server: the product's dependency
-discipline (R1) keeps the core install to numpy +
+discipline keeps the core install to numpy +
 requests, and a sample API should be readable end-to-end
 in one file, not framework-shaped. Anything heavier
 belongs to the deployment, not the sample.
@@ -121,7 +121,7 @@ class SearchService:
 
     def triple(self, params: dict) -> dict:
         """GET /triple?subject=&relation=&object=&index=
-        — one triple as the R9 inspection report."""
+        — one triple as the inspection report."""
         records = self.store.triple_records()
         index = params.get("index")
         index = int(index) if index is not None else None
@@ -218,7 +218,7 @@ def _int_param(params: dict, name: str, default: int,
 
 
 # ----------------------------------------------------------------------
-# Demo app (R18) — static assets, served by the same shell
+# Demo app — static assets, served by the same shell
 # ----------------------------------------------------------------------
 APP_CONTENT_TYPES = {
     ".html": "text/html; charset=utf-8",
@@ -235,7 +235,7 @@ APP_CONTENT_TYPES = {
 def app_candidates() -> list[Path]:
     """Where the demo app's static files may live, in
     resolution order — the shipped example's candidate
-    discipline (G-F5): the source tree, the pip
+    discipline: the source tree, the pip
     ``--target`` layout (data files beside the packages),
     the regular install layout (the interpreter's data
     path)."""
@@ -363,12 +363,12 @@ def main(argv=None) -> int:
     [--store auto|file|neo4j] [--host H] [--port N]
     [--embed]`` — serve the sample API (default:
     localhost:8765, the shipped example build). The
-    demo app (R18) is served at ``/`` on the same port
+    demo app is served at ``/`` on the same port
     when its assets resolve."""
     ap = argparse.ArgumentParser(
         prog="ontosmith serve",
-        description="Sample API server over the R16 "
-                    "search/graph surface (plan §7 R17): "
+        description="Sample API server over the "
+                    "search/graph surface: "
                     "/search, /entity, /neighborhood, "
                     "/triple (with evidence)")
     ap.add_argument("--source", default=None,

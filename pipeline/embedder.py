@@ -4,12 +4,12 @@ The ER gate (Jev) is accurate, but candidates must reach it first.
 Substring matching misses abbreviations (LHO, HSCA). Embedding-based
 search with a large model finds them.
 
-Validated 2026-10-10 (Dongbum's "just in case" hunch was right):
+Validated 2026-10-10 (a "just in case" check was right):
 - text-embedding-3-large: LHO→Oswald variants, HSCA→House Select Committee
 - all-MiniLM-L6-v2 (local): missed both
 
 That comparison is why there is no local embedding path
-(run 31 removed the fallback it had already disqualified):
+:
 the embedder is the embedder seat's hosted binding, and
 a seat whose key cannot be resolved refuses by name
 (:func:`default_embedder`).
@@ -42,7 +42,7 @@ class EntityEmbedder(ABC):
 
     @property
     def usage(self) -> dict:
-        """Cumulative API usage (G-27): input_tokens / output_tokens
+        """Cumulative API usage: input_tokens / output_tokens
         / cost, same shape as the Jev decision calls."""
         return {"input_tokens": 0, "output_tokens": 0, "cost": 0.0}
 
@@ -70,7 +70,7 @@ class SeatEmbedder(EntityEmbedder):
     @property
     def usage(self) -> dict:
         """Cumulative usage across all embed() calls on this
-        instance, from the responses' usage blocks (G-27).
+        instance, from the responses' usage blocks.
         ``cost`` is None once any response carried no cost
         and the binding declares no rates — unmetered is
         reported as unknown, never folded to 0.0 (issue
@@ -81,7 +81,7 @@ class SeatEmbedder(EntityEmbedder):
         # Batch in chunks of 100 (API limits). Each response is large
         # (100 x 3072 floats) and the egress proxy occasionally cuts a
         # chunked read mid-stream — http.client.IncompleteRead killed
-        # the clean-main-v1 INDEX stage on 2026-10-13 — so retry each
+        # the flagship INDEX stage on 2026-10-13 — so retry each
         # chunk request with backoff instead of failing the whole call.
         out = []
         for i in range(0, len(texts), 100):
@@ -117,7 +117,7 @@ class SeatEmbedder(EntityEmbedder):
             # Convert each sub-batch to float32 immediately: accumulating
             # raw Python float lists for a whole corpus (~50k chunks x
             # 3072 dims) balloons to several GB and gets the process
-            # OOM-killed mid-stage (clean-main-v1 INDEX, 2026-10-13).
+            # OOM-killed mid-stage (flagship INDEX, 2026-10-13).
             out.append(np.array([d["embedding"] for d in data],
                                 dtype=np.float32))
             if len(out) % 50 == 0:
@@ -132,7 +132,7 @@ class SeatEmbedder(EntityEmbedder):
         return arr
 
 
-#: Backwards-compatible alias (issue #41): the class was
+#: Backwards-compatible alias: the class was
 #: renamed to name the seat seam, not one provider. The
 #: alias is retained for one release.
 OpenRouterEmbedder = SeatEmbedder

@@ -46,7 +46,7 @@ from .docred import build_candidates, doc_text, entity_name, load_dev
 from .hard_negatives import build_hard_negatives, confusion_choices
 from .reference_profile import ESCALATION_MODEL, JUDGE_MODEL
 
-#: The Jev gate binding (pinned product component, D9).
+#: The Jev gate binding (pinned product component).
 JEV = JUDGE_MODEL
 
 _ZERO_USAGE = {"cost": 0.0, "latency_ms": 0.0, "provider": None}
@@ -84,7 +84,7 @@ def _eval_loop(cands, judge_fields, error_fields):
     shape — a failed call is data, never a silent skip).
     Returns ``(records, latencies, total_cost)``.
 
-    Run 32 (audit F17): every error record additionally carries an
+    Every error record additionally carries an
     explicit ``error`` field (the exception text) — before, an
     er/onto failure was a bare p_true=0.0 with provider=None,
     indistinguishable in the output file from a judged negative —
@@ -104,7 +104,7 @@ def _eval_loop(cands, judge_fields, error_fields):
             rec["error"] = str(e)
         records.append(rec)
         lat.append(usage.get("latency_ms", 0.0) or 0.0)
-        # None-aware (issue #41): a successful call whose
+        # None-aware: a successful call whose
         # provider reported no cost makes the run's total
         # unknown (None), never a silent 0.0 fold-in. The
         # error path's _ZERO_USAGE (cost 0.0) is a genuinely
@@ -120,7 +120,7 @@ def _summary(model: str, records, lat, cost,
              extra: dict | None = None) -> dict:
     """The runners' common summary block (latency percentiles are
     the originals' index math, kept verbatim). The error count is
-    computed here so EVERY arm reports it (run 32 — previously
+    computed here so EVERY arm reports it (previously
     only the llm arm did)."""
     lat_sorted = sorted(lat)
     summary = {
@@ -263,7 +263,7 @@ def _llm_cmd(args) -> None:
         rec = {**base(c), "provider": usage.get("provider"),
                "pred": label}
         if usage.get("parse_failed"):
-            # Run 32 (audit F8): the label came from the raw-text
+            # The label came from the raw-text
             # fallback, not a parsed answer — visible on the
             # record and counted in the summary.
             rec["parse_failed"] = True
@@ -561,7 +561,7 @@ def _ollama_cmd(args) -> None:
                "pred": pred,
                "latency_ms": usage["latency_ms"]}
         if err is not None:
-            # Run 32: a failed judge call carries an explicit
+            # A failed judge call carries an explicit
             # error field and is counted in the summary — a
             # pred=-1 alone read as an ordinary wrong answer.
             row["error"] = err

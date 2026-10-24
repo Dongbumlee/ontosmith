@@ -1,6 +1,6 @@
 """EntityRegistry and GraphStore interfaces.
 
-Design decision (2026-10-10, Dongbum):
+Design decision (2026-10-10):
 - EntityRegistry = system of record (source of truth for entities)
 - GraphStore = derived view optimized for RAG traversals
 - Interfaces are separate NOW; physical separation LATER.
@@ -25,7 +25,7 @@ def attestation_id(subject_id: str, relation: str, object_id: str,
                    surface_o: str = "", quote: str = "",
                    model: str = "") -> str:
     """Content-derived identity of ONE attestation of a fact
-    (G-28): the same fact attested in N documents, or twice in one
+   : the same fact attested in N documents, or twice in one
     document under different surfaces/quotes/methods, yields N
     distinct ids, while re-writing the identical attestation is
     idempotent. Writers that carry no surface/quote material
@@ -61,13 +61,13 @@ _HONORIFICS = {"mr", "mrs", "ms", "miss", "dr", "prof", "professor",
 
 
 def index_normalize(name: str) -> str:
-    """Normalize a name into a registry index key (G-12).
+    """Normalize a name into a registry index key.
 
     The form-variant rules: case folding, diacritic folding
     ('Léon' → 'leon'), punctuation/underscore cleanup (via
     normalize_name), and stripping of leading honorific tokens
     ('Dr. Smith' → 'smith'). Index keys drive candidate LOOKUP only;
-    they are never an auto-merge decision (G-10 guardrail).
+    they are never an auto-merge decision.
     """
     import unicodedata
     n = unicodedata.normalize("NFKD", name)
@@ -90,7 +90,7 @@ _GENERIC_TOKENS = {"inc", "llc", "corp", "corporation", "ltd", "co",
 
 
 def is_form_variant(a: str, b: str) -> bool:
-    """Deterministic form-variant test (G-10 ER guardrail).
+    """Deterministic form-variant test.
 
     True when two surface forms are variants of the SAME name itself
     under the established rules — and only then may WRITE auto-merge
@@ -128,7 +128,7 @@ def is_form_variant(a: str, b: str) -> bool:
 
 
 def mint_entity_id(exists) -> str:
-    """Mint a collision-checked unique entity ID (G-12).
+    """Mint a collision-checked unique entity ID.
 
     `exists(entity_id) -> bool` is the backend's uniqueness check;
     minting loops until the candidate is unused, so a collision can
@@ -184,7 +184,7 @@ class Entity:
     batch_id: str = ""
     run_id: str = ""
     doc_id: str = ""
-    corpus: str = ""        # corpus namespace (G-14); "" = unscoped legacy
+    corpus: str = ""        # corpus namespace; "" = unscoped legacy
 
 
 class EntityRegistry(ABC):
@@ -196,7 +196,7 @@ class EntityRegistry(ABC):
                         cross_corpus: bool = False) -> list[Entity]:
         """Find existing entities that might match (fuzzy).
 
-        Corpus scoping (G-14): when `corpus` is given and
+        Corpus scoping: when `corpus` is given and
         `cross_corpus` is False, only entities of that corpus are
         returned — resolution never crosses namespaces by default.
         `cross_corpus=True` is the explicit call-site opt-in."""
@@ -228,9 +228,9 @@ class EntityRegistry(ABC):
         Default: no-op (backends without a decision store). The
         file registry overrides this — review-band pairs land in
         er_decisions with outcome='review' so the pair, the gate's
-        p_same and the model stay auditable (G-10). `reason` names
+        p_same and the model stay auditable. `reason` names
         a deterministic rule behind the decision when one made the
-        call (e.g. an EG-R2-2 type-pair merge prohibition);
+        call (e.g. an type-pair merge prohibition);
         gate-driven rows leave it empty."""
 
     def settled_er_decision(self, merged_name: str,
@@ -238,7 +238,7 @@ class EntityRegistry(ABC):
         """The latest HUMAN settlement of an ER pair, if any.
 
         Default: None (backends without a decision store settle
-        nothing). The file registry overrides this (issue #45):
+        nothing). The file registry overrides this:
         a pair a person settled — merged, or kept separate — is
         a recorded decision in er_decisions, and WRITE consults
         this so a keep-separate pair is never re-held and its

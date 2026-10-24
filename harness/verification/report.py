@@ -1,4 +1,4 @@
-"""The one-command evaluation report (plan §7 R10).
+"""The one-command evaluation report.
 
 The lab produced its evaluation numbers per run, by hand, in
 run-specific scripts; the method was proven but absent as a
@@ -7,7 +7,7 @@ takes predicted + gold records (and optionally the audit
 verdicts) and returns the full evaluation record — raw
 scores, audit-corrected precision, ceiling-adjusted recall,
 and the failure anatomy — as JSON-able data plus a Markdown
-rendering in the report-card shape (plan §7 R15).
+rendering in the report-card shape.
 
 Failure anatomy: every gold record is assigned exactly one
 fate so the buckets sum to the gold total — ``matched``,

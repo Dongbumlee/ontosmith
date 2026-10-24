@@ -1,7 +1,7 @@
-"""A2-F2 — the role-word guard vocabulary is pack data.
+"""— the role-word guard vocabulary is pack data.
 
-Until run 7 the word set was a literal in core proposer code
-(the CUAD-flavored set A2-F2 named in run 4). It now ships as
+The word set was once a literal in core proposer code
+(the CUAD-flavored set). It now ships as
 the Legal Contract pack's role_words artefact, resolved by
 profile_config and injected into proposer.guard_triples.
 

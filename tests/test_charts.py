@@ -1,10 +1,10 @@
-"""Chart/record agreement tests (Phase C run 2).
+"""Chart/record agreement tests.
 
 The figures are rendered by parsing the shipped record —
 never by retyping numbers. These tests pin the parse
 against the frozen record values (a drift in either the
 record or the parser fails here), smoke-render every
-figure, and pin the D4 placement decision (2026-10-22):
+figure, and pin the placement decision (2026-10-22):
 the README carries process diagrams only; the quality
 chart is a whitepaper asset under benchmarks/assets/.
 """
@@ -18,11 +18,11 @@ RECORD = ROOT / "benchmarks" / "redocred.md"
 
 # Rendering needs matplotlib (the [viz] extra); parsing the
 # record does not. On a base install the parse tests still
-# run and only the render smoke skips (E-F1, Phase E).
+# run and only the render smoke skips.
 HAS_MATPLOTLIB = importlib.util.find_spec("matplotlib") is not None
 
 # Support rates are the record's current figures: the
-# ruled adjudication contract's rates (run 33, 2026-10-22;
+# ruled adjudication contract's rates (2026-10-22;
 # whitepaper §5.3). Counts are the frozen census fates.
 FROZEN_FATES = {
     "matched": (1838, 0.884),
@@ -82,7 +82,7 @@ class TestReadmePlacement(unittest.TestCase):
         self.assertIn("docs/assets/pipeline-flow.png", readme)
         self.assertIn("docs/assets/ontology-loop.png", readme)
         self.assertIn("docs/assets/method.png", readme)
-        # D4 revision: no score chart embedded in the README;
+        # Placement: no score chart embedded in the README;
         # the anatomy chart is a benchmarks-side asset.
         self.assertNotIn("docs/assets/anatomy.png", readme)
         self.assertTrue(

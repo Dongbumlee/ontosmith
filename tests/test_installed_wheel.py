@@ -1,6 +1,6 @@
-"""Installed-wheel smoke (FE3-1; fresh-eyes round 3).
+"""Installed-wheel smoke.
 
-The round-3 blocker: `ontosmith configure --emit-template`
+The blocker: `ontosmith configure --emit-template`
 resolved its template by a source-tree-relative path, so
 the door worked in a checkout and died for pip-installed
 users — and the guard tests read the same source-tree
@@ -205,7 +205,7 @@ class TestInstalledWheel(unittest.TestCase):
         # script is checkout-bound by design — it pins
         # its own tree on sys.path — and the wheel does
         # not promise it; the configure doors above are
-        # FE3-1's installed-layout scope.)
+        # the installed-layout scope.)
         share = self.prefix / "share" / "ontosmith"
         corpus = share / "examples" / "corpus"
         self.assertTrue(corpus.is_dir(),

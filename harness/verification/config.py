@@ -1,4 +1,4 @@
-"""Pre-registration as data structures (plan §7 R7 / R12).
+"""Pre-registration as data structures.
 
 The lab's measurement discipline ran on operator habit:
 counted projections computed before any spend, stop-lines a
@@ -9,7 +9,7 @@ discipline product configuration — plain dataclasses that
 serialize to JSON, validate fail-closed, and carry no corpus,
 pack, or model names.
 
-Layering (plan §7 R14): this is *product* configuration. The
+Layering: this is *product* configuration. The
 domain layer (packs / profiles) declares capability tiers
 only; prices and bindings are caller-supplied data here, and
 secrets never appear (API keys are environment names, read by
@@ -25,10 +25,10 @@ Contents:
 - :class:`CountedProjection` — a cost projection built from
   counted units (items, characters, tokens, calls) priced by
   caller-supplied unit costs; scenarios combine into a
-  governing (maximum) figure, the J3F2 pattern.
+  governing (maximum) figure.
 - :class:`SpendLedger` — an append-only JSONL spend ledger
   with a stop-line guard and checkpoint/resume semantics.
-- :class:`FrontierEscalationConfig` — R12: optional, OFF by
+- :class:`FrontierEscalationConfig` — optional, OFF by
   default; only a declared shaky band escalates, and the
   judging seat never escalates.
 - :class:`VerificationConfig` — the aggregate a run records:
@@ -130,7 +130,7 @@ def all_passed(results: list[GateResult]) -> bool:
 
 @dataclass(frozen=True)
 class StopLine:
-    """A spend cap and the stop-line a run must halt at (R7).
+    """A spend cap and the stop-line a run must halt at.
 
     The cap is the hard budget; the stop-line (default = cap)
     is where execution halts, leaving room for in-flight work.
@@ -174,15 +174,15 @@ class StopLineExceeded(RuntimeError):
 
 @dataclass
 class CountedProjection:
-    """A counted cost projection (R7): units counted from the
+    """A counted cost projection: units counted from the
     real builders, priced by caller-supplied unit costs.
 
     ``scenarios`` maps a scenario name to its line items
     ``{unit: count}``; ``unit_costs`` maps a unit to its USD
     price. The governing figure is the maximum scenario total
-    — the lab rule (J3F2: the governing projection is max(A,
+    — the governing projection is max(A,
     B'), and a cell whose governing projection exceeds its cap
-    does not start).
+    does not start.
     """
 
     unit_costs: dict[str, float]
@@ -225,7 +225,7 @@ class CountedProjection:
 class SpendLedger:
     """Append-only JSONL spend ledger with stop-line guard.
 
-    Extracted from the per-cell ledgers (J3F2 pattern): one
+    Extracted from the per-cell ledgers: one
     line per unit of work, flushed per append, carrying a
     cumulative total rounded to 6 decimals; re-opening an
     existing ledger resumes its total (checkpoint/resume), so
@@ -294,7 +294,7 @@ class SpendLedger:
 
 #: Roles that sit in the judging seat. Escalation to a frontier
 #: model is drafting/advising only — these roles NEVER escalate
-#: (plan §7 R12 doctrine: the judging seat itself never
+#: (doctrine: the judging seat itself never
 #: escalates, whatever the config says).
 JUDGING_ROLES = frozenset({
     "judge", "pair_judge", "gate", "jev", "er_gate",
@@ -304,7 +304,7 @@ JUDGING_ROLES = frozenset({
 
 @dataclass(frozen=True)
 class FrontierEscalationConfig:
-    """Frontier-escalation policy (plan §7 R12).
+    """Frontier-escalation policy.
 
     Optional and **off by default**. When enabled, only items
     whose first-pass score lands in the shaky band

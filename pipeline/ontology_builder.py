@@ -1,4 +1,4 @@
-"""Ontology builder (plan §7 R6; issue #73): draft -> validate ->
+"""Ontology builder: draft -> validate ->
 approve -> emit, productizing the lab's setup-service loop.
 
 The lab proved the loop for *profile claims*: setup_service
@@ -70,8 +70,8 @@ from . import profile_config
 BUILDER_VERSION = "ontology-builder/1.0"
 DRAFT_KIND = "ontology_schema_draft"
 
-#: The capability tier drafting assistance binds to (plan §7
-#: R14: domain artifacts declare tiers; the connection layer
+#: The capability tier drafting assistance binds to
+#: (domain artifacts declare tiers; the connection layer
 #: binds them to models — reference_profile carries the tested
 #: preset). The builder itself never names a model.
 DRAFTING_TIER = "drafting"
@@ -155,7 +155,7 @@ def schema_hash(draft: dict) -> str:
         "schema_front": draft.get("schema_front"),
         "merge_prohibited_type_pairs":
             draft.get("merge_prohibited_type_pairs") or [],
-        # BO-3: the theme-attestation lever is an operating
+        # the theme-attestation lever is an operating
         # declaration like merge_prohibited_type_pairs — it
         # rides the payload, so it is approval-bound too:
         # toggling it after approval stale-dates the record.
@@ -213,7 +213,7 @@ def _brief_names(brief: dict, key: str) -> list[str]:
     named error — silently str()-coercing it would seed
     the draft with a repr as a type name and let
     validation report nonsense findings against it
-    (E-F3, Phase E clean room)."""
+   ."""
     out = []
     for t in brief.get(key) or []:
         if not isinstance(t, str):
@@ -470,7 +470,7 @@ def _payload_for(draft: dict, pack_version: str) -> dict:
     pairs = draft.get("merge_prohibited_type_pairs") or []
     if pairs:
         payload["merge_prohibited_type_pairs"] = pairs
-    # BO-3: the theme-attestation lever rides the same channel
+    # the theme-attestation lever rides the same channel
     # as merge_prohibited_type_pairs — an operating declaration
     # the author states on the draft, carried into the payload
     # the pin binds. Absent/false = the legacy quote-only test,
@@ -960,7 +960,7 @@ def _write_json(path, obj) -> None:
     # The builder owns its working directories (the emit path
     # already creates the pack tree): a first-run user following
     # the tracks must not meet a raw FileNotFoundError because
-    # drafts/ does not exist yet (BO-2).
+    # drafts/ does not exist yet.
     p = Path(path)
     if p.parent != Path(""):
         p.parent.mkdir(parents=True, exist_ok=True)
@@ -978,7 +978,7 @@ def main(argv=None) -> int:
     ap = argparse.ArgumentParser(
         prog="ontosmith ontology",
         description="Ontology builder: draft -> validate -> "
-                    "approve -> emit a pack (plan §7 R6)")
+                    "approve -> emit a pack")
     sub = ap.add_subparsers(dest="cmd", required=True)
 
     p = sub.add_parser("draft", help="Draft a schema from a "

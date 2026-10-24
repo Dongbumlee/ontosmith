@@ -165,8 +165,8 @@ def main() -> None:
         sys.exit(2)
     # Several command mains return a process exit code
     # (ontology, profile, inspect, search, serve, verify);
-    # honor it instead of dropping it (run 29 — `ontology
-    # check`'s clean/defect verdict rides on it).
+    # honor it instead of dropping it — the `ontology check`
+    # clean/defect verdict rides on it.
     if isinstance(rc, int):
         sys.exit(rc)
 

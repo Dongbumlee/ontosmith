@@ -1,5 +1,5 @@
 """R16 serving surface: the file store, hybrid search,
-and the CLI (issue #79, run 15).
+and the CLI.
 
 Pins, in order:
 - the FileServingStore read contract over both source
@@ -525,7 +525,7 @@ class TestCliAndSelection(unittest.TestCase):
         self.assertEqual(payload["store"]["kind"], "file")
 
     def test_cli_embed_keyless_refuses_by_name(self):
-        # Run 31: --embed with an unresolvable embedder key
+        # --embed with an unresolvable embedder key
         # is a named refusal (exit 1 naming the seat and the
         # variable), never a silent local model.
         err = io.StringIO()
@@ -562,7 +562,7 @@ class TestCliAndSelection(unittest.TestCase):
     def test_example_candidates_cover_install_layouts(self):
         # the pip --target layout puts data files beside
         # the packages; a candidate derived from the
-        # package location must exist (run 15's installed
+        # package location must exist (an installed-layout
         # check caught its absence)
         pkg_parent = Path(search.__file__).resolve().parent.parent
         self.assertIn(pkg_parent / "share" / "ontosmith"

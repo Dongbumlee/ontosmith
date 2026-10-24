@@ -299,7 +299,7 @@ options:
                         profile_hash is recorded on the batch and into the
                         manifest at INGEST
   --candidate-source {pipeline,llm,both}
-                        CANDIDATES source (E4): pipeline = RER hybrid; llm =
+                        CANDIDATES source: pipeline = RER hybrid; llm =
                         LLM proposer (triples + profile clause slots); both =
                         union (default pipeline)
   --pack PACK           domain pack binding this batch (pack_id, family, or
@@ -308,19 +308,19 @@ options:
                         directory (default: the pack bound to the --profile
                         family, if any)
   --max-cost-usd MAX_COST_USD
-                        R7 stop-line: hard spend cap for the batch (default:
+                        stop-line: hard spend cap for the batch (default:
                         the BatchConfig default)
   --no-cost-cap         run with no USD spend cap (the explicit way to run on
                         a cost-less binding; the ledger then records tokens
                         and marks cost not-provided)
   --frontier-escalation
-                        R12: enable frontier escalation for non-judging seats
+                        enable frontier escalation for non-judging seats
                         (default OFF; the judging seat never escalates)
   --escalation-band-lo ESCALATION_BAND_LO
-                        R12 shaky-band lower bound (with --frontier-
+                        shaky-band lower bound (with --frontier-
                         escalation)
   --escalation-band-hi ESCALATION_BAND_HI
-                        R12 shaky-band upper bound (with --frontier-
+                        shaky-band upper bound (with --frontier-
                         escalation)
 ```
 
@@ -574,7 +574,7 @@ usage: ontosmith profile [-h] --family FAMILY [--out OUT]
                          [--sample-n SAMPLE_N] [--json]
                          corpus_dir
 
-Corpus profiler (plan §7 R5): stage-0 profile of a corpus directory —
+Corpus profiler: stage-0 profile of a corpus directory —
 deterministic, no LLM calls, no spend
 
 positional arguments:
@@ -599,7 +599,7 @@ options:
 ```text
 usage: ontosmith ontology [-h] {draft,validate,brief,approve,emit,check} ...
 
-Ontology builder: draft -> validate -> approve -> emit a pack (plan §7 R6)
+Ontology builder: draft -> validate -> approve -> emit a pack
 
 positional arguments:
   {draft,validate,brief,approve,emit,check}
@@ -735,7 +735,7 @@ usage: ontosmith inspect [-h] [--index INDEX] [--subject SUBJECT]
                          [--relation RELATION] [--object OBJECT] [--json]
                          artefact
 
-Evidence/provenance viewer (plan §7 R9): print one triple with its evidence
+Evidence/provenance viewer: print one triple with its evidence
 spans and provenance chain
 
 positional arguments:
@@ -773,7 +773,7 @@ usage: ontosmith search [-h] [--source SOURCE] [--batch BATCH]
                         [--store {auto,file,neo4j}] [--k K] [--embed] [--json]
                         query
 
-Hybrid search over a built graph (plan §7 R16): lexical + vector + graph
+Hybrid search over a built graph: lexical + vector + graph
 retrieval over the build's chunks and triples
 
 positional arguments:
@@ -821,7 +821,7 @@ usage: ontosmith serve [-h] [--source SOURCE] [--batch BATCH]
                        [--store {auto,file,neo4j}] [--host HOST] [--port PORT]
                        [--embed]
 
-Sample API server over the R16 search/graph surface (plan §7 R17): /search,
+Sample API server over the search/graph surface: /search,
 /entity, /neighborhood, /triple (with evidence)
 
 options:

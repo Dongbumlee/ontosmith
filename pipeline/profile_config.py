@@ -1,4 +1,4 @@
-"""Profile setup_config layer (issue #51; gaps EG-R2-1 / EG-R2-2).
+"""Profile setup_config layer.
 
 The stage-0 corpus profile's setup_config.json is the config layer
 that carries a corpus's ontology into the pipeline. Three jobs:
@@ -9,11 +9,11 @@ that carries a corpus's ontology into the pipeline. Three jobs:
    refuses a config with an unregistered key and names it. Before
    this registry existed, a key could sit in the profile forever
    with no reader: BioRED v1's entity_types / relation_types were
-   consumed by NOTHING through the whole of round 1 (the wiring
-   audit, BIORED_PILOT_REPORT round 2) — the profile looked wired
+   consumed by NOTHING (the wiring
+   audit) — the profile looked wired
    and was decoration. That state is now impossible at creation.
 
-2. THE GUIDANCE CHANNEL (EG-R2-1). derive_guidance() renders the
+2. THE GUIDANCE CHANNEL. derive_guidance() renders the
    profile's schema into the guidance text stage_candidates threads
    into the proposer prompt: an explicit ``proposer_guidance``
    string wins verbatim; otherwise the ``schema_front`` inventory
@@ -25,7 +25,7 @@ that carries a corpus's ontology into the pipeline. Three jobs:
    pre-channel construction (pinned by
    scripts/test_profile_wiring.py).
 
-3. TYPED MENTIONS (EG-R2-2). The helpers below define the type
+3. TYPED MENTIONS. The helpers below define the type
    vocabulary candidates are validated against
    (endpoint_type_names) and the merge prohibitions WRITE's ER
    consults in BOTH channels (prohibited_type_pairs /
@@ -33,7 +33,7 @@ that carries a corpus's ontology into the pipeline. Three jobs:
    ``merge_prohibited_type_pairs`` = a list of [typeA, typeB]
    unordered pairs that must never merge.
 
-4. INDUSTRY PACKS (issue #63, docs/PACK_DESIGN.md). The pack
+4. INDUSTRY PACKS (docs/PACK_DESIGN.md). The pack
    loader at the bottom of this module binds a versioned pack
    manifest (packs/<id>/pack.json) to the profile payload it
    pins by sha256 and returns the payload as a setup_config dict
@@ -45,7 +45,7 @@ that carries a corpus's ontology into the pipeline. Three jobs:
    declared keys govern, undeclared keys keep the core
    defaults the core pack carries).
 
-5. DOMAIN FRAMING (PK-01 / PK-02). The proposer and pair-judge
+5. DOMAIN FRAMING. The proposer and pair-judge
    base templates are domain-neutral core text; a family's
    domain framing (proposer_framing / slot_framing / slot_rules
    / pair_judge_generic_relation) is profile data, accessed via
@@ -73,52 +73,48 @@ CONSUMED_KEYS: dict[str, str] = {
                   "(pack_role_words; frozen into the resolved "
                   "config by resolve_setup_config)",
     "proposer_guidance": "CANDIDATES -> proposer prompt guidance "
-                         "(EG-R2-1, derive_guidance)",
+                         "(derive_guidance)",
     "schema_front": "CANDIDATES -> proposer prompt guidance + "
-                    "endpoint type vocabulary (EG-R2-1/EG-R2-2, "
-                    "derive_guidance / endpoint_type_names)",
+                    "endpoint type vocabulary "
+                    "(derive_guidance / endpoint_type_names)",
     "entity_types": "CANDIDATES endpoint-type validation vocabulary "
-                    "(EG-R2-2, endpoint_type_names) and guidance "
+                    "(endpoint_type_names) and guidance "
                     "vocabulary when no schema_front is declared "
                     "(derive_guidance fallback rendering)",
     "relation_types": "CANDIDATES guidance vocabulary when no "
                       "schema_front is declared (derive_guidance "
                       "fallback rendering: closed relation list)",
-    # CANDIDATES pair-enumeration branch (rounds 3/4, issues
-    # #54/#55): with pair_enumeration on, stage_candidates replaces
+    # CANDIDATES pair-enumeration branch: with
+    # pair_enumeration on, stage_candidates replaces
     # the free generative proposer with the roster pair census
-    # (pilot/pair_proposer.py); pair_window selects the enumeration
+    # (pipeline/pair_proposer.py); pair_window selects the enumeration
     # window; roster_pass declares that the batch's roster file is
     # the mention-first roster-pass product (roster_v2.jsonl).
     "pair_enumeration": "CANDIDATES pair-enumeration branch switch "
-                        "(stage_candidates; docs/BIORED_ROUND3.md "
-                        "§2, docs/BIORED_ROUND4.md §4.4)",
+                        "(stage_candidates)",
     "pair_window": "CANDIDATES pair-enumeration window: "
                    "'sentence' | 'adjacent' (stage_candidates)",
     "roster_pass": "CANDIDATES roster source declaration: true = "
                    "the batch roster is roster_v2.jsonl, built by "
                    "the mention-first roster pass "
-                   "(pilot/roster_pass.py; stage_candidates)",
-    # CANDIDATES pair-judge variant (round 5, issue #56): the
+                   "(pipeline/roster_pass.py; stage_candidates)",
+    # CANDIDATES pair-judge variant: the
     # factorial's winning judge (abstract context x evidence
     # instruction) selected by setup_config; absent = the
-    # rounds-3/4 judge (sentence x standard), byte-identical.
+    # the default judge (sentence x standard), byte-identical.
     "pair_judge_context": "CANDIDATES pair-enumeration judge "
                           "context: 'sentence' | 'abstract' "
                           "(stage_candidates -> "
-                          "pair_proposer.build_pair_prompt_judge; "
-                          "docs/BIORED_ROUND5.md §6)",
+                          "pair_proposer.build_pair_prompt_judge)",
     "pair_judge_instruction": "CANDIDATES pair-enumeration judge "
                               "instruction: 'standard' | 'evidence' "
                               "(stage_candidates -> "
-                              "pair_proposer.build_pair_prompt_judge; "
-                              "docs/BIORED_ROUND5.md §6)",
+                              "pair_proposer.build_pair_prompt_judge)",
     "pair_judge_format": "CANDIDATES pair-enumeration judge "
                          "answer format: 'jf1' = the JF-F1 "
                          "direction slot (stage_candidates -> "
                          "pair_proposer.propose_pairs_for_doc "
-                         "jf1=True; docs/REDOCRED_JF_F1_DESIGN.md "
-                         "§3, issue #66 stage 11 W-1). Absent = "
+                         "jf1=True). Absent = "
                          "the legacy answer format, byte-identical.",
     "pair_judge_symmetric_source": "CANDIDATES pair-enumeration "
                                    "judge: path (repo-root relative "
@@ -127,62 +123,61 @@ CONSUMED_KEYS: dict[str, str] = {
                                    "the JF-F1 symmetric relation set "
                                    "is read from (stage_candidates; "
                                    "the family pack's declarations "
-                                   "artefact, issue #66 stage 11 "
-                                   "W-1/W-2)",
-    # CANDIDATES emission-guard relaxations (issue #68 phase 2;
-    # A2-F4 — registered in Phase B so a pack payload may declare
-    # them; absent = the frozen legacy behavior, so registering
-    # the keys changes no run that does not declare them).
+                                   "artefact)",
+    # CANDIDATES emission-guard relaxations: registered so a
+    # pack payload may declare them; absent = the frozen legacy
+    # behavior, so registering the keys changes no run that does
+    # not declare them).
     "pair_abbrev_guard": "CANDIDATES pair-enumeration sentence "
                          "splitter abbreviation guard "
                          "(stage_candidates -> "
                          "pair_proposer.split_sentences_r3 "
-                         "abbrev_guard; issue #68 phase 2)",
+                         "abbrev_guard)",
     "pair_theme_attest_sentence": "CANDIDATES pair-item theme "
                                   "attestation reads the posed "
                                   "pair sentence instead of the "
                                   "item span (stage_candidates "
-                                  "guards; issue #68 phase 2)",
+                                  "guards)",
     "quote_punct_insensitive": "CANDIDATES quote verification "
                                "accepts punctuation-spacing-"
                                "equivalent quotes (stage_candidates "
-                               "guards; issue #68 phase 2)",
+                               "guards)",
     "theme_attest_chunk": "CANDIDATES theme-presence guard "
                           "accepts a verb+preposition relation's "
                           "object attested anywhere in the "
                           "proposal's chunk, not only inside the "
                           "shortest quote (stage_candidates -> "
-                          "proposer.guard_triples; BO-3, for packs "
+                          "proposer.guard_triples, for packs "
                           "whose relations are verb+preposition "
                           "forms — absent = the quote-only test)",
-    # Domain framing for the proposer base prompts (PK-01/PK-02,
-    # docs/GAP_REGISTER.md): the core templates in
-    # pilot/proposer.py and pilot/pair_proposer.py are
+    # Domain framing for the proposer base prompts: the core
+    # templates in
+    # pipeline/proposer.py and pipeline/pair_proposer.py are
     # domain-neutral; a family's domain framing is profile data,
     # never a core literal. Absent = the neutral core default.
     "proposer_framing": "CANDIDATES free-proposer triple prompt "
                         "opening line (stage_candidates -> "
-                        "proposer.propose_triples_for_doc; PK-01)",
+                        "proposer.propose_triples_for_doc)",
     "slot_framing": "CANDIDATES clause-slot prompt opening line "
                     "(stage_candidates -> "
-                    "proposer.propose_slots_for_doc; PK-01)",
+                    "proposer.propose_slots_for_doc)",
     "slot_rules": "CANDIDATES clause-slot prompt rules block "
                   "(stage_candidates -> "
-                  "proposer.propose_slots_for_doc; PK-01)",
+                  "proposer.propose_slots_for_doc)",
     "pair_judge_generic_relation": "CANDIDATES pair-judge evidence "
                                    "instruction: the inventory's "
                                    "generic-member relation name "
                                    "(stage_candidates -> "
                                    "pair_proposer."
-                                   "build_pair_prompt_judge; PK-02)",
+                                   "build_pair_prompt_judge)",
     # ROUTE (stage_route)
     "c1_whitelist": "ROUTE Arm C C1 demotions (_c1_whitelist)",
     # WRITE (stage_write)
     "relation_map": "WRITE relation normalization "
                     "(RelationNormalizer profile_map)",
     "merge_prohibited_type_pairs": "WRITE ER merge prohibitions, "
-                                   "both channels (EG-R2-2, "
-                                   "prohibited_type_pairs)",
+                                   "both channels "
+                                   "(prohibited_type_pairs)",
 }
 
 # Declared metadata: provenance and batch-parameter declarations.
@@ -194,7 +189,7 @@ CONSUMED_KEYS: dict[str, str] = {
 METADATA_KEYS: set[str] = {
     "family", "profile_version", "profile_hash", "corpus_scope",
     "consumption_note",
-    # industry-pack declaration (docs/PACK_DESIGN.md, issue #63):
+    # industry-pack declaration (docs/PACK_DESIGN.md):
     # a setup_config may declare the pack it is the payload of;
     # the declaration is provenance metadata in v0 — the pack
     # manifest (packs/<id>/pack.json) is the identity record.
@@ -204,7 +199,7 @@ METADATA_KEYS: set[str] = {
     "er_cross_doc_min_p_same", "chunk_window_chars",
     "chunk_min_chars", "route_baseline", "er_auto_merge",
     "er_alias_sources", "batch_cost_cap_usd",
-    # LEGACY declarations (run-7 findings T-1/T-2): inert
+    # LEGACY declarations: inert
     # mirrors that NAME connection-layer bindings — the live
     # embed binding is BatchConfig.embed_model (defaulted from
     # the reference profile) and the live provider routing is
@@ -228,7 +223,7 @@ def setup_config_errors(cfg: dict) -> list[str]:
 
     Returns a list of human-readable errors (empty = valid). Every
     unregistered key is named — an unconsumed key is exactly the
-    silent-no-op failure EG-R2-1/EG-R2-2 were declared for.
+    silent-no-op failure these keys were declared for.
     """
     errors: list[str] = []
     if not isinstance(cfg, dict):
@@ -251,7 +246,7 @@ def setup_config_errors(cfg: dict) -> list[str]:
                       "object with entity_inventory / "
                       "relation_inventory")
     if isinstance(sf, dict):
-        # PK-05 directionality declarations (schema data consumed
+        # Directionality declarations (schema data consumed
         # by _render_schema_front): values are a closed vocabulary,
         # validated here so a typo fails closed at creation rather
         # than silently rendering the default statement.
@@ -259,7 +254,7 @@ def setup_config_errors(cfg: dict) -> list[str]:
         if rd is not None and rd not in ("directed", "undirected"):
             errors.append(
                 "schema_front key 'relation_directionality' must "
-                "be 'directed' or 'undirected' (PK-05)")
+                "be 'directed' or 'undirected'")
         for r in sf.get("relation_inventory") or []:
             if not isinstance(r, dict):
                 continue
@@ -268,14 +263,14 @@ def setup_config_errors(cfg: dict) -> list[str]:
                 errors.append(
                     f"schema_front relation {r.get('type')!r}: "
                     f"'direction' must be 'directed' or "
-                    f"'symmetric' (PK-05)")
+                    f"'symmetric'")
             inv = r.get("inverse_of")
             if inv is not None and not (isinstance(inv, str)
                                         and inv.strip()):
                 errors.append(
                     f"schema_front relation {r.get('type')!r}: "
                     f"'inverse_of' must be a non-empty relation "
-                    f"name (PK-05)")
+                    f"name")
     for bkey in ("pair_enumeration", "roster_pass",
                  "pair_abbrev_guard", "pair_theme_attest_sentence",
                  "quote_punct_insensitive", "theme_attest_chunk"):
@@ -330,8 +325,7 @@ def setup_config_errors(cfg: dict) -> list[str]:
         if fv is not None and not (isinstance(fv, str) and fv.strip()):
             errors.append(
                 f"setup_config key {fkey!r} must be a non-empty "
-                f"string (domain framing carried as profile data, "
-                f"PK-01/PK-02)")
+                f"string (domain framing carried as profile data)")
     pairs = cfg.get("merge_prohibited_type_pairs")
     if pairs is not None:
         ok = isinstance(pairs, list) and all(
@@ -363,11 +357,11 @@ def entity_type_names(cfg: dict | None) -> set[str]:
 
 
 def endpoint_type_names(cfg: dict | None) -> set[str]:
-    """Types a relation endpoint may carry (EG-R2-2 validation set).
+    """Types a relation endpoint may carry (the validation set).
 
     When the profile carries a schema_front, its entity inventory
     is authoritative: entries whose role is not "entity" (e.g.
-    OrganismTaxon, role qualifier_never_entity per DP-B3) are NOT
+    OrganismTaxon, role qualifier_never_entity) are NOT
     endpoint types — a proposer tagging an endpoint with one has
     the tag dropped at the guards, exactly like an unknown type.
     Without a schema_front, the declared entity_types vocabulary
@@ -455,7 +449,7 @@ def _render_schema_front(sf: dict) -> str:
     if relations:
         lines.append("")
         lines.append("### Relation inventory (closed)")
-        # PK-05: the directionality statement is schema DATA, not
+        # The directionality statement is schema DATA, not
         # a core constant. A schema_front declaring
         # relation_directionality="directed" gets the directed
         # statement; an undeclared schema_front (and one declaring
@@ -483,7 +477,7 @@ def _render_schema_front(sf: dict) -> str:
                     f"  Endpoint signature: {'; '.join(str(s) for s in sig)}")
             if r.get("signature_note"):
                 lines.append(f"  {r['signature_note']}")
-            # PK-05: per-relation direction declarations render as
+            # Per-relation direction declarations render as
             # note lines when the payload declares them; payloads
             # declaring neither field render exactly as before.
             if r.get("direction") == "symmetric":
@@ -561,7 +555,7 @@ def _render_vocabularies(cfg: dict) -> str:
 
 
 # ------------------------------------------------------------------
-# Industry packs (docs/PACK_DESIGN.md, issue #63).
+# Industry packs (docs/PACK_DESIGN.md).
 #
 # A pack is the versioned home of one domain's content. Its
 # manifest (packs/<pack_id>/pack.json) names the profile payload
@@ -576,7 +570,7 @@ def _render_vocabularies(cfg: dict) -> str:
 # dict the channel already consumes — byte-identical behavior is
 # proven by scripts/test_pack_v0.py.
 #
-# RESOLUTION (Phase A2, issue #71). resolve_setup_config()
+# RESOLUTION. resolve_setup_config()
 # layers the core/default pack (packs/core/) under a
 # specified domain pack: the core payload is the baseline,
 # and for each key the specified pack declares, the pack's
@@ -695,11 +689,11 @@ def pack_setup_config(pack_dir) -> dict:
 def pack_role_words(pack_dir) -> frozenset | None:
     """The pack's role-word guard vocabulary, or None.
 
-    The vocabulary is pack DATA (A2-F2): a pack whose payload
+    The vocabulary is pack DATA: a pack whose payload
     declares ``role_word_rules_from_profile`` ships the word
     set as a ``role_words`` artefact in its manifest, sha256
-    -pinned like the payload (the fitted-qualifiers route,
-    PK-03). Returns None when the manifest lists no such
+    -pinned like the payload (the fitted-qualifiers route).
+    Returns None when the manifest lists no such
     artefact. Fail-closed: a listed artefact that is missing,
     malformed, or pin-drifted raises ValueError naming the
     defect — a declared guard never runs with a guessed
@@ -755,7 +749,7 @@ def effective_role_words(root, cfg) -> frozenset | None:
     declares no role-word rules (the guard is off). A config
     that declares the rules with no resolvable vocabulary
     raises — fail-closed: the guard never silently runs
-    empty (A2-F2).
+    empty.
     """
     if not cfg or not cfg.get("role_word_rules_from_profile"):
         return None
@@ -770,7 +764,7 @@ def effective_role_words(root, cfg) -> frozenset | None:
             "setup_config declares role_word_rules_from_profile "
             f"but no role_words vocabulary resolves (family "
             f"{family!r}); the declaring pack must ship a "
-            "role_words artefact (A2-F2)")
+            "role_words artefact")
     return vocab
 
 
@@ -783,8 +777,7 @@ def installed_packs_dir() -> Path:
     path. A source checkout never needs this — its own
     ``packs/`` resolves first (packs_dir_candidates) —
     but a wheel install has no ``packs/`` beside the code
-    at all, so this is the only tree it can resolve from
-    (C-F4)."""
+    at all, so this is the only tree it can resolve from."""
     import sysconfig
     from pathlib import Path
     return Path(sysconfig.get_path("data")) / "share" / \
@@ -858,7 +851,7 @@ def resolve_setup_config(root, pack_dir=None) -> dict:
     that cannot load never degrades to the baseline under its
     own name.
 
-    Role words (A2-F2): when the merged config declares
+    Role words: when the merged config declares
     ``role_word_rules_from_profile``, the declaring pack's
     ``role_words`` artefact is resolved and frozen into the
     merged dict under ``role_words`` — the vocabulary is pack
@@ -872,7 +865,7 @@ def resolve_setup_config(root, pack_dir=None) -> dict:
     if specified:
         overlay = pack_setup_config(pack_dir)
         resolved = {**resolved, **overlay}
-    # A2-F2: a payload declaring the role-word guard carries
+    # A payload declaring the role-word guard carries
     # its vocabulary as pack data; resolve it into the merged
     # config so the frozen resolved config is self-contained.
     # A declaration without the artefact refuses the whole
@@ -887,7 +880,7 @@ def resolve_setup_config(root, pack_dir=None) -> dict:
                 "role_word_rules_from_profile but pack "
                 f"{declaring_dir.name!r} ships no role_words "
                 "artefact; the guard vocabulary is pack data "
-                "(A2-F2) and a declared guard never runs empty")
+                "and a declared guard never runs empty")
         resolved["role_words"] = sorted(vocab)
     if specified:
         errs = setup_config_errors(resolved)
@@ -974,7 +967,7 @@ def pack_for_setup_config(root, family: str,
                           setup_config_bytes: bytes) -> dict | None:
     """The pack provenance triple binding a run, or None.
 
-    PK-04 remainder (docs/PACK_DESIGN.md §1.5): a run executes
+    Provenance (docs/PACK_DESIGN.md §1.5): a run executes
     under a pack iff some pack manifest names the run's family
     AND pins exactly the setup_config bytes the run executes
     with — byte equality with the pinned payload, the same
@@ -1046,7 +1039,7 @@ def profile_setup_config_path(root, family: str):
 
 
 def derive_guidance(cfg: dict | None) -> str:
-    """The EG-R2-1 guidance channel: profile -> proposer guidance.
+    """The guidance channel: profile -> proposer guidance.
 
     An explicit ``proposer_guidance`` string is used verbatim.
     Otherwise a ``schema_front`` inventory is rendered; failing
@@ -1069,10 +1062,10 @@ def derive_guidance(cfg: dict | None) -> str:
 
 
 # ------------------------------------------------------------------
-# Domain framing accessors (PK-01 / PK-02, docs/GAP_REGISTER.md).
+# Domain framing accessors.
 #
-# The proposer and pair-judge base templates in pilot/proposer.py
-# and pilot/pair_proposer.py are domain-neutral core text. A
+# The proposer and pair-judge base templates in pipeline/proposer.py
+# and pipeline/pair_proposer.py are domain-neutral core text. A
 # family's domain framing (the contract opening line for CUAD,
 # the slot rules block, the pair inventory's generic-member name
 # for BioRED) is profile DATA, declared in the family's
@@ -1089,25 +1082,25 @@ def _framing_value(cfg: dict | None, key: str) -> str | None:
 
 def proposer_framing(cfg: dict | None) -> str | None:
     """The family's declared opening line for the free-proposer
-    triple prompt (PK-01); None = neutral core default."""
+    triple prompt; None = neutral core default."""
     return _framing_value(cfg, "proposer_framing")
 
 
 def slot_framing(cfg: dict | None) -> str | None:
     """The family's declared opening line for the clause-slot
-    prompt (PK-01); None = neutral core default."""
+    prompt; None = neutral core default."""
     return _framing_value(cfg, "slot_framing")
 
 
 def slot_rules(cfg: dict | None) -> str | None:
     """The family's declared rules block for the clause-slot
-    prompt (PK-01); None = neutral core default rules."""
+    prompt; None = neutral core default rules."""
     return _framing_value(cfg, "slot_rules")
 
 
 def pair_judge_generic_relation(cfg: dict | None) -> str | None:
     """The relation inventory's generic-member name for the
-    pair judge's evidence instruction (PK-02) — e.g. BioRED's
+    pair judge's evidence instruction — e.g. BioRED's
     "Association", declared in its profile; None = the neutral
     fallback wording in pair_proposer."""
     return _framing_value(cfg, "pair_judge_generic_relation")

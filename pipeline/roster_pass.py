@@ -1,23 +1,23 @@
-"""Mention-first roster pass — BioRED round 4 (issue #55).
+"""Mention-first roster pass (BioRED design §4.1).
 
-Design: docs/BIORED_ROUND4.md §4.1. One LLM call per document
+One LLM call per document
 asking for MENTIONS ONLY — every mention of the profile's entity
 types, including mentions that participate in no relation. The
 operative instruction sentence ("...including mentions that
 participate in no relation") is the operationalization of the
-round-4 H-A1 test (relation-coupled extraction): round 2's roster
+H-A1 test (relation-coupled extraction): the earlier roster
 was the endpoints of kept triples, so entities the free proposer
 built no triple around never entered it; this pass decouples
 mention extraction from relation proposal.
 
-The prompt is built through pilot/profile_config.derive_guidance
+The prompt is built through pipeline/profile_config.derive_guidance
 (the #51 channel — the same schema text the proposers see) ahead
 of the mention instruction. Output passes deterministic guards
 mirroring the pipeline's verbatim discipline:
 
 - an emitted surface must occur in the doc text under the
   roster's occurrence semantics (whitespace-normalized,
-  case-preserved substring — pilot.pair_proposer.norm_surface);
+  case-preserved substring — pipeline.pair_proposer.norm_surface);
   non-verbatim surfaces are dropped AND counted;
 - an emitted type must be in the profile's closed endpoint-type
   vocabulary (endpoint_type_names); others dropped and counted;
@@ -25,10 +25,9 @@ mirroring the pipeline's verbatim discipline:
   emitted with two types keeps BOTH rows and is counted as a
   roster type conflict.
 
-The pass is an artifact-producing stage (Stage B of round 4): its
-output is materialized into roster_v2.jsonl by
-scripts/build_biored_r4_roster.py and is thereafter a frozen
-input. It is not a pipeline stage.
+The pass is an artifact-producing stage: its output is
+materialized into roster_v2.jsonl and is thereafter a
+frozen input. It is not a pipeline stage.
 """
 from __future__ import annotations
 
@@ -114,7 +113,7 @@ def guard_mentions(raw: list[dict], text: str,
     the roster's canonical order. The emitted surface kept is
     the whitespace-normalized form (the roster's own surface
     semantics; the verbatim test is on that same normalized
-    form, case preserved per DP-B6).
+    form, case preserved).
     """
     norm_text = norm_surface(text)
     seen: dict[tuple[str, str], dict] = {}

@@ -1,5 +1,4 @@
-"""R17 sample API: endpoint contracts (issue #79,
-run 15).
+"""Sample API: endpoint contracts.
 
 Two layers, both pinned:
 - SearchService (transport-free): every endpoint's
@@ -198,7 +197,7 @@ class TestServeMain(unittest.TestCase):
         self.assertEqual(rc, 1)
 
     def test_embed_keyless_refuses_by_name(self):
-        # Run 31: --embed with an unresolvable embedder key
+        # --embed with an unresolvable embedder key
         # is a named refusal (exit 1 naming the seat and the
         # variable), never a silent local model.
         err = io.StringIO()

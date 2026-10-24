@@ -1,7 +1,7 @@
 """Command-line surface for the verification cores.
 
-One-command forms of the three user-runnable loops (plan §2.2
-/ R10), over JSONL inputs in the documented record shapes
+One-command forms of the three user-runnable loops,
+over JSONL inputs in the documented record shapes
 (see :mod:`harness.verification.scoring`):
 
     python -m pipeline verify score --predicted P.jsonl \

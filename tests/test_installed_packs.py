@@ -1,9 +1,9 @@
-"""Pack resolution from an installed layout (C-F4).
+"""Pack resolution from an installed layout.
 
 A wheel install places the pack tree at the installed
 data-files location — ``<sysconfig data>/share/ontosmith
 /packs`` — not under the pipeline root (site-packages in
-that layout). Run 10 recorded the defect: a pack-bound
+that layout). A recorded defect: a pack-bound
 ``batch create`` from such an install failed because the
 pack lookups consulted only ``<root>/packs``.
 
@@ -126,7 +126,7 @@ class TestResolveSetupConfigInstalled(InstalledLayoutCase):
 
     def test_role_words_pack_resolves_installed(self):
         # legal-contract declares the role-word guard and
-        # ships its vocabulary as pack data (A2-F2); the
+        # ships its vocabulary as pack data (); the
         # resolution must freeze it from the installed tree.
         pack_dir = pc.find_pack_dir(self.root, "legal-contract")
         cfg = pc.resolve_setup_config(self.root, pack_dir)

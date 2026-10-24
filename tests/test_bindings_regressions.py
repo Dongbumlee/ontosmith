@@ -1,6 +1,6 @@
-"""FE3 regressions — fresh-eyes round 3 (issue #43).
+"""Bindings regressions.
 
-The round-3 blockers lived in test blind spots: the
+The blockers lived in test blind spots: the
 None-cost (unmetered binding) path was unit-tested at the
 normalize/ledger level but never run through the GATES
 stage or a whole build, and the pip-installed configure
@@ -10,21 +10,21 @@ file carries the stage-level and end-to-end layers:
 - stage_gates with a None-cost judge completes, prints a
   count-based projection (no fabricated dollars), and
   records the stage + total as null in the ledger
-  (FE3-2, FE3-4);
+ ;
 - the review's Try-It B as a repeatable end-to-end test:
   a cost-less custom binding on a stub OpenAI-compatible
   server (chat + systemone decisions + embeddings) —
   capped create refused by name, --no-cost-cap build
   completing through a stop-and-resume cycle, and the
   manifest/wire/config model triple in agreement
-  (FE3-2, FE3-3, FE3-4, FE3-8);
+ ;
 - the smaller findings' units: export-prefixed bindings
-  files parse (FE3-9), probe failures speak plainly
-  (FE3-7), a nonexistent batch id errors by name
-  (FE3-6), cost_basis() on an empty seat set is
+  files parse, probe failures speak plainly
+ , a nonexistent batch id errors by name
+ , cost_basis() on an empty seat set is
   not-provided and require_key never prints "model
-  None" (FE3-10), the shipped template's two copies are
-  byte-identical (FE3-1).
+  None", the shipped template's two copies are
+  byte-identical.
 """
 import argparse
 import io
@@ -170,7 +170,7 @@ class _FakeGraph:
 
 
 # ----------------------------------------------------------------------
-# (a) Stage-level None-cost tests (FE3-2, FE3-4)
+# (a) Stage-level None-cost tests
 # ----------------------------------------------------------------------
 
 class TestStageGatesUnmetered(unittest.TestCase):
@@ -183,7 +183,7 @@ class TestStageGatesUnmetered(unittest.TestCase):
     def _batch_with_candidates(self, n=2):
         cfg = BatchConfig(candidate_source="llm",
                           max_cost_usd=None)
-        b = Batch(batch_id="fe3-stage", run_id="run-0001",
+        b = Batch(batch_id="bindings-stage", run_id="run-0001",
                   source="src", collection="coll",
                   doc_ids=["d1"], config=cfg,
                   status=BatchStatus.CANDIDATES_DONE)
@@ -206,7 +206,7 @@ class TestStageGatesUnmetered(unittest.TestCase):
                       "input_tokens": 5, "output_tokens": 2}
 
     def test_unmetered_judge_completes_and_records_null(self):
-        # The FE3-2 blocker shape: before the fix this
+        # The blocker shape: before the fix this
         # stage died with "unsupported operand type(s) for
         # +=: 'float' and 'NoneType'" on the first
         # candidate and wedged the batch.
@@ -224,7 +224,7 @@ class TestStageGatesUnmetered(unittest.TestCase):
         self.assertEqual(ledger["metered_usd"], 0.0)
         self.assertIsNone(b.metrics["gates"]["cost_usd"])
         self.assertEqual(b.metrics["gates"]["judged"], 2)
-        # FE3-4: the banner projects a judgment count on an
+        # the banner projects a judgment count on an
         # unmetered binding — no dollar figure is printed.
         banner = out.getvalue()
         self.assertIn("no $ projection", banner)
@@ -259,7 +259,7 @@ class TestRecordCostTotals(unittest.TestCase):
         self.addCleanup(_clear_binding_env)
 
     def _batch(self):
-        return Batch(batch_id="fe3-ledger", run_id="run-1",
+        return Batch(batch_id="bindings-ledger", run_id="run-1",
                      source="s", collection="c", doc_ids=[],
                      config=BatchConfig(max_cost_usd=None))
 
@@ -283,7 +283,7 @@ class TestRecordCostTotals(unittest.TestCase):
 
 
 # ----------------------------------------------------------------------
-# (c) Try-It B as a repeatable end-to-end test (FE3-2/3/4/8)
+# (c) Try-It B as a repeatable end-to-end test
 # ----------------------------------------------------------------------
 
 class TestTryItBEndToEnd(unittest.TestCase):
@@ -367,7 +367,7 @@ class TestTryItBEndToEnd(unittest.TestCase):
         self.assertIn("proposer", str(cm.exception))
 
         # 2. --no-cost-cap create freezes the seat models
-        #    into the batch config (FE3-3).
+        #    into the batch config.
         b = self._create(no_cost_cap=True)
         self.assertEqual(b.config.llm_model,
                          STUB_MODELS["proposer"])
@@ -379,7 +379,7 @@ class TestTryItBEndToEnd(unittest.TestCase):
 
         # 3. First run: the embedder is down, so the build
         #    stops FAILED at INDEX — after GATES judged on
-        #    the unmetered binding (the FE3-2 wedge point).
+        #    the unmetered binding (the wedge point).
         _StubHandler.fail_embeddings = True
         import urllib.error
         with self.assertRaises(urllib.error.HTTPError):
@@ -396,7 +396,7 @@ class TestTryItBEndToEnd(unittest.TestCase):
 
         # 4. Resume keeping the run_id: completes, and the
         #    run names exactly one run_id — the kept one
-        #    (FE3-8).
+        #   .
         _StubHandler.fail_embeddings = False
         out = self._run(reuse=True)
         b = load_batch(self.state, "fe3-e2e")
@@ -408,7 +408,7 @@ class TestTryItBEndToEnd(unittest.TestCase):
         self.assertEqual(uuids, {run_id_at_create})
 
         # 5. Manifest provenance == config == wire
-        #    (FE3-3): the models the manifest names are
+        #   : the models the manifest names are
         #    the models the stub actually saw.
         manifest = json.loads((batch_dir(self.state, "fe3-e2e")
                                / "manifest.json").read_text())
@@ -426,7 +426,7 @@ class TestTryItBEndToEnd(unittest.TestCase):
         self.assertEqual(decisions, {STUB_MODELS["judge"]})
         self.assertEqual(embeddings, {STUB_MODELS["embedder"]})
 
-        # 6. Ledger + status agree (FE3-4): every live
+        # 6. Ledger + status agree: every live
         #    stage unmetered, the total null — and the
         #    status JSON prints it that way.
         ledger = b.metrics["cost_ledger"]
@@ -443,7 +443,7 @@ class TestTryItBEndToEnd(unittest.TestCase):
 
 
 # ----------------------------------------------------------------------
-# Smaller findings (FE3-1, FE3-6, FE3-7, FE3-9, FE3-10)
+# Smaller findings
 # ----------------------------------------------------------------------
 
 class TestSmallerFindings(unittest.TestCase):
@@ -454,7 +454,7 @@ class TestSmallerFindings(unittest.TestCase):
         self.addCleanup(shutil.rmtree, self.tmp, True)
 
     def test_export_prefixed_lines_parse(self):
-        # FE3-9: a shell-style file must not silently drop
+        # a shell-style file must not silently drop
         # its declarations (which stamped a false
         # `reference` on the preset fallback).
         text = ("export ONTOSMITH_PROPOSER_BASE_URL="
@@ -473,7 +473,7 @@ class TestSmallerFindings(unittest.TestCase):
         self.assertEqual(prov["name"], "custom")
 
     def test_probe_failure_speaks_plainly(self):
-        # FE3-7: a dead endpoint's probe failure names the
+        # a dead endpoint's probe failure names the
         # reason in plain words — no urllib plumbing in
         # the report (or the artifact header built from it).
         decls = {
@@ -494,7 +494,7 @@ class TestSmallerFindings(unittest.TestCase):
         self.assertNotIn("Errno", joined)
 
     def test_nonexistent_batch_id_errors_by_name(self):
-        # FE3-6: a typo'd batch id is a named error with
+        # a typo'd batch id is a named error with
         # exit code 2, never a traceback.
         env = {"ONTOSMITH_ROOT": str(self.tmp)}
         err = io.StringIO()
@@ -508,7 +508,7 @@ class TestSmallerFindings(unittest.TestCase):
         self.assertIn("no such batch", err.getvalue())
 
     def test_cost_basis_empty_seat_set_is_not_provided(self):
-        # FE3-10: with no seat carrying a bound model the
+        # with no seat carrying a bound model the
         # aggregate basis is defined as not-provided —
         # "mixed" would claim a disagreement that does
         # not exist.
@@ -531,7 +531,7 @@ class TestSmallerFindings(unittest.TestCase):
         self.assertIn("none bound", str(cm.exception))
 
     def test_template_copies_byte_identical(self):
-        # FE3-1: the package-data template (what
+        # the package-data template (what
         # --emit-template serves from an install) and the
         # documented docs/ copy are the same bytes.
         repo = Path(__file__).resolve().parent.parent

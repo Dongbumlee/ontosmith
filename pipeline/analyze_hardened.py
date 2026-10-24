@@ -5,7 +5,7 @@
 - Cluster bootstrap (over docs) 95% CIs for F1
 - McNemar's test for paired model comparisons on identical candidates
 
-Usage: python -m pilot.analyze_hardened results/matrix_<model>_<gate>.json [...]
+Usage: python -m pipeline.analyze_hardened results/matrix_<model>_<gate>.json [...]
 """
 from __future__ import annotations
 
@@ -106,7 +106,7 @@ def mcnemar(a: list[dict], b: list[dict], t_a: float, t_b: float) -> dict:
 def main() -> None:
     paths = sys.argv[1:]
     if not paths:
-        print("usage: python -m pilot.analyze_hardened <result json> ...")
+        print("usage: python -m pipeline.analyze_hardened <result json> ...")
         return
     cfgs = {}
     for p in paths:

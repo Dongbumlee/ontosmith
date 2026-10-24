@@ -1,6 +1,6 @@
-"""BO-2 / BO-3 regressions (BYO ontology review, 2026-10-23).
+"""Theme-attestation regressions (BYO ontology review, 2026-10-23).
 
-BO-3: the theme-presence guard blocked a hand-authored pack's
+The theme-presence guard blocked a hand-authored pack's
 verb+preposition relation wholesale (10/10 "works at"
 proposals) with the reason visible only inside a metrics
 JSON. The guard stays — it exists to stop fabricated
@@ -13,7 +13,7 @@ payload, and the free-proposal guard then accepts the
 object attested anywhere in the proposal's chunk. Default
 (absent) behaviour is byte-identical to before.
 
-BO-2: the Track 3 first command died with a raw
+the Track 3 first command died with a raw
 FileNotFoundError when the drafts/ directory did not exist
 yet; the builder now creates its output directories like
 the rest of the product.
@@ -160,7 +160,7 @@ class TestLeverDeclaration(unittest.TestCase):
 
 
 class TestDraftCreatesOutputDirs(unittest.TestCase):
-    """BO-2: the Track 3 first command writes into a
+    """the Track 3 first command writes into a
     drafts/ directory the walkthrough never creates."""
 
     def test_write_json_creates_parents(self):

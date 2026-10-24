@@ -1,4 +1,4 @@
-"""Query stack (E6, PRODUCTION_DESIGN.md §7) — the production
+"""Query stack — the production
 retrieval path over the GraphStore serving index.
 
 One code path serves production queries AND the pinned-QA eval
@@ -6,7 +6,7 @@ arms (§7 contract, gap G-20): the arms below are flags over the
 same retrievers, so measurement and production cannot drift apart.
 
 Components:
-  Chunker            the §6 chunking interface (G-16); the measured
+  Chunker            the §6 chunking interface; the measured
                      baseline is FixedWindowChunker (1000-char
                      windows, identical to cuad_eval.py / stage_index)
   project_serving()  E5 serving projection for the judged CUAD full
@@ -42,9 +42,9 @@ Components:
                      floor — never a fabricated answer.
 
 CLI:
-  python -m pilot.query_stack project   build the serving data
-  python -m pilot.query_stack measure   latency + A/B over QA 116
-  python -m pilot.query_stack smoke     answerer smoke, 12 questions
+  python -m pipeline.query_stack project   build the serving data
+  python -m pipeline.query_stack measure   latency + A/B over QA 116
+  python -m pipeline.query_stack smoke     answerer smoke, 12 questions
 """
 from __future__ import annotations
 
@@ -146,7 +146,7 @@ class FixedWindowChunker:
 
 
 # ----------------------------------------------------------------------
-# chat helper (mirrors pilot/proposer.py's pattern: Haiku takes no
+# chat helper (mirrors pipeline/proposer.py's pattern: Haiku takes no
 # temperature; usage incl. cost is returned for accounting)
 # ----------------------------------------------------------------------
 def _chat(content: str, max_tokens: int, key: str,
@@ -209,7 +209,7 @@ def _chat_cost(usage: dict) -> float | None:
 
 
 # ----------------------------------------------------------------------
-# E5 serving projection for the judged full corpus (G-15/G-16)
+# E5 serving projection for the judged full corpus
 # ----------------------------------------------------------------------
 def project_serving(gs=None, registry=None) -> dict:
     """Project batches/cuad-legal-full/routed_v6_judged.jsonl +
@@ -359,7 +359,7 @@ def project_serving(gs=None, registry=None) -> dict:
 
     # --- MENTIONS: a chunk mentions an entity when a surface form
     #     of one of the doc's own triple endpoints is attested in
-    #     the chunk text (P1's rule: verbatim, then case-insensitive)
+    #     the chunk text (verbatim, then case-insensitive)
     ent_surfaces: dict[str, dict[str, set[str]]] = defaultdict(
         lambda: defaultdict(set))  # doc_id -> entity_id -> surfaces
     for r in routed:
@@ -502,20 +502,19 @@ class Linker:
 # ----------------------------------------------------------------------
 def load_attestations(batch_dir: Path, eval_dir: Path):
     """Per-attestation rows for the graph arms, from the projection
-    record (eval/p3b_surface_map.jsonl).
+    record (the surface-map rows).
 
     Each surface-map row carries the (p_true, tier) the projection
     recorded for THAT attestation, and those values are the ones
-    used. Run 32 (audit F1): the previous implementation joined
-    the surface rows to routed_v6_judged.jsonl through a dict keyed
+    used. The previous implementation joined
+    the surface rows to the judged routed rows through a dict keyed
     (subject, object, relation, doc_id) — duplicate keys silently
     overwrote each other (the last row won), and any surface row
     whose key missed the dict silently scored the default
     (0.3, 2). The per-attestation join here was proven equivalent
     on the frozen artifacts before it landed: per-question
     recall@20/@5 for both graph arms is unchanged
-    (0.6516 / 0.7115 overall; verification-workspace checks
-    f1_graph_arm_recompute / f1_hybrid_arm_recompute).
+    (0.6516 / 0.7115 overall).
 
     Returns (attestations, att_tokens, stats). stats counts the
     surface rows whose key has no judged counterpart
@@ -564,9 +563,8 @@ class GraphData:
     """Two views of the projected graph, both loaded from the
     serving projection:
 
-    facts        the store's REL edges. Since the G-28 fix
-                 (P4), GraphStore.upsert_edges MERGEs at
-                 attestation level (key includes doc_id +
+    facts        the store's REL edges. GraphStore.upsert_edges
+                 MERGEs at attestation level (key includes doc_id +
                  att_id) and stores the extractor surfaces on the
                  edge, so facts ARE the per-attestation rows and
                  the store alone answers "which documents attest
@@ -772,12 +770,12 @@ class PPRIndex:
 # ----------------------------------------------------------------------
 def assemble_pool(gd: GraphData, seed_ids: set, top_docs: set,
                   qtoks: set) -> list[dict]:
-    """Evidence pool assembly v2 (P4; P3b answerer follow-up).
+    """Evidence pool assembly v2.
 
     v1 pool: attestations touching a linked seed or a top-ranked
-    doc, ordered by (question-token overlap, judged weight). The
-    P3b smoke's 9 correct abstentions traced to deciding triples
-    that this pool never reached:
+    doc, ordered by (question-token overlap, judged weight). An
+    earlier smoke run's 9 correct abstentions traced to deciding
+    triples that this pool never reached:
 
     * conflict questions: the deciding triples hang off the
       parties' CONTRACT entities (one hop beyond the party seeds),
@@ -1288,7 +1286,7 @@ def smoke() -> dict:
              docs_from_chunk_rows(t_rows)])[:10])
         # evidence pool: assembly v2 (assemble_pool) — v1 seed /
         # top-doc pool plus contested-relation interleave and the
-        # 2-hop frontier (P4; see assemble_pool's docstring)
+        # 2-hop frontier (see assemble_pool's docstring)
         qtoks = {t for t in tokenize(question)
                  if t not in STOP and len(t) > 2}
         pool = assemble_pool(gd, seed_ids, top_docs, qtoks)
@@ -1316,7 +1314,7 @@ def smoke() -> dict:
 
 
 def main() -> None:
-    ap = argparse.ArgumentParser(prog="pilot.query_stack")
+    ap = argparse.ArgumentParser(prog="pipeline.query_stack")
     ap.add_argument("cmd", choices=("project", "measure", "smoke"))
     args = ap.parse_args()
     if args.cmd == "project":

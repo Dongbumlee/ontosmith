@@ -1,4 +1,4 @@
-"""Build the PyPI variant of the README (generated; issue #78).
+"""Build the PyPI variant of the README (generated).
 
 PyPI renders the package long description through
 readme_renderer (the Warehouse path), and it does NOT
@@ -15,7 +15,7 @@ generates the PyPI variant from it:
   * relative links to a directory -> <base>/tree/<branch>/...
   * relative images          -> <base>/raw/<branch>/...
   * the brand banner the master carries directly under
-    its title (assets/brand/banner.png, run 21) is
+    its title (assets/brand/banner.png) is
     verified — the build refuses if it is missing — and
     rewritten to its absolute raw URL like every other
     image;
@@ -73,8 +73,8 @@ from pathlib import Path
 DEFAULT_BASE = "https://github.com/Dongbumlee/ontosmith"
 DEFAULT_BRANCH = "main"
 
-# The brand banner (run 21: logo concept A, Forged
-# Triad, picked by Dongbum). The master carries it
+# The brand banner (logo concept A, Forged
+# Triad). The master carries it
 # directly under the title as a relative image; the
 # variant must carry it exactly once, in the header
 # above the first section, rewritten to the absolute
@@ -180,7 +180,7 @@ def build_variant(master: str, base: str = DEFAULT_BASE,
             f"master must carry the brand banner line "
             f"{BANNER_LINE!r} exactly once (found "
             f"{master.count(BANNER_LINE)}) — the logo "
-            "lands in the master first (run 21)")
+            "lands in the master first")
 
     text = master
     for old, new in SUBSTITUTIONS:
@@ -209,7 +209,7 @@ def build_variant(master: str, base: str = DEFAULT_BASE,
 
     # Brand banner LAST: the rewritten variant must carry
     # it exactly once, in the header (above the first
-    # section heading) — the slot the run-19 generator
+    # section heading) — the slot the generator
     # used to reserve is now filled, and this check is
     # what guards it.
     banner_abs = (f"![OntoSmith]({base}/raw/{branch}/"

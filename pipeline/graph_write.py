@@ -1,7 +1,7 @@
 """Write gate-accepted triples into Neo4j with full provenance.
 
 Usage:
-  NEO4J_PASSWORD=... python -m pilot.graph_write \
+  NEO4J_PASSWORD=... python -m pipeline.graph_write \
       --results results/scale1k_jev-1.13_noul_v2.json --threshold 0.25
 
 Schema:

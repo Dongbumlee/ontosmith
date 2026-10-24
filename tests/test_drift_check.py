@@ -1,4 +1,4 @@
-"""Drift spot audit (G-23): pipeline.drift_check + the VERIFY hook.
+"""Drift spot audit: pipeline.drift_check + the VERIFY hook.
 
 Regression for the installed-copy defect: stage_verify used to
 load the audit implementation from scripts/drift_check.py by
@@ -170,9 +170,9 @@ class TestExpectedFromManifest(DriftWorkspace):
                                                 / "registry.db")})
 
     def test_corpus_from_batch_json_not_state(self):
-        # Run 32 (audit F2): batch.json's `source` is the
+        # Batch.json's `source` is the
         # authoritative corpus. A state.json without `source`
-        # (everything save_state wrote before run 32) must not
+        # (everything save_state wrote before the fix) must not
         # zero the corpus and void the join.
         d = batch_dir(self.root, self.batch_id)
         (d / "state.json").write_text(json.dumps({}))
@@ -185,7 +185,7 @@ class TestExpectedFromManifest(DriftWorkspace):
         self.assertEqual(exp, {KEY: {"p_true": 0.9, "tier": 1}})
 
     def test_batch_dir_registry_wins_over_default(self):
-        # Run 32 (audit F2): with no handle passed, a registry
+        # With no handle passed, a registry
         # file in the batch's own directory is resolved before
         # the state-root default — the default here is a fresh
         # registry that knows none of the batch's entities, so
@@ -268,7 +268,7 @@ class TestVerifyHook(DriftWorkspace):
         self.assertEqual(audit["property_drift"], 1)
 
     def test_stage_verify_zero_join_blocks_verified(self):
-        # Run 32 guard (audit F2): the routed surfaces resolve in
+        # Guard: the routed surfaces resolve in
         # a corpus the registry does not hold, so the property
         # join is 0 — the drift check must FAIL (VERIFIED
         # blocked), never pass on key existence alone. This is
@@ -304,7 +304,7 @@ class TestVerifyHook(DriftWorkspace):
         audit = b.metrics["verify"]["checks"]["drift_spot_audit"]
         self.assertIsNone(audit["pass"])
         # The report must say plainly that the property audit
-        # did not run (run 32) — a skipped audit is not a passed
+        # did not run — a skipped audit is not a passed
         # one, and the record must not read as if it were.
         self.assertIn("property audit did not run", audit["note"])
 

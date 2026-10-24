@@ -1,4 +1,4 @@
-"""Worked-example smoke tests (Phase C): the shipped
+"""Worked-example smoke tests: the shipped
 example must stay runnable and honest — its corpus exists,
 its recorded build output parses as triple records, and
 every evidence quote is a verbatim substring of the

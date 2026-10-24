@@ -1,13 +1,13 @@
-"""Pair-enumeration proposer — BioRED round 3 (issue #54).
+"""Pair-enumeration proposer — the BioRED pair-enumeration design.
 
 The single-variable alternative to the free generative proposer
-(pilot/proposer.py): instead of asking the model to write down the
+(pipeline/proposer.py): instead of asking the model to write down the
 pairs it notices in a document, enumerate EVERY pair of roster
 mentions that co-occurs in a sentence and ask about each pair once.
 
-Design (docs/BIORED_ROUND3.md, pre-registered):
+Design (pre-registered):
 
-- The roster is an INPUT (round 2's extracted typed mentions,
+- The roster is an INPUT (the free-proposer pass's extracted typed mentions,
   materialized as roster.jsonl) — this module never extracts
   mentions; mention quality is the control, not the variable.
 - Enumeration is deterministic pure code: the sentence rule, the
@@ -16,7 +16,7 @@ Design (docs/BIORED_ROUND3.md, pre-registered):
   measures with, so the measured ceiling and the run cannot drift
   apart.
 - The pair question carries the profile guidance rendered by
-  pilot/profile_config.derive_guidance (the #51 channel — the same
+  pipeline/profile_config.derive_guidance (the guidance channel — the same
   schema text the free proposer sees) and demands one inventory
   relation or NONE, plus the shortest verbatim quote from the
   shared sentence. Answers are shaped exactly like free-proposer
@@ -38,19 +38,19 @@ DEFAULT_MODEL = PROPOSER_MODEL
 
 
 def norm_surface(s: str) -> str:
-    """Whitespace-normalized surface, case PRESERVED (DP-B6: case
+    """Whitespace-normalized surface, case PRESERVED (case
     is part of a gene/protein name). Same normalization the frozen
     scorer (biored_score.norm_ws) applies to gold surfaces."""
     return re.sub(r"\s+", " ", (s or "")).strip()
 
 
 # ------------------------------------------------------------------
-# Sentence rule (declared in docs/BIORED_ROUND3.md §3.2)
+# Sentence rule (design §3.2)
 # ------------------------------------------------------------------
 _SENT_SPLIT = re.compile(r"(?<=[.!?])\s+")
 
-# Abbreviation guard (issue #68 phase 2; opt-in, default off =
-# byte-identical R3). The plain boundary rule cuts a false
+# Abbreviation guard (opt-in, default off =
+# byte-identical to the base splitter). The plain boundary rule cuts a false
 # boundary after any period + space, including the final
 # period of a dotted initialism ('U.S. Route 20' -> 'U.S.' +
 # 'Route 20 ...') or of a title abbreviation ('St. Louis').
@@ -103,9 +103,9 @@ def split_sentences_r3(text: str, *,
 
 def mention_surfaces(m: dict) -> list[str]:
     """A mention's resolution surface set: the canonical surface
-    first, then any registered aliases (round 4, §4.3 — aliases
+    first, then any registered aliases (§4.3 — aliases
     are additional surfaces recorded against the mention; each
-    entry is a string or a {"surface": ...} record). Round-3
+    entry is a string or a {"surface": ...} record). Base
     mentions carry no aliases and resolve to [surface] exactly
     as before."""
     out = [norm_surface(m["surface"])]
@@ -124,7 +124,7 @@ def mention_sentence_sets(text: str,
     sentence indices where the mention occurs. A mention occurs
     where ANY of its resolution surfaces occurs (normalized,
     case-preserved substring); with no aliases this is exactly
-    the round-3 canonical-surface rule."""
+    the canonical-surface rule."""
     sents = split_sentences_r3(text, abbrev_guard=abbrev_guard)
     norm_sents = [norm_surface(s) for s in sents]
     out = []
@@ -147,8 +147,7 @@ def enumerate_pairs(text: str, mentions: list[dict],
 
     ONE mechanism, parameterized by the maximum sentence
     distance between an occurrence of one endpoint and an
-    occurrence of the other (enumeration-coverage program,
-    docs/REDOCRED_ENUMERATION_DESIGN.md):
+    occurrence of the other (the enumeration-coverage design):
 
     - window="sentence" (the default; max_dist=0): a pair is
       enumerated when both mentions occur in at least one
@@ -225,11 +224,11 @@ def enumerate_pairs(text: str, mentions: list[dict],
                 "sentence": context,
                 "shared_sentences": shared,
             }
-            # Round 4: when a mention carries registered aliases,
+            # Aliases: when a mention carries registered aliases,
             # its resolution surface set rides along so the pair
             # stage can emit the form attested in the question
             # sentence (design §4.3 emission rule). Absent for
-            # round-3 rosters — pair records are unchanged there.
+            # base rosters — pair records are unchanged there.
             s_surfs = mention_surfaces(mentions[i])
             o_surfs = mention_surfaces(mentions[j])
             if len(s_surfs) > 1:
@@ -296,14 +295,13 @@ def build_pair_prompt(sentence: str, subject: str, subject_type: str,
                       obj: str, object_type: str,
                       guidance: str = "", jf1: bool = False,
                       jf2: bool = False) -> str:
-    """Guidance channel first (the #51 discipline: the profile's
+    """Guidance channel first (the profile's
     schema text is the pair judge's working instructions, exactly
     as it is the free proposer's), then the pair question.
 
-    jf1=True selects the JF-F1 answer format (issue #66 stage 7
-    design, docs/REDOCRED_JF_F1_DESIGN.md section 3): the
-    positive branch gains a "direction" field. jf1=False is
-    byte-identical to the rounds-3/4 prompt.
+    jf1=True selects the JF-F1 answer format (design
+    section 3): the positive branch gains a "direction"
+    field. jf1=False is byte-identical to the original prompt.
 
     jf2 is accepted for signature symmetry with
     build_pair_prompt_judge's restatement switch (design
@@ -322,20 +320,20 @@ def build_pair_prompt(sentence: str, subject: str, subject_type: str,
 
 
 # ------------------------------------------------------------------
-# Pair-judge variants (round 5, issue #56; docs/BIORED_ROUND5.md)
+# Pair-judge variants
 #
-# The round-5 factorial varied the pair judge on two factors —
+# The variants vary the pair judge on two factors —
 # CONTEXT (sentence | abstract) and INSTRUCTION (standard |
-# evidence) — and J3 (abstract x evidence) won on the frozen
+# evidence) — and the abstract x evidence cell won on the frozen
 # slice census (eta 0.5412 -> 0.7412; guard audit upheld 0.70).
 # The templates below are the experiment's registered texts,
-# transcribed verbatim from scripts/run_biored_r5_judge_exp.py;
-# scripts/test_r5_wiring.py byte-compares this module's output
+# transcribed verbatim from the experiment runner;
+# the wiring tests byte-compare this module's output
 # against the experiment runner's and against the recorded
 # template hashes, so the production path cannot drift from the
 # measured instrument. With both switches at their defaults
 # (sentence / standard) the prompt is build_pair_prompt's —
-# byte-identical to rounds 3/4.
+# byte-identical to the original.
 # ------------------------------------------------------------------
 _HEAD = """
 
@@ -366,10 +364,10 @@ Entity B: {object} (type: {object_type})
 
 """
 
-# PK-02 (docs/GAP_REGISTER.md): the evidence template names the
+# The evidence template names the
 # inventory's generic-member relation through the {generic}
 # placeholder — the name is profile data
-# (pilot/profile_config.pair_judge_generic_relation; BioRED's
+# (pipeline/profile_config.pair_judge_generic_relation; BioRED's
 # profile declares "Association"), never a core literal. A
 # profile that declares none gets the neutral fallback wording.
 GENERIC_RELATION_DEFAULT = "generic relation"
@@ -406,7 +404,7 @@ _ANSWER_EVIDENCE = """Answer with ONLY one JSON object, no other text:
   connects them'>"}}
 """
 
-# JF-F1 answer templates (issue #66 stage 7; design section 3.1):
+# JF-F1 answer templates (design section 3.1):
 # the positive branch gains the direction field; the NONE branch
 # is unchanged (under evidence it keeps its `missing` field).
 _ANSWER_STANDARD_JF1 = """Answer with ONLY one JSON object, no other text:
@@ -429,7 +427,7 @@ _ANSWER_EVIDENCE_JF1 = """Answer with ONLY one JSON object, no other text:
   connects them'>"}}
 """
 
-# Stage-12 (J3F2) inventory restatement (design section
+# Inventory restatement (design section
 # 14): the relation inventory, names only, restated
 # immediately before the answer format. The names are
 # data ({names} = the inventory names in payload order,
@@ -469,7 +467,7 @@ def build_pair_prompt_judge(sentence: str, subject: str,
                             jf1: bool = False,
                             restat_inventory: list[str] | None = None
                             ) -> str:
-    """The pair question under a round-5 judge variant.
+    """The pair question under a judge variant.
 
     Defaults (sentence x standard) delegate to build_pair_prompt
     unchanged. Any other combination assembles the experiment's
@@ -478,15 +476,15 @@ def build_pair_prompt_judge(sentence: str, subject: str,
     branch for INSTRUCTION). `text` is the full document text,
     required by the abstract context. `generic_relation` is the
     inventory's generic-member name for the evidence block
-    (PK-02 — profile data; with the name BioRED's profile
+    (profile data; with the name BioRED's profile
     declares, the assembled prompt is byte-identical to the
-    round-5 experiment's registered template).
+    experiment's registered template).
 
     jf1=True selects the JF-F1 answer format (design section 3)
     in whichever template the variant assembles; jf1=False is
     byte-identical to the pre-JF-F1 prompts.
 
-    restat_inventory (design section 14, cell J3F2): when a
+    restat_inventory (design section 14): when a
     list of inventory names is passed, the section-14
     restatement block is inserted immediately before the
     answer format; None (the default) leaves every variant
@@ -577,8 +575,8 @@ DIRECTIONS = ("AB", "BA")
 def _parse_pair_answer_jf1(content: str,
                            relation_inventory: set[str]
                            ) -> tuple[str, str, str, str | None]:
-    """JF-F1 successor to _parse_pair_answer (issue #66 stage 7;
-    docs/REDOCRED_JF_F1_DESIGN.md section 3, rules R1/R4).
+    """JF-F1 successor to _parse_pair_answer (design
+    section 3, rules R1/R4).
 
     -> (relation_or_NONE, quote, outcome, direction|None).
     Outcomes extend the legacy set with bad_direction. The
@@ -620,8 +618,8 @@ def jf1_swaps(direction: str | None, relation: str,
 
 def _parse_pair_missing(content: str) -> str:
     """The judge's stated evidence gap on a NONE answer — the
-    evidence instruction (round 5) requires every NONE to carry
-    one; round 8's FIX-P persists it (design §4.4). "" for
+    evidence instruction requires every NONE to carry
+    one; the FIX-P record persists it (design §4.4). "" for
     positive answers, unparseable content, and NONE answers
     carrying no missing text (the standard instruction never
     asks for one)."""
@@ -644,7 +642,7 @@ def _occurrence_spans(haystack: str, needle: str) -> list[tuple[int, int]]:
 
 
 def attested_form(surfaces: list[str], context: str) -> str:
-    """Round-4 emission rule (design §4.3): the surface form a
+    """Emission rule (design §4.3): the surface form a
     candidate carries for an endpoint is the form attested in
     the question sentence when one is, else the canonical
     surface. A form is attested when it has a STANDALONE
@@ -693,11 +691,11 @@ def propose_pairs_for_doc(doc_id: str, text: str,
                           ) -> dict:
     """Enumerate pairs for one doc and ask about each (one call).
 
-    judge_context / judge_instruction select the round-5 pair
-    judge variant (issue #56); at their defaults the prompts are
-    byte-identical to rounds 3/4.
+    judge_context / judge_instruction select the pair
+    judge variant; at their defaults the prompts are
+    byte-identical to the original pair prompt.
 
-    jf1=True runs the JF-F1 answer format (issue #66 stage 7):
+    jf1=True runs the JF-F1 answer format (design section 3):
     positive answers carry a direction field, emission swaps
     endpoints iff jf1_swaps says so against
     `symmetric_relations` (the profile payload's declared
@@ -706,7 +704,7 @@ def propose_pairs_for_doc(doc_id: str, text: str,
     jf1=False the prompts, parse, emission and verdict records
     are exactly the pre-JF-F1 behavior.
 
-    restat_inventory forwards the section-14 (J3F2)
+    restat_inventory forwards the section-14
     inventory names to the judge builder; None leaves every
     prompt byte-identical.
 
@@ -714,8 +712,8 @@ def propose_pairs_for_doc(doc_id: str, text: str,
     guard to enumeration (default off = the frozen R3 split).
     evidence_sentence_in_items (default off) adds the pair's
     sentence to each ok item under `evidence_sentence`, for
-    the guard_triples theme-attestation span (issue #68
-    phase 2); with it off, items are byte-identical.
+    the guard_triples theme-attestation span; with it off,
+    items are byte-identical.
 
     Returns {items, cost, calls, errors, enumerated, answered,
     outcomes, verdicts} — items shaped like proposer items
@@ -726,7 +724,7 @@ def propose_pairs_for_doc(doc_id: str, text: str,
     sentence itself is the quote (it is verbatim by
     construction) — the guards still apply verbatim/attestation
     checks downstream. verdicts carries one FIX-P record per
-    enumerated pair (round 8, issue #59; design §4.4): pair
+    enumerated pair (design §4.4): pair
     identity, the parse-level outcome and its coarse verdict
     (ok / none / error), relation, the model's quote, and — for
     NONE verdicts under the evidence instruction — the judge's
@@ -789,7 +787,7 @@ def propose_pairs_for_doc(doc_id: str, text: str,
                 "chunk_idx": 0, "chunk_norm": _norm_ws_lower(text)}
             if evidence_sentence_in_items:
                 item["evidence_sentence"] = pair["sentence"]
-        # FIX-P verdict record (round 8, issue #59; design §4.4):
+        # FIX-P verdict record (design §4.4):
         # the pair's identity is the roster (canonical) endpoint
         # pair the question was asked about; the quote is the
         # model's own (an ok item may substitute the sentence

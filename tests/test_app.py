@@ -1,9 +1,9 @@
-"""R18 demo app (issue #79, run 16): the static page
+"""Demo app: the static page
 ``ontosmith serve`` serves at ``/`` over the sample API.
 
 Three layers, all pinned:
 - asset resolution — the app directory resolves in the
-  source tree under the G-F5 candidate discipline, and
+  source tree under the candidate discipline, and
   asset names are refused unless they are a single
   bare file name with a known content type;
 - the app↔API contract — every endpoint and parameter

@@ -1,8 +1,8 @@
 """Import smoke: every module in the tree imports cleanly.
 
-Baseline: run 1 verified 40 pipeline modules; run 2 adds
-reference_profile, gate_cli and evaluate (43); run 6 adds
-ontology_builder and run 7 moves canonicalization to the
+Baseline: 40 pipeline modules verified; later additions
+brought reference_profile, gate_cli and evaluate (43) and
+ontology_builder, and canonicalization moved to the
 harness (a measurement instrument, not a pipeline stage),
 for 43. The harness doc-check tool imports with the
 standard library only.

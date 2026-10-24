@@ -1,4 +1,4 @@
-"""ER review-band settlement tests (issue #45).
+"""ER review-band settlement tests.
 
 The settlement surface: held pairs (er_decisions rows with
 outcome='review') can be listed with their evidence, decided
@@ -142,7 +142,7 @@ class TestSettledDecisionLookup(unittest.TestCase):
 
 class _FakeGraph:
     """The stage_write graph double (upsert_entities /
-    write_triples), same shape as the FE3 tests'."""
+    write_triples), same shape as the bindings tests'."""
 
     def __init__(self):
         self.entities = []

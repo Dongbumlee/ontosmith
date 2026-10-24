@@ -1,7 +1,7 @@
-"""Render the full clean-main-v1 Tier 1 graph as a promotional image.
+"""Render the flagship build's full Tier 1 graph as a promotional image.
 
-Real data only: batches/clean-main-v1/routed.jsonl (Tier 1 triples,
-the same content projected into Neo4j/Aura). The web look comes from
+Real data only: the flagship batch's routed.jsonl (Tier 1 triples,
+the same content projected into the graph store). The web look comes from
 the corpus itself: each force-layout cluster is roughly one book's
 world (Valjean's Paris, Quixote's La Mancha, Pierre's Russia...).
 

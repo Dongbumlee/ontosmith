@@ -63,7 +63,7 @@ def _record_cost(b: Batch, stage: str, usd: float | None) -> None:
     b.metrics["cost_ledger"] maps stage -> USD (assignment semantics:
     a resumed stage re-records its recomputed total, so the ledger
     never double-counts) plus "total_usd", "cap_usd" and
-    "cost_basis" (issue #41: the bindings' aggregate basis —
+    "cost_basis" (the bindings' aggregate basis —
     provider-reported / estimated / not-provided / mixed).
     Enforces config.max_cost_usd as a hard cap: recording a stage
     that pushes the cumulative total over the cap raises, which
@@ -75,7 +75,7 @@ def _record_cost(b: Batch, stage: str, usd: float | None) -> None:
     never a folded 0.0. While any recorded stage is
     unmetered the run's total is likewise unknown:
     "total_usd" is None and the metered stages' sum rides
-    in "metered_usd" (FE3-4 — a bare numeric total beside
+    in "metered_usd" (a bare numeric total beside
     a null stage told JSON consumers the run cost that
     much, or nothing, when the truth is "partly unknown").
     With a cap set, an unmetered stage refuses by name
@@ -130,17 +130,17 @@ def _check_cost_cap(b: Batch) -> None:
 
 
 def _load_setup_config(b: Batch, root: Path) -> dict | None:
-    """Stage-0 setup_config for the batch's profile family (E1).
+    """Stage-0 setup_config for the batch's profile family.
 
     Consumed by CANDIDATES (proposer categories, role-word
-    rules, EG-R2-1 guidance, EG-R2-2 endpoint types), ROUTE
-    (C1 whitelist) and WRITE (relation map, EG-R2-2 merge
+    rules, guidance, endpoint types), ROUTE
+    (C1 whitelist) and WRITE (relation map, merge
     prohibitions). The registered consumer set lives in
     pipeline/profile_config.py; batch creation fails closed on
     any key outside it. None when the batch runs without a
     profile; stages then use their no-profile defaults.
 
-    Sources, in priority order (Phase B wiring):
+    Sources, in priority order:
     1. the batch directory's ``setup_config.resolved.json`` —
        the resolver's output frozen at creation (core
        baseline + the binding pack); a batch executes exactly
@@ -159,7 +159,7 @@ def _load_setup_config(b: Batch, root: Path) -> dict | None:
     if pack_sc is not None:
         candidates.append(pack_sc)
     p = next((c for c in candidates if c.exists()), None)
-    # IA-06 (#61): the batch DECLARES a profile family, so a missing
+    # The batch DECLARES a profile family, so a missing
     # or unreadable setup_config is a hard failure, not a silent
     # no-profile fallback — running under defaults while batch.json
     # names a profile makes the run's semantics differ from its
@@ -170,15 +170,14 @@ def _load_setup_config(b: Batch, root: Path) -> dict | None:
             f"batch declares profile_family={b.profile_family!r} but "
             f"no setup_config exists at any of "
             f"{[str(c) for c in candidates]}; refusing to run with "
-            "no-profile defaults under a named profile (IA-06)")
+            "no-profile defaults under a named profile")
     try:
         return json.loads(p.read_text())
     except Exception as e:
         raise RuntimeError(
             f"setup_config for profile_family={b.profile_family!r} "
             f"at {p} is unreadable/corrupt: {e}; refusing to run "
-            "with no-profile defaults under a named profile "
-            "(IA-06)") from e
+            "with no-profile defaults under a named profile") from e
 
 
 def stage_ingest(b: Batch, root: Path, doc_texts: dict[str, str],
@@ -213,10 +212,10 @@ def stage_ingest(b: Batch, root: Path, doc_texts: dict[str, str],
 def _ner_chunks(text: str) -> list[str]:
     """Chunk selection for NER: 2,000-char slices, at most 10 per doc.
 
-    Dispersed sampling (2026-10-12, Dongbum's call): the 10-chunk budget
+    Dispersed sampling (2026-10-12): the 10-chunk budget
     is spread evenly across the whole document (first and last included)
     instead of head-only [:10], which covered only ~14.4% of corpus
-    chars, all from document heads. See docs/NER_COVERAGE_DECISION.md.
+    chars, all from document heads.
     """
     all_chunks = [text[j:j + 2000] for j in range(0, len(text), 2000)]
     if len(all_chunks) > 10:
@@ -245,7 +244,7 @@ def _predict_doc_entities(model, chunks: list[str], labels: list[str],
     Dedupes on (text.lower(), label), preserving first-seen order —
     identical semantics to the original sequential loop.
 
-    Failure accounting (run 32, audit F17): the batched-call
+    Failure accounting: the batched-call
     failure and every swallowed per-chunk failure increment
     ``stats`` when one is passed — a chunk the model choked on
     must not be indistinguishable from a chunk with no entities.
@@ -297,7 +296,7 @@ def _ner_worker_init(model_name: str) -> None:
 def _ner_worker_doc(task):
     """One doc in a worker process. Returns (doc_id, entities,
     failed, stats): a doc whose prediction raised is reported as
-    failed with an empty entity list (run 32 — the catch-all used
+    failed with an empty entity list (the catch-all used
     to return a bare [] indistinguishable from a doc that simply
     has no entities, and the stage recorded neither)."""
     doc_id, chunks = task
@@ -328,7 +327,7 @@ def stage_ner(b: Batch, root: Path, stages: list[str]) -> None:
             r = json.loads(line)
             texts[r["doc_id"]] = r["text"]
     if (b.config.candidate_source or "pipeline").lower() == "llm":
-        # GLiNER removed from the LLM path (P4 section 6 ablation
+        # GLiNER removed from the LLM path (ablation
         # verdict): the proposer's guards attest by deterministic
         # text containment and never consult NER mentions; GLiNER's
         # only llm-path role was the document list, which
@@ -356,13 +355,13 @@ def stage_ner(b: Batch, root: Path, stages: list[str]) -> None:
         save_batch(b, root)
         advance(b, root, [*stages, "NER"])
         _log(b.batch_id, "NER: GLiNER skipped (candidate_source=llm; "
-                         "removed from the LLM path, P4 section 6)")
+                         "removed from the LLM path)")
         return
     total_ents = 0
     t0 = time.perf_counter()
-    # Resume support (2026-10-12): a killed NER stage previously lost all
-    # completed docs (clean-main-v1 died at 128/391). Keep valid lines,
-    # drop a possibly truncated tail line, skip finished doc_ids.
+    # Resume support: a killed NER stage previously lost all
+    # completed docs. Keep valid lines, drop a possibly truncated
+    # tail line, skip finished doc_ids.
     ner_path = d / "ner.jsonl"
     done_ids = set()
     if ner_path.exists():
@@ -458,7 +457,7 @@ _STOP_ENTITIES = frozenset([
 def _is_valid_entity(text: str) -> bool:
     """Filter out OCR garbage and common nouns before candidate generation.
 
-    Design (2026-10-11, Dongbum): entity quality gate at CANDIDATES stage.
+    Design (2026-10-11): entity quality gate at CANDIDATES stage.
     The pipeline doesn't clean input (§10.3), but it shouldn't waste gate
     judgments on obvious non-entities either.
     """
@@ -485,7 +484,7 @@ def _is_valid_entity(text: str) -> bool:
 def stage_candidates(b: Batch, root: Path, stages: list[str]) -> None:
     """CANDIDATES: RER-based triple extraction → candidates.
 
-    Design evolution (2026-10-11, Dongbum):
+    Design evolution (2026-10-11):
     - v1: document-level pairing (mechanical co-occurrence)
     - v2: sentence-level pairing (contextual, but relation=associated_with)
     - v3: RER via spaCy — extract actual verb as relation.
@@ -494,9 +493,9 @@ def stage_candidates(b: Batch, root: Path, stages: list[str]) -> None:
 
     The verb becomes the relation. Jev still validates.
 
-    Candidate source (E4, config.candidate_source):
+    Candidate source (config.candidate_source):
     - "pipeline": the RER hybrid above, unchanged.
-    - "llm": the LLM proposer only (pilot/proposer.py) — free
+    - "llm": the LLM proposer only (pipeline/proposer.py) — free
       triples plus clause slots where the profile declares
       categories; deterministic span/attestation guards at
       proposal time, Jev gates judge downstream as usual.
@@ -510,7 +509,7 @@ def stage_candidates(b: Batch, root: Path, stages: list[str]) -> None:
     setup_cfg = _load_setup_config(b, root) if use_llm else None
     slot_categories = list((setup_cfg or {}).get(
         "label_categories") or [])
-    # A2-F2: the role-word guard vocabulary is pack data,
+    # The role-word guard vocabulary is pack data,
     # resolved by profile_config — frozen into the resolved
     # config at batch creation, or read from the binding
     # pack's role_words artefact. None = the profile declares
@@ -518,7 +517,7 @@ def stage_candidates(b: Batch, root: Path, stages: list[str]) -> None:
     # resolvable vocabulary refuses here (fail closed).
     from .profile_config import effective_role_words
     role_words = effective_role_words(root, setup_cfg)
-    # EG-R2-1 / EG-R2-2 profile wiring (issue #51): the guidance
+    # profile wiring: the guidance
     # rendered from the profile's setup_config is threaded into the
     # proposer prompt, and proposed endpoint types are validated
     # against the profile's endpoint-type vocabulary. A profile
@@ -535,7 +534,7 @@ def stage_candidates(b: Batch, root: Path, stages: list[str]) -> None:
     guidance = derive_guidance(setup_cfg) if use_llm else ""
     endpoint_types = endpoint_type_names(setup_cfg) if use_llm \
         else set()
-    # Domain framing (PK-01/PK-02): the family's declared framing
+    # Domain framing: the family's declared framing
     # for the proposer / pair-judge base templates, threaded as
     # data; None (profile declares none) selects the builders'
     # domain-neutral core defaults.
@@ -553,9 +552,8 @@ def stage_candidates(b: Batch, root: Path, stages: list[str]) -> None:
         if guidance:
             _log(b.batch_id,
                  f"CANDIDATES: profile guidance active "
-                 f"({len(guidance)} chars, EG-R2-1); endpoint types "
-                 f"validated against {sorted(endpoint_types)} "
-                 f"(EG-R2-2)")
+                 f"({len(guidance)} chars); endpoint types "
+                 f"validated against {sorted(endpoint_types)}")
     nlp = None
     if use_pipeline:
         import spacy
@@ -580,24 +578,23 @@ def stage_candidates(b: Batch, root: Path, stages: list[str]) -> None:
             r = json.loads(line)
             texts[r["doc_id"]] = r["text"]
             source_paths[r["doc_id"]] = r.get("source_path", "")
-    # Pair-enumeration branch (rounds 3/4, issues #54/#55;
-    # docs/BIORED_ROUND3.md §2, docs/BIORED_ROUND4.md §4.4): with
-    # the profile's pair_enumeration switch on, Phase 4 below
+    # Pair-enumeration branch: with the profile's
+    # pair_enumeration switch on, the proposer phase below
     # replaces the free generative proposer with the roster pair
-    # census (pilot/pair_proposer.py). The roster is a frozen
+    # census (pipeline/pair_proposer.py). The roster is a frozen
     # batch-dir input: roster_v2.jsonl when the profile declares
-    # roster_pass (the mention-first pass product, round 4),
-    # roster.jsonl otherwise (round 3). Switch absent/off -> this
+    # roster_pass (the mention-first pass product),
+    # roster.jsonl otherwise. Switch absent/off -> this
     # block is inert and candidate construction is byte-identical
     # to the pre-branch behavior (pinned by the wiring tests).
     pair_enum = bool(use_llm and setup_cfg
                      and setup_cfg.get("pair_enumeration"))
     pair_window = (setup_cfg or {}).get("pair_window") or "sentence"
-    # Issue-#68 phase-2 guard relaxations: profile-selected,
+    # Pair guard relaxations: profile-selected,
     # absent = the frozen legacy behavior (pinned by
-    # scripts/test_emission_guards.py). theme attestation for
+    # tests/test_emission_guards.py). theme attestation for
     # pair items uses the pair sentence the endpoints were
-    # posed from; the G1 quote check additionally accepts
+    # posed from; the quote check additionally accepts
     # punctuation-spacing-equivalent quotes.
     pair_abbrev_guard = bool((setup_cfg or {}).get(
         "pair_abbrev_guard"))
@@ -605,25 +602,22 @@ def stage_candidates(b: Batch, root: Path, stages: list[str]) -> None:
         "pair_theme_attest_sentence"))
     quote_punct_insensitive = bool((setup_cfg or {}).get(
         "quote_punct_insensitive"))
-    # BO-3: theme attestation scope for free proposals —
+    # theme attestation scope for free proposals —
     # profile/pack-selected, absent = the quote-only test.
     theme_attest_chunk = bool((setup_cfg or {}).get(
         "theme_attest_chunk"))
-    # Round-5 pair-judge variant (issue #56): profile-selected;
-    # absent = the rounds-3/4 judge (sentence x standard).
+    # Pair-judge variant: profile-selected;
+    # absent = the default judge (sentence x standard).
     pair_judge_context = (setup_cfg or {}).get(
         "pair_judge_context") or "sentence"
     pair_judge_instruction = (setup_cfg or {}).get(
         "pair_judge_instruction") or "standard"
-    # JF-F1 direction slot on the production path (issue #66
-    # stage 11 W-1; docs/REDOCRED_MAIN_RUN_DESIGN_V2.md §7.1):
+    # JF-F1 direction slot on the production path:
     # profile-selected via the registered pair_judge_format key.
     # Absent = the legacy answer format — the proposer is then
     # called with jf1=False and a None symmetric set, exactly the
-    # pre-W-1 call, and prompts / parsing / emission / verdict
-    # records are byte-identical (pinned by
-    # scripts/test_jf1_wiring.py and
-    # scripts/test_mainrun_jf1_batch_wiring.py). The symmetric set
+    # pre-existing call, and prompts / parsing / emission / verdict
+    # records are byte-identical (pinned by the wiring tests). The symmetric set
     # is DATA: read from the pinned pack artefact the profile
     # names (pair_judge_symmetric_source), never a core literal;
     # any failure to resolve it fails the stage closed.
@@ -705,7 +699,7 @@ def stage_candidates(b: Batch, root: Path, stages: list[str]) -> None:
                  f"from {symmetric_src['path']}, sha256 "
                  f"{symmetric_src['sha256'][:12]}…)")
     # NER mentions feed only the pipeline pairing phases; the LLM
-    # proposer never consults them (P4 section 6). For llm-only
+    # proposer never consults them. For llm-only
     # batches the document list comes from texts.jsonl and
     # ner.jsonl is not read at all.
     ner_data = {}
@@ -717,14 +711,14 @@ def stage_candidates(b: Batch, root: Path, stages: list[str]) -> None:
 
     candidates = []
     blocked_all = []  # Arm-B C3-blocked records (killed-set audit sidecar)
-    # FIX-P verdict sidecar (round 8, issue #59; design §4.4):
+    # Verdict sidecar:
     # every pair verdict the pair stage produces, persisted
     # pre-guard so the verdict -> blocked -> deduped -> kept
     # accounting is reproducible from artifacts alone.
     pair_verdicts: list[dict] = []
     pair_verdicts_consistent = True
-    llm_cost = 0.0  # LLM-fallback spend, summed across docs (G-27)
-    # Proposer spend/stats (E4). Persisted in the checkpoint so a
+    llm_cost = 0.0  # LLM-fallback spend, summed across docs
+    # Proposer spend/stats. Persisted in the checkpoint so a
     # resumed run keeps the true totals (unlike the fallback above).
     proposer_cost = 0.0
     proposer_stats = {"proposed": 0, "calls": 0, "errors": 0,
@@ -732,7 +726,7 @@ def stage_candidates(b: Batch, root: Path, stages: list[str]) -> None:
                       "types_dropped_unknown": 0}
     pair_stats = {"enumerated": 0, "answered": 0, "calls": 0,
                   "outcomes": {}, "alias_emitted": 0}
-    # Silent-path counters (run 32, audit F17): the stage's
+    # Silent-path counters: the stage's
     # swallowed failures are counted and stamped into the stage
     # metrics — per-doc candidate-cap hits, Phase-2 worker
     # exceptions, RER-LLM fallback failures (delta of rer's call
@@ -777,7 +771,7 @@ def stage_candidates(b: Batch, root: Path, stages: list[str]) -> None:
                         if line.strip():
                             pair_verdicts.append(json.loads(line))
             elif pair_enum and pair_stats.get("outcomes"):
-                # Resumed from a pre-FIX-P checkpoint: the metrics
+                # Resumed from a pre-sidecar checkpoint: the metrics
                 # carry verdicts the sidecar never saw. The sidecar
                 # then covers only docs judged by the wired code,
                 # and the outcome-count assert below is skipped.
@@ -785,8 +779,8 @@ def stage_candidates(b: Batch, root: Path, stages: list[str]) -> None:
         except Exception as e:
             # A checkpoint that cannot be read resets the stage's
             # resume state (done-docs, proposer/pair stats, loaded
-            # candidates). That reset used to be silent (run 32,
-            # audit F17): log it and stamp it into the metrics.
+            # candidates). That reset used to be silent:
+            # log it and stamp it into the metrics.
             ckpt_reset = {"error": f"{type(e).__name__}: {e}"}
             _log(b.batch_id,
                  f"CANDIDATES: checkpoint {ckpt_path.name} "
@@ -889,8 +883,8 @@ def stage_candidates(b: Batch, root: Path, stages: list[str]) -> None:
                     try:
                         si, sent, (triples, usage) = fut.result()
                     except Exception:
-                        # A dead worker used to vanish silently
-                        # (run 32): its sentence simply got no
+                        # A dead worker used to vanish silently:
+                        # its sentence simply got no
                         # LLM pass. Counted in the stage metrics.
                         cand_counters["llm_worker_errors"] += 1
                         continue
@@ -925,15 +919,15 @@ def stage_candidates(b: Batch, root: Path, stages: list[str]) -> None:
                         doc_cands.append({"doc_id": doc_id, "subject": p,
                                           "relation": r, "object": o,
                                           "context": sent, "method": "pair"})
-        # Phase 4 (E4): LLM proposer — free triples + clause slots.
-        # Proposals pass the deterministic guards in pilot/proposer.py;
+        # LLM proposer — free triples + clause slots.
+        # Proposals pass the deterministic guards in pipeline/proposer.py;
         # survivors become candidates judged by Jev at GATES (no score
         # is assigned here). The pipeline per-doc cap (40) does NOT
         # apply to proposer candidates: their bound is the recipe's
         # per-chunk cap, as in the measured standalone path.
         doc_llm = []
         if use_llm and pair_enum:
-            # Pair-enumeration Phase 4 (rounds 3/4): the roster
+            # Pair-enumeration: the roster
             # pair census replaces the free proposer. Same guard,
             # same candidate-record discipline (the guard output
             # IS the candidate set — no parallel second pass);
@@ -967,7 +961,7 @@ def stage_candidates(b: Batch, root: Path, stages: list[str]) -> None:
             for ok_, ov in res["outcomes"].items():
                 pair_stats["outcomes"][ok_] = pair_stats[
                     "outcomes"].get(ok_, 0) + ov
-            # FIX-P: the doc's verdicts join the sidecar pool
+            # The doc's verdicts join the sidecar pool
             # (they were computed pre-guard, inside the proposer;
             # the guard outcome never alters a verdict record).
             pair_verdicts.extend(res.get("verdicts") or [])
@@ -1039,7 +1033,7 @@ def stage_candidates(b: Batch, root: Path, stages: list[str]) -> None:
                     "context": _prop.quote_window(text, it["quote"]),
                     "method": "llm", "quote": it["quote"],
                     "attest": it["attest"]}
-                # EG-R2-2: validated endpoint types ride the
+                # Validated endpoint types ride the
                 # candidate through GATES/ROUTE into WRITE. Absent
                 # keys = untyped candidate (legacy record shape).
                 for tk in ("subject_type", "object_type"):
@@ -1095,7 +1089,7 @@ def stage_candidates(b: Batch, root: Path, stages: list[str]) -> None:
         if len(doc_cands) > 40:
             # The per-doc pipeline cap (40) truncates silently by
             # design of the slice; the truncation itself is
-            # counted (run 32) so a capped doc is visible in the
+            # counted so a capped doc is visible in the
             # stage metrics instead of just producing fewer
             # candidates.
             cand_counters["cap_docs"] += 1
@@ -1148,7 +1142,7 @@ def stage_candidates(b: Batch, root: Path, stages: list[str]) -> None:
             for v in pair_verdicts:
                 f.write(json.dumps(v) + "\n")
     if pair_enum:
-        # FIX-P assert (round 8, issue #59): the persisted sidecar
+        # Sidecar assert: the persisted sidecar
         # must account for every pair judgment the stage metrics
         # record. The sidecar counts verdicts (pre-guard); the
         # metrics count the same outcomes — any drift means the
@@ -1160,13 +1154,13 @@ def stage_candidates(b: Batch, root: Path, stages: list[str]) -> None:
                 v["outcome"] for v in pair_verdicts))
             if sidecar_outcomes != pair_stats["outcomes"]:
                 raise RuntimeError(
-                    "FIX-P: pair_verdicts sidecar outcome counts "
+                    "pair_verdicts sidecar outcome counts "
                     f"{sidecar_outcomes} != pair_enum outcomes "
                     f"{pair_stats['outcomes']}")
         else:
             _log(b.batch_id,
                  "CANDIDATES: pair_verdicts sidecar is partial "
-                 "(resumed from a pre-FIX-P checkpoint); "
+                 "(resumed from a pre-sidecar checkpoint); "
                  "outcome-count assert skipped")
     # Clean up checkpoint
     if ckpt_path.exists():
@@ -1193,7 +1187,7 @@ def stage_candidates(b: Batch, root: Path, stages: list[str]) -> None:
         "proposer": {**proposer_stats,
                      "cost_usd": _round_cost(proposer_cost),
                      "model": b.config.llm_model}}
-    # Silent-path counters (run 32): see the cand_counters init.
+    # Silent-path counters: see the cand_counters init.
     rer_stats1 = _rer_mod.llm_call_stats()
     b.metrics["candidates"]["rer_llm_calls"] = {
         "attempts": rer_stats1["attempts"] - rer_stats0["attempts"],
@@ -1220,7 +1214,7 @@ def stage_candidates(b: Batch, root: Path, stages: list[str]) -> None:
         if symmetric_src is not None:
             b.metrics["candidates"]["pair_enum"][
                 "symmetric_source"] = symmetric_src
-    # Ledger: the stage's actual API spend (G-27 — usage is returned
+    # Ledger: the stage's actual API spend (usage is returned
     # by extract_triples_llm_with_usage for the fallback and by the
     # proposer for its calls, and summed above). spaCy/pair paths
     # are local and cost 0. Caveat: on a resumed run, FALLBACK spend
@@ -1234,7 +1228,7 @@ def stage_candidates(b: Batch, root: Path, stages: list[str]) -> None:
     _log(b.batch_id, f"CANDIDATES done: {len(candidates)} "
                      f"(by method: {by_method})")
     if blocked_all:
-        # BO-3: guard blocks are reported BY NAME in the run
+        # Guard blocks are reported BY NAME in the run
         # output, not only in the metrics record — a relation
         # class blocked wholesale (theme_presence) must be
         # visible at the moment it happens, with the sidecar
@@ -1256,7 +1250,7 @@ def stage_gates(b: Batch, root: Path, stages: list[str],
     d = batch_dir(root, b.batch_id)
     candidates = [json.loads(l) for l in open(d / "candidates.jsonl")]
     # The $ projection is a planning heuristic, printed only
-    # when the judge seat can meter spend at all (FE3-4): on
+    # when the judge seat can meter spend at all: on
     # a cost-less binding a dollar figure would fabricate
     # knowledge the product's own doctrine says is unknown —
     # the banner then projects a judgment COUNT instead, and
@@ -1357,7 +1351,7 @@ def stage_gates(b: Batch, root: Path, stages: list[str],
                         _beat(b, root, "GATES", done, total)
                 # Hard cap (§3): abort the stage rather than silently
                 # continue past max_cost_usd. Unmetered spend under
-                # a set cap refuses by name (issue #41) — the cap
+                # a set cap refuses by name — the cap
                 # cannot guard what it cannot meter.
                 if (b.config.max_cost_usd is not None
                         and (spent_before is None
@@ -1424,7 +1418,7 @@ def stage_gates(b: Batch, root: Path, stages: list[str],
 
 def _c1_whitelist(setup_cfg: dict | None) -> set | None:
     """C1 (verb-class, preposition) whitelist from the corpus
-    profile's setup_config (G-09).
+    profile's setup_config.
 
     Returns None when the profile declares no whitelist (CUAD:
     c1_whitelist is null with a derivation note) — the caller then
@@ -1454,11 +1448,11 @@ def _c1_whitelist(setup_cfg: dict | None) -> set | None:
 def stage_route(b: Batch, root: Path, stages: list[str]) -> None:
     """ROUTE: tier decision + review queue, Arm C baseline (§5).
 
-    Design (2026-10-11, Dongbum):
+    Design (2026-10-11):
     - Dropped candidates are saved to dropped_queue.jsonl for audit.
     - Human can review false negatives. Nothing is truly lost.
 
-    Arm C demotions (G-09; the standalone ab_armc_route.py logic,
+    Arm C demotions (the standalone Arm C route logic,
     wired in): a would-be Tier 1 item carrying C7 fields is demoted
     to Tier 2 — never dropped — when
       C4  asserted is False (negated/modal extraction), or
@@ -1466,7 +1460,7 @@ def stage_route(b: Batch, root: Path, stages: list[str]) -> None:
           pair is not in the corpus profile's C1 whitelist.
     Items without C7 fields (LLM-proposed candidates) carry no
     asserted/path, so neither rule fires on them — their guards ran
-    at proposal time (pilot/proposer.py). C2 theme-presence likewise
+    at proposal time (pipeline/proposer.py). C2 theme-presence likewise
     lives at extraction level (§5), not here.
     """
     d = batch_dir(root, b.batch_id)
@@ -1524,7 +1518,7 @@ def stage_route(b: Batch, root: Path, stages: list[str]) -> None:
                     "doc_id": j["doc_id"], "subject": j["subject"],
                     "relation": j["relation"], "object": j["object"],
                     "p_true": p, "status": "DROPPED",
-                    # IA-04 (#61): carry the gate error through, so a
+                    # Carry the gate error through, so a
                     # dropped row whose gate call FAILED (judgments
                     # row error, e.g. DLQ) is distinguishable from a
                     # judged negative everywhere downstream.
@@ -1538,7 +1532,7 @@ def stage_route(b: Batch, root: Path, stages: list[str]) -> None:
     _log(b.batch_id, f"ROUTE done: {counts}, Arm C demotes: {demotes}")
 
 
-# G-33 guard (option B, decided 2026-10-16, issue #15/#21): a
+# Cross-document merge guard (option B, decided 2026-10-16): a
 # cross-document form-variant pair may auto-merge only when the Jev
 # ER gate scores it at or above this p_same. Below it — or unscored —
 # the pair is recorded to the review band and never merged.
@@ -1549,17 +1543,18 @@ def stage_write(b: Batch, root: Path, stages: list[str],
                 registry, graph, er_decide_fn=None) -> None:
     """WRITE: registry-first, then graph. (Consistency §10.1)
 
-    Entity resolution (G-10 guardrail + G-33 guard, option B —
-    decided 2026-10-16, issue #15/#21): form variants of the name
+    Entity resolution (the form-variant guardrail + the
+    cross-document merge guard, option B — decided 2026-10-16):
+    form variants of the name
     itself merge deterministically WITHIN a document; a cross-
     document form-variant pair may merge only when the Jev ER gate
     scores it p_same >= 0.85 (score recorded on the merge row);
     every other pair goes to the review band — recorded in
     er_decisions with the gate's p_same when consulted, never
     auto-merged (see er_match).
-    Relations are normalized at this stage (G-11, relation_map.py).
+    Relations are normalized at this stage.
 
-    Typed mentions (EG-R2-2, issue #51): a candidate may carry
+    Typed mentions: a candidate may carry
     subject_type / object_type (proposed under the profile's schema
     guidance, validated at CANDIDATES). The mention's type becomes
     its entity's registry label, and the profile's configured
@@ -1567,7 +1562,7 @@ def stage_write(b: Batch, root: Path, stages: list[str],
     prohibited pair never merges, within-doc or cross-doc, and is
     recorded to the review band with the prohibition as the
     reason. Untyped mentions / no configured prohibitions =
-    pre-EG-R2-2 behavior exactly.
+    the pre-existing behavior exactly.
     """
     from .registry import Entity, Triple
     d = batch_dir(root, b.batch_id)
@@ -1578,7 +1573,7 @@ def stage_write(b: Batch, root: Path, stages: list[str],
             if j.get("tier") == 1:
                 tier1.append(j)
     _log(b.batch_id, f"WRITE: {len(tier1)} Tier 1 triples")
-    # Corpus namespace (G-14): the batch's source is its corpus family
+    # Corpus namespace: the batch's source is its corpus family
     # (§4; same rule RegistryStore.corpus applies to batch.json).
     corpus = b.source
     setup_cfg = _load_setup_config(b, root)
@@ -1587,11 +1582,11 @@ def stage_write(b: Batch, root: Path, stages: list[str],
     if merge_prohibitions:
         _log(b.batch_id,
              f"WRITE: {len(merge_prohibitions)} type-pair merge "
-             f"prohibitions active (EG-R2-2)")
+             f"prohibitions active")
 
     er_cost = 0.0  # Jev ER gate spend, surfaced into the ledger below
     er_review = 0  # pairs recorded to the ER review band (no merge)
-    er_gate_merges = 0  # cross-doc merges via the G-33 gate (>= 0.85)
+    er_gate_merges = 0  # cross-doc merges via the ER gate (>= 0.85)
     er_xdoc_blocked = 0  # cross-doc form-variant pairs held to review
     er_prohibited_blocked = 0  # pairs held by a type prohibition
 
@@ -1602,11 +1597,12 @@ def stage_write(b: Batch, root: Path, stages: list[str],
 
         gate_p_same is None for a deterministic within-document
         merge (no gate consulted) and the recorded Jev ER score for
-        a cross-document merge the G-33 guard admitted.
+        a cross-document merge the merge guard admitted.
 
-        ER guardrail (G-10, §5 — replaces the pre-P3 mechanism whose
-        merges measured 0.283 precision) + G-33 guard (option B,
-        decided 2026-10-16) + EG-R2-2 type prohibitions (issue #51):
+        ER guardrail (§5 — replaces the earlier mechanism whose
+        merges measured 0.283 precision) + the cross-document
+        merge guard (option B, decided 2026-10-16) + type
+        prohibitions:
         0. Type-pair prohibition: when the mention carries a type,
            the candidate entity's stored type (its label) differs,
            and the profile configures that pair in
@@ -1624,7 +1620,7 @@ def stage_write(b: Batch, root: Path, stages: list[str],
            the score recorded on the merge's er_decisions row;
            below that (or unscored / gate failure) the pair is NEVER
            merged — it is recorded to the review band with its score.
-           (The census behind G-33 measured unguarded cross-document
+           (The census behind the guard measured unguarded cross-document
            form-variant merges at 0.057 precision.)
         3. Everything else goes to the REVIEW BAND: the pair is
            never auto-merged on similarity. For plausible pairs
@@ -1633,7 +1629,7 @@ def stage_write(b: Batch, root: Path, stages: list[str],
            are recorded in er_decisions (outcome='review') for
            human adjudication; the mention becomes its own entity.
 
-        Human settlements bind every channel (issue #45): a pair
+        Human settlements bind every channel: a pair
         settled keep-separate (`batch er-decide`) is checked
         before the gate in channels (2) and (3) and before the
         within-doc merge in (1) — it is never re-held, never
@@ -1644,7 +1640,7 @@ def stage_write(b: Batch, root: Path, stages: list[str],
         from .registry import _GENERIC_TOKENS, index_normalize, is_form_variant
 
         def settled_kept_separate(candidate_id: str) -> bool:
-            """Issue #45: a pair a human settled keep-separate
+            """A pair a human settled keep-separate
             is never re-held — the gate is not re-consulted and
             no new review row is recorded, in either channel
             below. Registries without a decision store settle
@@ -1655,10 +1651,10 @@ def stage_write(b: Batch, root: Path, stages: list[str],
             row = fn(name, candidate_id)
             return bool(row) and row.get("outcome") == "kept_separate"
         # Corpus-scoped by default: resolution never crosses namespaces
-        # (the w1-154 contamination class, G-14). Candidates are
+        # (the cross-corpus name-contamination class). Candidates are
         # looked up UNTYPED (label=""): the registry filters on a
         # non-empty label, which would hide exactly the cross-type
-        # candidates the EG-R2-2 prohibition below must see.
+        # candidates the prohibition below must see.
         cands = registry.find_candidates(name, label=label, limit=5,
                                          corpus=corpus)
         if not cands:
@@ -1669,7 +1665,7 @@ def stage_write(b: Batch, root: Path, stages: list[str],
                     is_form_variant(name, a) for a in c.aliases)):
                 continue
             fv_handled.add(c.entity_id)
-            # EG-R2-2 type-pair prohibition: binds BOTH channels —
+            # type-pair prohibition: binds BOTH channels —
             # checked before the within-doc / cross-doc split, the
             # pair never merges and the gate is never consulted.
             # The pair is recorded to the review band with the
@@ -1777,7 +1773,7 @@ def stage_write(b: Batch, root: Path, stages: list[str],
             key = name.lower()
             if key in ent_ids:
                 continue
-            # EG-R2-2: the mention's validated type (when the
+            # The mention's validated type (when the
             # candidate carries one) is stored as the entity's
             # registry label and is er_match's prohibition operand.
             # er_match still looks candidates up untyped (label="")
@@ -1794,7 +1790,7 @@ def stage_write(b: Batch, root: Path, stages: list[str],
                 if gate_p is None:
                     ent_ids[key] = registry.merge(existing, new_ent)
                 else:
-                    # G-33 gate-admitted cross-doc merge: the score
+                    # Gate-admitted cross-doc merge: the score
                     # is an input of the decision — record it on the
                     # merge's er_decisions row.
                     ent_ids[key] = registry.merge(
@@ -1806,7 +1802,7 @@ def stage_write(b: Batch, root: Path, stages: list[str],
                     Entity(entity_id="", name=name, label=label,
                            batch_id=b.batch_id, run_id=b.run_id,
                            doc_id=j["doc_id"], corpus=corpus))
-    # 1.4. Store identity (RR-2 store ruling): the store holds ONE
+    # 1.4. Store identity: the store holds ONE
     # graph — this build's. When the store's stamp names a
     # different graph, clear it (named, counted) before
     # projecting this one; content no stamp identifies stops
@@ -1863,7 +1859,7 @@ def stage_write(b: Batch, root: Path, stages: list[str],
         if records:
             graph.upsert_entities(records)
     # 2. Graph second (derived view). Relations are normalized at
-    # WRITE (G-11): profile vocabulary / explicit map / deterministic
+    # WRITE: profile vocabulary / explicit map / deterministic
     # canonical form; unmapped surfaces pass through and are counted
     # in relation_map.json for the per-batch report.
     from .relation_map import RelationNormalizer
@@ -1895,7 +1891,7 @@ def stage_write(b: Batch, root: Path, stages: list[str],
     with open(d / "relation_map.json", "w") as f:
         json.dump(rel_report, f, indent=1)
     # The graph write is complete: stamp the store with this
-    # graph's identity (RR-2) — the stamp is what a later
+    # graph's identity — the stamp is what a later
     # build names before replacing this graph, and what
     # serving resolves the store's one graph from.
     if store_client is not None:
@@ -1927,7 +1923,7 @@ def stage_write(b: Batch, root: Path, stages: list[str],
     _log(b.batch_id, f"WRITE done: {n} triples, {len(ent_ids)} entities, "
                      f"{er_merges} ER merges")
     if er_review:
-        # RR-6: a hold names its remedy on the line that reports
+        # a hold names its remedy on the line that reports
         # it — the settlement flow (er-review prints the decide
         # command in turn), so the reader standing at the WRITE
         # output is never left to hunt for the next step.
@@ -1943,7 +1939,7 @@ def _index_embedder(model_name: str):
     Only hosted provider/model ids (e.g.
     openai/text-embedding-3-large) resolve, through the
     embedder seat's binding. There is no local embedding
-    path (run 31 removed it): the local model measured
+    path: the local model measured
     against the large one lost (2026-10-12, measured:
     single-hop recall@10 0.500 -> 0.617 vs MiniLM; see
     rag_eval.py), so a config naming anything else
@@ -1979,7 +1975,7 @@ def stage_index(b: Batch, root: Path, stages: list[str]) -> None:
             if j.get("tier") == 2:
                 tier2_docs.add(j["doc_id"])
     chunks, meta = [], []
-    # Sorted (run 32, audit F11): tier2_docs is a set, and its
+    # Sorted: tier2_docs is a set, and its
     # iteration order leaked into the pickle — the same routed
     # input could produce chunk arrays in different orders across
     # runs. The index content is now a deterministic function of
@@ -2011,7 +2007,7 @@ def stage_index(b: Batch, root: Path, stages: list[str]) -> None:
                          "dims": int(embs.shape[1]),
                          "model": b.config.embed_model,
                          "input_tokens": emb_usage["input_tokens"]}
-    # Ledger: the embedder's actual spend (G-27 — SeatEmbedder
+    # Ledger: the embedder's actual spend (SeatEmbedder
     # accumulates usage from each response; token count is recorded
     # in metrics above either way). Cost may be None (unmetered
     # binding) — the ledger records it as unknown, not 0.0.
@@ -2038,29 +2034,28 @@ def stage_verify(b: Batch, root: Path, stages: list[str],
        written_triples.jsonl at WRITE time. Catches partial WRITE
        runs and residue from abandoned runs. Batches written before
        the manifest existed skip this check (pass=None).
-    6. Store drift spot audit (G-23): a deterministic sample of
+    6. Store drift spot audit: a deterministic sample of
        manifest attestations at (subject, relation, object, doc_id)
        granularity compared against the store at property level
        (p_true, tier) — sees per-document attestation loss and
        property drift that set equality cannot. pass=None without
        a manifest; with a manifest, a property join of 0
-       attestations FAILS the check (run 32 guard, audit F2) —
+       attestations FAILS the check —
        VERIFIED is never recorded on key existence alone.
-    7. Tier-2 index match (IA-09): tier2_index.pkl is opened and
+    7. Tier-2 index match: tier2_index.pkl is opened and
        its chunk count and embedding model are compared against
        the INDEX metrics; when INDEX recorded 0 chunks the file
        must not exist. pass=None when no INDEX metrics exist.
 
     Graph checks are scoped by batch_id, NOT run_id: edges legitimately
     carry the id of the run that minted them, so run-scoping made the
-    checks vacuous whenever VERIFY ran under a fresh run (clean-main-v1,
-    2026-10-13).
+    checks vacuous whenever VERIFY ran under a fresh run.
     """
     _log(b.batch_id, "VERIFY: running consistency checks")
     d = batch_dir(root, b.batch_id)
     checks: dict[str, dict] = {}
 
-    # 1. Graph edges → registry entities (IA-02, #61): every endpoint
+    # 1. Graph edges → registry entities: every endpoint
     # of every REL edge carrying this batch_id must resolve in the
     # REGISTRY, the source of truth. The previous form compared the
     # graph against its own nodes — an endpoint trivially "exists" as
@@ -2164,10 +2159,10 @@ def stage_verify(b: Batch, root: Path, stages: list[str],
         checks["graph_projection_match"] = {
             "pass": None, "note": "not a Neo4j store"}
 
-    # 6. Store drift spot audit (G-23). Check 5 compares edge SETS
+    # 6. Store drift spot audit. Check 5 compares edge SETS
     #    at (subject, relation, object) granularity; it cannot see
-    #    per-document attestation loss (G-28 collapsed 1,478
-    #    attestations under near-equal counts) or per-edge property
+    #    per-document attestation loss (an attestation collapse
+    #    that hid 1,478 attestations under near-equal counts) or per-edge property
     #    drift (p_true / tier mutated after WRITE). This check
     #    re-derives expected (subject, type, object, doc_id) rows
     #    from the batch manifest + routed rows and compares a
@@ -2180,7 +2175,7 @@ def stage_verify(b: Batch, root: Path, stages: list[str],
             b.batch_id, root=root, registry=registry)
         act = dc.actual_from_store(b.batch_id, client=graph.c)
         rep = dc.audit(exp, act, sample_n=200)
-        # Guard (run 32, audit F2): a property audit that joined
+        # Guard: a property audit that joined
         # 0 attestations compared nothing — the check FAILS and
         # VERIFIED is blocked; it never degrades to a silent pass
         # on key existence alone. (The pre-fix audit resolved the
@@ -2214,7 +2209,7 @@ def stage_verify(b: Batch, root: Path, stages: list[str],
         checks["drift_spot_audit"] = {
             "pass": None, "note": "not a Neo4j store"}
 
-    # 7. Tier-2 index artifact vs INDEX metrics (IA-09, #61): the
+    # 7. Tier-2 index artifact vs INDEX metrics: the
     # pickle is opened and its chunk count and embedding model are
     # compared against what INDEX recorded in metrics. Existence of
     # the file alone proved nothing — a stale or foreign index would
@@ -2280,7 +2275,7 @@ def _batch_edge_count(graph, batch_id: str) -> int:
 
 
 def purge_batch_attempt(b: Batch, root: Path, graph) -> dict:
-    """IA-01 retry semantics (Dongbum, 2026-10-19; #61): retrying a
+    """Retry semantics (decided 2026-10-19): retrying a
     batch that already ran WRITE first DELETES that batch's own
     prior-attempt outputs, then rewrites ("erase, then write again").
 
@@ -2293,7 +2288,7 @@ def purge_batch_attempt(b: Batch, root: Path, graph) -> dict:
       the edges it describes).
 
     Another batch's edges and files are never touched. Entity nodes
-    stay: the registry owns them (BATCH_DESIGN §8.4 rollback
+    stay: the registry owns them (the rollback
     invariant — rollback deletes edges, not entities). Returns a
     record of what was removed, for batch metrics."""
     d = batch_dir(root, b.batch_id)
@@ -2345,7 +2340,7 @@ def _preflight_bindings(b: Batch, stages: list[str],
 
 def _preflight_cost_cap(b: Batch, stages: list[str],
                         live_decide: bool) -> None:
-    """Stop-line preflight (issue #41): when a USD cap is set,
+    """Stop-line preflight: when a USD cap is set,
     every seat this run will use must be able to meter its
     spend — otherwise the cap could never trip and the run
     refuses by name BEFORE any paid call (the ledger's
@@ -2371,20 +2366,19 @@ def _preflight_cost_cap(b: Batch, stages: list[str],
 
 
 def _preflight_store(b: Batch, stages: list[str], graph) -> None:
-    """Store preflight (BO-1): a build writes into Neo4j —
+    """Store preflight: a build writes into Neo4j —
     a required part of the stack (native graph + vector
     index + full-text in one store), not an optional backend.
     When a graph stage (WRITE / INDEX / VERIFY) is still
     pending and the graph object is the production Neo4j
     store, verify reachability and auth BEFORE anything
-    runs — including the IA-01 retry purge, which also
+    runs — including the retry purge, which also
     touches the store — so an absent or misconfigured store
     refuses by name here instead of killing the batch at
-    WRITE after the paid stages have run (the 2026-10-23
-    BYO walk). Stub graph objects (tests, replay doubles)
+    WRITE after the paid stages have run. Stub graph objects (tests, replay doubles)
     expose no Neo4j client and are untouched.
 
-    Identity (RR-2 store ruling): the store holds ONE
+    Identity: the store holds ONE
     graph, stamped with its identity at WRITE. When this
     build will replace a different graph, the preflight
     names that graph NOW — before the paid stages — and
@@ -2439,7 +2433,7 @@ def run_batch(b: Batch, root: Path, doc_texts: dict[str, str] | None,
 
     ``keep_run_id`` is the CLI's --reuse-run: a FAILED batch
     resumes under its existing run_id. This function is the
-    single place a resume run_id is minted (FE3-8) — callers
+    single place a resume run_id is minted — callers
     never mint their own, so one resume names exactly one
     run_id."""
     d = batch_dir(root, b.batch_id)
@@ -2447,7 +2441,7 @@ def run_batch(b: Batch, root: Path, doc_texts: dict[str, str] | None,
     stages: list[str] = []
     if state_p.exists():
         stages = json.loads(state_p.read_text()).get("stages_completed", [])
-    # IA-01 (#61): a FAILED batch whose failure sits at WRITE or
+    # Retry rule: a FAILED batch whose failure sits at WRITE or
     # later — WRITE/INDEX in stages_completed, or the stage after
     # the last completed one is WRITE (partial WRITE before the
     # failure was recorded) — is retried by PURGE-THEN-REWRITE:
@@ -2467,10 +2461,10 @@ def run_batch(b: Batch, root: Path, doc_texts: dict[str, str] | None,
                            "ROUTE")]
         b.metrics["retry_purge"] = info
         save_state(b, root, stages)
-        _log(b.batch_id, f"IA-01 retry purge: {info['edges_deleted']} "
+        _log(b.batch_id, f"retry purge: {info['edges_deleted']} "
                          f"edges deleted, files {info['files_removed']}; "
                          "checkpoint rolled back to ROUTE")
-    # IA-01, kill -9 case: the batch sits at ROUTED (checkpoint
+    # Kill -9 case: the batch sits at ROUTED (checkpoint
     # advanced) but a previous attempt died inside WRITE before any
     # failure could be recorded, leaving partial edges behind.
     # Same rule: purge this batch's edges before WRITE re-enters.
@@ -2479,7 +2473,7 @@ def run_batch(b: Batch, root: Path, doc_texts: dict[str, str] | None,
         info = purge_batch_attempt(b, root, graph)
         b.metrics["retry_purge"] = info
         save_batch(b, root)
-        _log(b.batch_id, f"IA-01 retry purge (residue at ROUTED): "
+        _log(b.batch_id, f"retry purge (residue at ROUTED): "
                          f"{info['edges_deleted']} edges deleted, "
                          f"files {info['files_removed']}")
     # Resume from FAILED: map back to the last completed stage's status
@@ -2525,12 +2519,12 @@ def run_batch(b: Batch, root: Path, doc_texts: dict[str, str] | None,
     # un-failed and un-started): pending stages' seats must have
     # their keys, or the run refuses with BindingKeyError here.
     _preflight_bindings(b, stages, live_decide and decide_fn is not None)
-    # Stop-line preflight (issue #41), same placement and for
+    # Stop-line preflight, same placement and for
     # the same reason: a USD cap over cost-less seats refuses
     # by name before any stage starts.
     _preflight_cost_cap(b, stages,
                         live_decide and decide_fn is not None)
-    # Store preflight (BO-1), same placement: a build needs
+    # Store preflight, same placement: a build needs
     # Neo4j serving before the first stage runs.
     _preflight_store(b, stages, graph)
     try:

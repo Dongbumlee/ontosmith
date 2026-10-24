@@ -47,7 +47,7 @@ idx = pickle.load(open(BATCH / "tier2_index.pkl", "rb"))
 chunks = idx["chunks"]
 USE_LARGE = os.environ.get("RAG_EMBEDDER") == "large"
 if USE_LARGE:
-    from pilot.embedder import OpenRouterEmbedder
+    from pipeline.embedder import OpenRouterEmbedder
     large = OpenRouterEmbedder()
     cache_f = BATCH / "tier2_index_large.pkl"
     if cache_f.exists():

@@ -77,7 +77,7 @@ def llm_text_judge(
     falling back to the last yes/no in the reasoning trace.
     Returns (pred_label, usage) where pred_label is 1 for Yes, 0 for No.
     When the structured answer does not parse and the fallback
-    produces the label, usage["parse_failed"] is True (run 32).
+    produces the label, usage["parse_failed"] is True.
     """
     binding = connections.seat("escalation")
     headers = {
@@ -132,8 +132,8 @@ def llm_text_judge(
             pass
     parse_failed = label == -1
     if parse_failed:
-        # Fallback: reasoning trace or plain text. Run 32 (audit
-        # F8): this recovery invents the label from the LAST yes/no
+        # Fallback: reasoning trace or plain text. This
+        # recovery invents the label from the LAST yes/no
         # token in the raw output — it used to be invisible, so a
         # parse failure read exactly like a judged No. The usage
         # dict now carries parse_failed=True; the fallback label

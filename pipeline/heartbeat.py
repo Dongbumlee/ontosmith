@@ -1,4 +1,4 @@
-"""Heartbeat / liveness for batch runs (PRODUCTION_DESIGN.md §3, E2).
+"""Heartbeat / liveness for batch runs.
 
 A running batch periodically rewrites ``heartbeat.json`` in its batch
 directory: {batch_id, run_id, stage, progress, total, ts}. An external

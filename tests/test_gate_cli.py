@@ -1,15 +1,15 @@
 """Golden tests for pipeline.gate_cli — the collapsed run_* drivers.
 
 The goldens under tests/golden/ were captured from the ORIGINAL
-lab runner scripts (pilot/run_er.py, run_conflict.py, run_onto.py,
+lab runner scripts (run_er.py, run_conflict.py, run_onto.py,
 run_llm.py, run_ollama.py, run_v0.py, run_cascade.py) executed
 with the same deterministic stub judges used here. Any behavior
 drift in the collapse — record shapes, summary math, error
 records, output formats — fails against them.
 
-Run 32 re-capture: the er/conflict/onto/llm_text/ollama goldens
+Re-capture: the er/conflict/onto/llm_text/ollama goldens
 were regenerated with the same stub judges after the deliberate
-error-shape change (audit F17) — error records now carry an
+error-shape change — error records now carry an
 explicit "error" field and every summary reports "errors" (the
 llm summary also reports "parse_failures"). The diff against the
 originals is exactly those additions; every judged value, cost,

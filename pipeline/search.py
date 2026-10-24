@@ -1,4 +1,4 @@
-"""Hybrid search over a built graph (plan §7 R16):
+"""Hybrid search over a built graph:
 ``ontosmith search``.
 
 The serving side of the release. The lab proved this stack
@@ -28,7 +28,7 @@ surface a stranger can run. This module is that surface:
   the store's own; attestation records still read from the
   registry artifacts — the registry is the source of truth
   (§4), exactly as the lab's ``GraphData`` loaded them.
-  The store holds one graph (RR-2): the serving store
+  The store holds one graph: the serving store
   resolves it from the WRITE stamp, never from a
   user-supplied scope.
 
@@ -611,7 +611,7 @@ class Neo4jServingStore(_ArtifactRecords):
     be reached refuses by name (StoreError) — it never
     silently falls back to the file store.
 
-    One graph (RR-2 store ruling): the store holds
+    One graph: the store holds
     exactly one graph, stamped at WRITE with its
     identity. Serving resolves THAT graph from the stamp
     — there is no user-supplied scope. A ``--batch`` /
@@ -769,7 +769,7 @@ class Neo4jServingStore(_ArtifactRecords):
 # ----------------------------------------------------------------------
 def _state_root() -> Path:
     """The batch/state root rule (batch_cli.state_root,
-    E-F6), imported lazily to keep this module light."""
+    ), imported lazily to keep this module light."""
     from .batch_cli import state_root
     return state_root()
 
@@ -1037,7 +1037,7 @@ def main(argv=None) -> int:
     ap = argparse.ArgumentParser(
         prog="ontosmith search",
         description="Hybrid search over a built graph "
-                    "(plan §7 R16): lexical + vector + "
+                    ": lexical + vector + "
                     "graph retrieval over the build's "
                     "chunks and triples")
     ap.add_argument("query", help="the search question")

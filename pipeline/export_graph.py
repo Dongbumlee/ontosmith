@@ -2,7 +2,7 @@
 
 Reads the graph over the Neo4j HTTP transactional endpoint and
 writes ``results/graph_export.json`` (nodes + edges). Connection
-comes from the environment (plan §7 R14): NEO4J_URL names the
+comes from the environment: NEO4J_URL names the
 server base (default http://localhost:7474) and NEO4J_PASSWORD
 the password — secrets are never read from files in the tree.
 """

@@ -1,12 +1,12 @@
-"""Reusable verification cores (plan §2.2, Phase B).
+"""Reusable verification cores.
 
-Extracted from the lab's per-cell scripts into domain-neutral,
+Extracted from per-cell scripts into domain-neutral,
 parameterized form:
 
 - :mod:`harness.verification.config` — pre-registration as data
   structures: gate definitions, counted cost projections,
-  stop-lines and spend ledgers (R7), and the frontier-escalation
-  policy (R12, off by default; the judging seat never
+  stop-lines and spend ledgers, and the frontier-escalation
+  policy (off by default; the judging seat never
   escalates).
 - :mod:`harness.verification.scoring` — the scoring instrument:
   exact-match scoring with an optional normalization table,
@@ -19,7 +19,7 @@ parameterized form:
   adoption-cell runner: projection gate, per-item ledger with
   stop-line, checkpoint/resume, and gate evaluation.
 - :mod:`harness.verification.report` — the one-command
-  evaluation report (R10): raw scores + corrected estimates +
+  evaluation report: raw scores + corrected estimates +
   failure anatomy, as JSON and Markdown.
 
 Nothing here names a corpus, a pack, or a model: corpora, gold,

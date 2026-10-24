@@ -1,4 +1,4 @@
-"""Provider generalization (issue #41) — P1a/P1b/P1c tests.
+"""Provider generalization — P1a/P1b/P1c tests.
 
 The preset's byte identity is guarded by
 tests/test_connections.py's golden; this module guards the

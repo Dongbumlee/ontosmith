@@ -1,11 +1,11 @@
 """Neo4j implementations of EntityRegistry and GraphStore.
 
 Phase 1: Neo4j implemented BOTH interfaces. That is superseded for
-the registry role (G-13): the source of truth is now the file-backed
-SqliteEntityRegistry (pilot/file_registry.py), and Neo4j is the
+the registry role: the source of truth is now the file-backed
+SqliteEntityRegistry (pipeline/file_registry.py), and Neo4j is the
 graph projection. Neo4jEntityRegistry remains for legacy callers and
 as the batch CLI's `JEV_REGISTRY=neo4j` fallback; new writes mint
-unique IDs (G-12) and honor corpus namespaces (G-14) either way.
+unique IDs and honor corpus namespaces either way.
 """
 from __future__ import annotations
 
@@ -20,8 +20,8 @@ from .registry import Entity, EntityRegistry, GraphStore, Triple, attestation_id
 
 
 def _password() -> str:
-    """Neo4j password from the environment only (plan §7 R14:
-    secrets are never settings values or files in the tree).
+    """Neo4j password from the environment only
+    (secrets are never settings values or files in the tree).
     The variable is NEO4J_PASSWORD; empty string when unset."""
     return os.environ.get("NEO4J_PASSWORD", "")
 
@@ -98,7 +98,7 @@ class Neo4jClient:
 class StoreUnreachableError(RuntimeError):
     """The configured Neo4j store cannot serve a build —
     raised by the run preflight before any stage spends
-    (BO-1). The message names what is wrong and where the
+   . The message names what is wrong and where the
     setup is documented; the CLI prints it as a one-line
     refusal, never a traceback."""
 
@@ -106,13 +106,13 @@ class StoreUnreachableError(RuntimeError):
 class StoreIdentityError(RuntimeError):
     """The store's current graph cannot be identified, or
     a write would replace a graph it cannot name — raised
-    before anything is overwritten (RR-2 store ruling,
+    before anything is overwritten (store ruling,
     2026-10-23). Like StoreUnreachableError, the CLI
     prints it as a one-line refusal, never a traceback."""
 
 
 # ------------------------------------------------------------------
-# The store's graph stamp (RR-2 store ruling): the store holds
+# The store's graph stamp: the store holds
 # exactly ONE graph — the materialization of the workspace's
 # completed, current ontology. Every build/projection that
 # writes the graph stamps the store with the graph's identity
@@ -402,7 +402,7 @@ class Neo4jEntityRegistry(EntityRegistry):
 
     @staticmethod
     def _scope_clause(corpus: str | None, cross_corpus: bool) -> str:
-        """Corpus namespace filter (G-14): scoped by default; the
+        """Corpus namespace filter: scoped by default; the
         cross_corpus opt-in drops the filter explicitly."""
         if corpus is None or cross_corpus:
             return ""
@@ -416,7 +416,7 @@ class Neo4jEntityRegistry(EntityRegistry):
         # path fails at runtime. A missing embedder *binding*
         # is not a runtime failure: it refuses by name
         # (BindingKeyError) rather than silently serving the
-        # weaker strategy (run 31 — no local embedder exists
+        # weaker strategy (no local embedder exists
         # to fall back to).
         try:
             return self._find_by_embedding(name, label, limit, corpus,
@@ -531,7 +531,7 @@ class Neo4jEntityRegistry(EntityRegistry):
         (case, underscores, whitespace). For abbreviations (LHO, HSCA),
         use find_candidates (embedding) instead — resolve() is for
         surface-form variants of the same string. Corpus-scoped when
-        `corpus` is given (G-14).
+        `corpus` is given.
         """
         from .registry import normalize_name
         target = normalize_name(name)
@@ -553,7 +553,7 @@ class Neo4jEntityRegistry(EntityRegistry):
         return None
 
     def create(self, entity: Entity) -> str:
-        # Minted unique IDs (G-12): IDs are never derived from names —
+        # Minted unique IDs: IDs are never derived from names —
         # the legacy slug (lowercased name truncated at 40 chars)
         # silently MERGEd distinct entities whose names collided.
         from .registry import mint_entity_id
@@ -578,7 +578,7 @@ class Neo4jEntityRegistry(EntityRegistry):
               model: str = "", p_same: float | None = None) -> str:
         # Merge new into existing. The cleaner name becomes canonical.
         # model/p_same accepted for interface parity with the file
-        # registry (G-10); the legacy backend keeps no decision store.
+        # registry; the legacy backend keeps no decision store.
         from .registry import pick_survivor
         cur = self.get(existing_id)
         best = pick_survivor([cur.name, new.name]) if cur else new.name
@@ -602,11 +602,11 @@ class Neo4jGraphStore(GraphStore):
     def upsert_entities(self, entities) -> int:
         """Project registry entities into the graph (UNWIND-batched).
 
-        MERGE semantics mirror pilot.graph_store.GraphStore
+        MERGE semantics mirror pipeline.graph_store.GraphStore
         .upsert_entities so both writers produce the same projection:
         MERGE by entity_id, SET name/aliases, label only when
         non-empty, corpus via coalesce (never clears an existing one).
-        Accepts pilot.registry.Entity objects or dicts. Returns rows
+        Accepts pipeline.registry.Entity objects or dicts. Returns rows
         written."""
         rows = []
         for e in entities:
@@ -633,11 +633,11 @@ class Neo4jGraphStore(GraphStore):
         return int(n)
 
     def write_triples(self, triples: list[Triple]) -> int:
-        # UNWIND batching (G-18): one statement per 500 triples instead
+        # UNWIND batching: one statement per 500 triples instead
         # of one statement per triple. On the Query API transport each
         # statement is one HTTP POST, so this is the difference between
         # ~500 round trips and ~1 per bulk write.
-        # Attestation-level MERGE key (G-28), identical to
+        # Attestation-level MERGE key, identical to
         # GraphStore.upsert_edges: {type, batch_id, run_id, doc_id,
         # att_id}. Triple carries no extractor surfaces/quote, so its
         # att_id is over (fact, doc, model) — the same material
@@ -672,7 +672,7 @@ class Neo4jGraphStore(GraphStore):
         # Count first, then delete: the previous single statement
         # ("WITH count(r) AS c DETACH DELETE r") was invalid Cypher —
         # r leaves scope after aggregation, and DETACH applies to
-        # nodes, not relationships — so rollback always failed (G-17).
+        # nodes, not relationships — so rollback always failed.
         params = {"b": batch_id, "r": run_id}
         n = self.c.one(
             "MATCH ()-[r:REL {batch_id: $b, run_id: $r}]->() "
@@ -688,7 +688,7 @@ class Neo4jGraphStore(GraphStore):
 
     def delete_batch(self, batch_id: str) -> int:
         """Delete EVERY REL edge carrying this batch_id, across all
-        runs of the batch (IA-01 retry purge, #61). A retry mints a
+        runs of the batch (the retry purge). A retry mints a
         fresh run_id, so run-scoped deletion cannot reach a prior
         attempt's edges; batch scope is the retry contract's unit.
         Strictly this batch's edges — other batches are untouched.

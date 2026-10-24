@@ -1,4 +1,4 @@
-"""Intrinsic surface canonicalization — BioRED round 4 (§4.3).
+"""Intrinsic surface canonicalization (BioRED design §4.3).
 
 Aliases are REGISTERED, never substituted: a roster mention
 keeps its canonical (extracted) surface; aliases are additional
@@ -26,7 +26,7 @@ hypothesis table §3.2):
 
 Not admitted (counted as unaddressed upside in reporting, never
 folded in): bare-acronym generation, loose/subset sub-phrases,
-orthographic invention (case/Greek/plural folding — DP-B6).
+orthographic invention (case/Greek/plural folding).
 
 Collision guard — the acceptance test every alias must pass.
 A candidate is REFUSED (and counted per rule) if:
@@ -56,11 +56,11 @@ as named there — standalone attestation is now required for
 A1/A2 components as well (A3/A4 already required it) — and the
 roster is re-measured at $0. Refusals are counted per clause
 (refused_a / refused_b) so the composition stays visible.
-PLACEMENT (run 7, issue #73 — the PK-03 quarantine, decided):
+PLACEMENT (decided):
 this module is a MEASUREMENT instrument and lives with the
 harness tooling. It is not a production pipeline stage and no
 production module imports it — its consumers of record are
-the BioRED round-4/7 decomposition and ceiling analyses, and
+the BioRED decomposition and ceiling analyses, and
 in the product it serves that same measurement role (alias
 -generation upside analysis) plus the pack-data wiring test.
 It was carried in the pipeline package under an experiment
@@ -102,10 +102,9 @@ def _fitted_qualifiers_candidates() -> list[Path]:
 
 
 def _load_fitted_qualifiers() -> frozenset:
-    """The A4 qualifier set as pack data (PK-03): fitted on
-    BioRED text for the decomposition instrument
-    (scripts/analyze_biored_r4_decomposition.py), committed with
-    the rule per design §4.3 / A4 — as data under the Bio Medical
+    """The A4 qualifier set as pack data: fitted on BioRED
+    text for the decomposition instrument, committed with the
+    rule per design §4.3 / A4 — as data under the Bio Medical
     pack (packs/bio-medical/), not as a core-code literal."""
     for cand in _fitted_qualifiers_candidates():
         if cand.is_file():
@@ -119,7 +118,7 @@ def _load_fitted_qualifiers() -> frozenset:
 
 
 # The BioRED-fitted qualifier set, loaded from pack content.
-# Kept as a module-level name because the round-7 scripts import
+# Kept as a module-level name because the analysis scripts import
 # it; new callers should inject their own set via the
 # `qualifiers` parameters below.
 QUALIFIERS = _load_fitted_qualifiers()

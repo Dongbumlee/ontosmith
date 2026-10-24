@@ -1,4 +1,4 @@
-"""One-graph store identity (RR-2 store ruling, 2026-10-23).
+"""One-graph store identity.
 
 The Neo4j store holds exactly ONE graph — the
 materialization of the workspace's completed, current
@@ -157,7 +157,7 @@ class _InMemoryNeo4jClient(Neo4jClient):
                     self.mentions.add((row["chunk_id"], row["eid"]))
                     n += 1
             return [{"row": [n]}]
-        # --- scoped clears (RR-2) ------------------------------------
+        # --- scoped clears ------------------------------------
         if "DELETE r" in s and "coalesce(r.batch_id" in s:
             keep = p["keep"]
             self.rels = [r for r in self.rels
@@ -655,7 +655,7 @@ class _PlainGraph:
 
 
 class TestWriteHoldNamesRemedy(unittest.TestCase):
-    """RR-6: the WRITE hold line names the er-review
+    """the WRITE hold line names the er-review
     command, the way er-review names er-decide."""
 
     def test_hold_line_names_er_review(self):

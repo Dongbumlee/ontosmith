@@ -1,4 +1,4 @@
-"""Hands-on demo tests (Phase C run 2, R13).
+"""Hands-on demo tests.
 
 The committed smoke set is a few hand-sized documents; the
 real demo corpus is fetched, never bundled. These tests

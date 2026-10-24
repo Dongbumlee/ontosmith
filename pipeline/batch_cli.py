@@ -64,8 +64,7 @@ def state_root() -> Path:
     code tree is site-packages, and state written there
     is both misplaced (the guides' batches/… paths are
     working-directory-relative) and fragile (a read-only
-    site-packages refuses the write) — E-F6, Phase E
-    clean room."""
+    site-packages refuses the write)."""
     env = os.environ.get("ONTOSMITH_ROOT")
     if env:
         return Path(env)
@@ -80,7 +79,7 @@ def cmd_create(args) -> None:
     the batch's pack, fail-closed), stamp pack provenance,
     persist the batch.
 
-    Resolution (Phase B, the PK-04 remainder): when a pack
+    Resolution: when a pack
     binds the batch — named with --pack, or found through the
     profile's family — the executed setup_config is the
     RESOLVED config (``resolve_setup_config``), written into
@@ -90,7 +89,7 @@ def cmd_create(args) -> None:
     refuses the whole creation — no fallback to the baseline
     under a named pack. Batches with no binding pack keep the
     legacy behavior (profile-file validation + exact-bytes
-    PK-04 provenance)."""
+    provenance)."""
     paths = []
     for pattern in args.docs:
         paths.extend(glob.glob(pattern, recursive=True))
@@ -177,11 +176,10 @@ def cmd_create(args) -> None:
         prov = pack_provenance(pack_dir)
     elif profile_family:
         # No binding pack: the legacy fail-closed validation of
-        # the family's profile setup_config file (issue #51,
-        # EG-R2-1/EG-R2-2 — every key must have a registered
-        # consumer; an unconsumed key is a silent no-op
-        # otherwise). The batch is NOT created when validation
-        # fails, and the offending key is named.
+        # the family's profile setup_config file — every key must
+        # have a registered consumer; an unconsumed key is a
+        # silent no-op otherwise. The batch is NOT created when
+        # validation fails, and the offending key is named.
         from .profile_config import (
             profile_setup_config_path,
             setup_config_errors,
@@ -201,7 +199,7 @@ def cmd_create(args) -> None:
                           file=sys.stderr)
                 sys.exit(1)
 
-    # FE3-3: the config's model fields resolve from the seat
+    # The config's model fields resolve from the seat
     # bindings in force at create — the same resolution whose
     # provenance is stamped below — never straight from the
     # reference-profile constants. BatchConfig's defaults ARE
@@ -233,7 +231,7 @@ def cmd_create(args) -> None:
         candidate_source=getattr(
             args, "candidate_source", "pipeline") or "pipeline",
         **cfg_kwargs)
-    # Stop-line rule (issue #41): a USD cap set on a cost-less
+    # Stop-line rule: a USD cap set on a cost-less
     # binding could never trip — refuse the creation by name
     # (BindingCostError) instead of recording a guarded-looking
     # batch that is not guarded. Seats a batch run uses:
@@ -253,7 +251,7 @@ def cmd_create(args) -> None:
     if profile_hash:
         print(f"profile: {profile_family} {profile_hash}")
     if prov is not None:
-        # PK-04: the resolved config descends from this pack's
+        # The resolved config descends from this pack's
         # pinned payload — stamp the provenance triple so the
         # INGEST manifest records it beside the profile pin.
         b.pack_provenance = prov
@@ -261,8 +259,8 @@ def cmd_create(args) -> None:
               f"{prov['pack_version']} (payload "
               f"sha256:{prov['pack_payload_sha256'][:16]}…)")
     elif profile_family:
-        # PK-04 remainder (docs/PACK_DESIGN.md §1.5), legacy
-        # path: stamp the provenance triple only when a pack
+        # Legacy path (docs/PACK_DESIGN.md §1.5):
+        # stamp the provenance triple only when a pack
         # pins exactly the setup_config bytes this batch
         # executes with. No binding pack -> the batch carries
         # no pack identity (never a guessed one).
@@ -279,10 +277,10 @@ def cmd_create(args) -> None:
                 print(f"pack: {prov2['pack_id']} "
                       f"{prov2['pack_version']} (payload "
                       f"sha256:{prov2['pack_payload_sha256'][:16]}…)")
-    # Run 12: stamp the connection binding this batch was
+    # Stamp the connection binding this batch was
     # created under (provenance: name + per-seat host/model;
     # keys are never recorded). A custom binding is named
-    # as such in the record — the D9 contract.
+    # as such in the record.
     b.binding_provenance = _bindings.provenance()
     print(f"binding: {b.binding_provenance['name']}")
     sroot = state_root()
@@ -333,7 +331,7 @@ def _decide_fn(context: str, subject: str, relation: str, obj: str,
     with urllib.request.urlopen(req, timeout=60) as resp:
         result = json.loads(resp.read())
     ans = result.get("answers", {}).get("q1", {})
-    # IA-03 (#61): a gate response missing the score field is a gate
+    # A gate response missing the score field is a gate
     # FAILURE, never a judged negative. Defaulting to 0.0 silently
     # recorded unjudged candidates as p_true=0.0 (dropped at ROUTE
     # with no trace); raising routes the item through the queue's
@@ -382,7 +380,7 @@ def _er_decide_fn(name_a: str, name_b: str, label: str, context: str,
     with urllib.request.urlopen(req, timeout=60) as resp:
         result = json.loads(resp.read())
     ans = result.get("answers", {}).get("q1", {})
-    # IA-03 (#61): same rule as _decide_fn — a missing score field is
+    # Same rule as _decide_fn — a missing score field is
     # a gate failure (raised, recorded by the caller), never a silent
     # p_same=0.0 that reads as "judged different".
     if not isinstance(ans, dict) or "noul" not in ans:
@@ -395,7 +393,7 @@ def _er_decide_fn(name_a: str, name_b: str, label: str, context: str,
 
 
 def _load_batch_or_exit(root: Path, batch_id: str) -> Batch:
-    """Load a batch or exit with a named error (FE3-6): a
+    """Load a batch or exit with a named error: a
     typo'd id is a user error, not a traceback."""
     try:
         return load_batch(root, batch_id)
@@ -411,7 +409,7 @@ def cmd_run(args) -> None:
     sroot = state_root()
     b = _load_batch_or_exit(sroot, args.batch_id)
     # The resume run_id is minted (or kept) by run_batch —
-    # the single minter (FE3-8); --reuse-run rides through
+    # the single minter; --reuse-run rides through
     # as keep_run_id. This command never mints its own.
     d = batch_dir(sroot, b.batch_id)
     doc_texts = None
@@ -433,7 +431,7 @@ def cmd_run(args) -> None:
                 doc_texts[p] = Path(p).read_text(errors="replace")
             except Exception as e:
                 print(f"  skip {p}: {e}", file=sys.stderr)
-    # Registry backend (G-13): the file-backed SQLite registry is the
+    # Registry backend: the file-backed SQLite registry is the
     # source of truth; Neo4j is the projection. JEV_REGISTRY=neo4j
     # selects the legacy Neo4j-resident registry (fallback only).
     # JEV_REGISTRY_DB overrides the registry file location.
@@ -561,7 +559,7 @@ def _resolve_pair_entities(registry, batch: Batch, pair: dict):
 
 def cmd_er_review(args) -> None:
     """List a batch's held ER pairs with the evidence a
-    person needs to settle them (issue #45): both sides as
+    person needs to settle them: both sides as
     registry entities, the gate's p_same and model, the
     recorded reason where one applies, each side's triple
     count in the batch's graph, and sample contexts from the
@@ -644,7 +642,7 @@ def cmd_er_review(args) -> None:
 
 def cmd_er_decide(args) -> None:
     """Record a human settlement of one held ER pair
-    (issue #45) — and, for a merge, apply it to the registry
+    and, for a merge, apply it to the registry
     (the source of truth) at once.
 
     The decision row is append-only, like every er_decisions
@@ -715,8 +713,8 @@ def cmd_er_decide(args) -> None:
 
 
 def cmd_er_apply(args) -> None:
-    """Apply a batch's recorded ER merges to its graph
-    (issue #45): amend the WRITE manifest
+    """Apply a batch's recorded ER merges to its graph:
+    amend the WRITE manifest
     (written_triples.jsonl) through the registry's
     id_mapping, then rebuild the batch's projection with the
     existing machinery (graph_store.project_from_registry),
@@ -836,7 +834,7 @@ def main() -> None:
                         "into the manifest at INGEST")
     c.add_argument("--candidate-source", default="pipeline",
                    choices=["pipeline", "llm", "both"],
-                   help="CANDIDATES source (E4): pipeline = RER hybrid; "
+                   help="CANDIDATES source: pipeline = RER hybrid; "
                         "llm = LLM proposer (triples + profile clause "
                         "slots); both = union (default pipeline)")
     c.add_argument("--pack", default=None,
@@ -847,7 +845,7 @@ def main() -> None:
                         "directory (default: the pack bound to the "
                         "--profile family, if any)")
     c.add_argument("--max-cost-usd", type=float, default=None,
-                   help="R7 stop-line: hard spend cap for the batch "
+                   help="stop-line: hard spend cap for the batch "
                         "(default: the BatchConfig default)")
     c.add_argument("--no-cost-cap", action="store_true",
                    help="run with no USD spend cap (the explicit "
@@ -855,14 +853,14 @@ def main() -> None:
                         "ledger then records tokens and marks "
                         "cost not-provided)")
     c.add_argument("--frontier-escalation", action="store_true",
-                   help="R12: enable frontier escalation for "
+                   help="enable frontier escalation for "
                         "non-judging seats (default OFF; the judging "
                         "seat never escalates)")
     c.add_argument("--escalation-band-lo", type=float, default=None,
-                   help="R12 shaky-band lower bound (with "
+                   help="shaky-band lower bound (with "
                         "--frontier-escalation)")
     c.add_argument("--escalation-band-hi", type=float, default=None,
-                   help="R12 shaky-band upper bound (with "
+                   help="shaky-band upper bound (with "
                         "--frontier-escalation)")
     c.set_defaults(fn=cmd_create)
 

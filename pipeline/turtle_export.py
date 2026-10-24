@@ -5,7 +5,7 @@ Pure-Python, no rdflib dependency. Emits:
   - provenance via RDF reification: rdf:Statement nodes carrying
     kg:p_true, kg:model, kg:gate, kg:doc_id
 
-Usage: NEO4J_PASSWORD=... python -m pilot.turtle_export --out results/graph.ttl
+Usage: NEO4J_PASSWORD=... python -m pipeline.turtle_export --out results/graph.ttl
 """
 from __future__ import annotations
 

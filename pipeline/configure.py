@@ -1,4 +1,4 @@
-"""``ontosmith configure`` — the bindings front door (issue #41).
+"""``ontosmith configure`` — the bindings front door.
 
 One mechanism, two doors, one artifact: an
 ``ontosmith-bindings.env`` file in the full per-seat
@@ -35,7 +35,7 @@ from . import connections
 from .connections import SeatBinding
 
 DEFAULT_OUT = "ontosmith-bindings.env"
-#: The template ships as package data (FE3-1) so
+#: The template ships as package data so
 #: --emit-template resolves from an installed wheel, not
 #: only from a source tree's docs/ directory. The docs/
 #: copy is the documented twin; a test pins them equal.
@@ -128,8 +128,8 @@ def parse_bindings_file(text: str) -> dict[str, str]:
     Accepts KEY=value and KEY="value" (with \\" and \\\\
     escapes), blank lines and # comments. A leading
     ``export `` (the shell style a hand-written file
-    naturally takes) is accepted as the same declaration
-    (FE3-9): silently dropping those lines made a
+    naturally takes) is accepted as the same declaration:
+    silently dropping those lines made a
     shell-style file resolve to the preset and stamp a
     false `reference`. Keys that are not ONTOSMITH_*
     declarations are ignored.
@@ -178,7 +178,7 @@ def resolve_from(env_map: dict[str, str]) -> connections.Bindings:
 # ----------------------------------------------------------------------
 
 def _plain_transport_error(e: BaseException) -> str:
-    """A transport failure in plain words (FE3-7): the
+    """A transport failure in plain words: the
     probe report (and the artifact header built from it)
     names what happened — 'connection refused', 'timed
     out' — never urllib's raw '<urlopen error [Errno …]>'

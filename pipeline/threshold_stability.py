@@ -6,7 +6,7 @@ Two checks, both offline (uses stored p_true + labels):
   2. F1(t) curve on held-out -> flatness around t*
      (robust optimum = flat region, not a knife's edge)
 
-Usage: python -m pilot.threshold_stability [--result results/scale1k_jev-1.13_noul_v2.json]
+Usage: python -m pipeline.threshold_stability [--result results/scale1k_jev-1.13_noul_v2.json]
 """
 from __future__ import annotations
 

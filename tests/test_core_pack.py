@@ -1,8 +1,8 @@
-"""Core/default pack tests (Phase A2, issue #71).
+"""Core/default pack tests.
 
 The core pack is the domain-neutral baseline a new user
-starts with: core default declarations, the post-PK-01 neutral
-framing as data, and the D5 enumeration window default — and
+starts with: core default declarations, the neutral
+framing as data, and the enumeration window default — and
 no domain content. These tests pin:
 
 - the pack contract (manifest + one sha-pinned payload +
@@ -130,8 +130,8 @@ class TestCoreDefaults(unittest.TestCase):
         self.assertEqual(self.cfg["er_cross_doc_min_p_same"],
                          ER_XDOC_MERGE_MIN)
 
-    def test_d5_window_default_declared_not_forced(self):
-        # D5: max_dist=1 ('adjacent') is the baseline window
+    def test_window_default_declared_not_forced(self):
+        # max_dist=1 ('adjacent') is the baseline window
         # default, but the baseline does not force the
         # pair-enumeration branch on for every corpus.
         self.assertEqual(self.cfg["pair_window"], "adjacent")
@@ -181,7 +181,7 @@ class TestResolution(unittest.TestCase):
             cfg["proposer_framing"],
             "Extract factual relations from this commercial "
             "contract excerpt.")
-        # Legal Contract declares no pair window: the D5
+        # Legal Contract declares no pair window: the
         # baseline default is inherited (inert — the pack does
         # not select pair enumeration).
         self.assertEqual(cfg["pair_window"], "adjacent")
@@ -228,7 +228,7 @@ class TestFailClosed(unittest.TestCase):
             (bad / "pack.json").write_text(json.dumps({
                 "pack_format": 1, "pack_id": "bad-pack",
                 "pack_version": "0.1.0", "profile_family": "bad",
-                # Schema-complete (run 29): the refusal this
+                # Schema-complete: the refusal this
                 # test prices is the PAYLOAD's, so the manifest
                 # itself must satisfy pack.schema.json.
                 "status": "in_force",

@@ -1,4 +1,4 @@
-"""``ontosmith configure`` (issue #41, P1d) — the front door.
+"""``ontosmith configure`` — the front door.
 
 Guards the §7 contract: one mechanism, two doors, one
 artifact. Artifact goldens for both §7 configurations live

@@ -2,8 +2,8 @@
 
 The numbers plotted here are PARSED from the record data
 block in ``benchmarks/redocred.md`` — never retyped. (The
-record's canonical text lives in the whitepaper, §5 —
-D4 placement revision, 2026-10-22; the benchmarks file
+record's canonical text lives in the whitepaper, §5;
+the benchmarks file
 carries the anatomy tables as data for this renderer and
 the replay.) A chart whose numbers disagree with the
 record is a defect, so parsing fails closed: if the
@@ -16,8 +16,8 @@ Outputs:
   * ``benchmarks/assets/anatomy.png`` — the flagship failure
     anatomy: census counts per gold fate + the adjudicated
     text-support rate per fate (CI whiskers: the rates are
-    sample estimates). A whitepaper asset (D4 revision,
-    2026-10-22): the README carries no score charts.
+    sample estimates). A whitepaper asset: the README
+    carries no score charts.
   * ``docs/assets/method.png`` — the method diagram:
     proposer/judge separation across the build loop.
   * ``pipeline-flow.png`` — the batch stage contract
@@ -33,10 +33,9 @@ The diagrams render the product's actual structure — stage
 names, branch conditions, and refusal paths are taken from
 the shipped code and record, never drawn from imagination.
 All four figures are re-renderable at other sizes for the
-whitepaper (issue #80).
+whitepaper.
 
-Style follows the repo chart rules (OSS_PACKAGING_PLAN §2,
-carried into the release plan): one deep-navy palette, value
+Style follows the repo chart rules: one deep-navy palette, value
 labels on bars, CI whiskers wherever a number is an
 estimate, the source named in every figure.
 
@@ -56,9 +55,8 @@ def _mpl():
 
     Parsing the record (parse_anatomy) is dependency-free —
     only rendering needs matplotlib, which is the [viz]
-    extra, not a core dependency (E-F1, Phase E clean
-    room: a base install must import this module and run
-    the parse tests)."""
+    extra, not a core dependency: a base install must import
+    this module and run the parse tests."""
     global _mpl_cache
     if _mpl_cache is None:
         import matplotlib
@@ -78,7 +76,7 @@ NAVY = "#12355b"
 NAVY_LIGHT = "#5b84ae"
 ACCENT = "#c05621"
 GREY = "#6b7280"
-# Method-diagram emphasis (Run 25): the proposer proposes and
+# Method-diagram emphasis: the proposer proposes and
 # the judge decides, so the judge carries the row's strongest
 # weight — full NAVY. The proposer keeps a warm family tint
 # desaturated to a quiet clay, and Graph sits one step below
@@ -200,7 +198,7 @@ def render_method(out: Path) -> Path:
     One story: how a graph is built and served. Verify is not
     drawn here — it lives in-flow as stage 8 of the pipeline
     diagram, and the measurement discipline appears only as
-    the footer line (Run 25). The serving surface is drawn,
+    the footer line. The serving surface is drawn,
     not annotated: the graph projects into the serving store
     and the store feeds its three faces (docs/serving.md).
     """
@@ -412,7 +410,7 @@ def render_ontology_loop(out: Path) -> Path:
     ax.text(53, 2.2, "emission refuses an invalid draft, a missing approval, "
             "or another pack's approval",
             ha="center", fontsize=8, color=GREY, style="italic")
-    fig.text(0.995, 0.012, "Source: pipeline/ontology_builder.py (run-6 loop)",
+    fig.text(0.995, 0.012, "Source: pipeline/ontology_builder.py",
              ha="right", fontsize=7.5, color=GREY)
     fig.tight_layout(rect=(0, 0.03, 1, 1))
     fig.savefig(out, dpi=200)
@@ -423,7 +421,7 @@ def render_ontology_loop(out: Path) -> Path:
 def main(argv=None) -> int:
     """Render all figures from the shipped record + code.
 
-    Placement (D4 revision, 2026-10-22): the process
+    Placement (revised 2026-10-22): the process
     diagrams go to docs/assets/ for the README; the
     quality-number chart is a whitepaper asset and goes to
     benchmarks/assets/ — the README carries no score

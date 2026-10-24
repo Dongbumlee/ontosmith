@@ -1,7 +1,6 @@
 """Batch abstraction: the unit of work for the KG pipeline.
 
 A Batch binds input documents, config, outputs, and metrics together.
-See docs/BATCH_DESIGN.md for the full design.
 """
 from __future__ import annotations
 
@@ -54,7 +53,7 @@ class BatchConfig:
     # Model fields: the constants are only the no-binding
     # defaults. `batch create` resolves gate_model /
     # embed_model / llm_model from the seat bindings in
-    # force and freezes them here (FE3-3), so a batch's
+    # force and freezes them here, so a batch's
     # config states the models that actually run — the
     # same models its manifest's binding provenance names.
     # (ner_model is a local GLiNER model; local seats take
@@ -66,17 +65,17 @@ class BatchConfig:
     review_band_hi: float = 0.50
     er_threshold: float = 0.40
     embed_model: str = EMBED_MODEL
-    # R7 (plan §7): the batch spend stop-line. The cost ledger
+    # The batch spend stop-line. The cost ledger
     # enforces this as a hard cap (pre-stage check + per-entry
     # accounting in stages); the counted-projection tooling
     # that prices a run BEFORE it starts lives in
     # harness.verification (CountedProjection / StopLine).
-    # None = no USD cap (issue #41): the explicit way to run
+    # None = no USD cap: the explicit way to run
     # on a cost-less binding — a cap set on such a binding
     # refuses by name at create/run, because it could never
     # trip (connections.require_metered).
     max_cost_usd: float | None = 10.0
-    # R12 (plan §7): frontier escalation — product config,
+    # Frontier escalation — product config,
     # OFF by default. When enabled, only non-judging seats
     # (drafting / audit adjudication) may escalate items whose
     # first-pass score lands in the shaky band below; the
@@ -87,18 +86,18 @@ class BatchConfig:
     frontier_escalation_enabled: bool = False
     frontier_escalation_band_lo: float = 0.25
     frontier_escalation_band_hi: float = 0.50
-    # GATES claim lease (G-07, decided 2026-10-16): seconds a claimed
+    # GATES claim lease (decided 2026-10-16): seconds a claimed
     # queue item stays claimed before a resumed run may reclaim it.
     # Default 300 = the pre-decision hard-coded constant in
-    # pilot/queue.py; now a policy value set per batch/run.
+    # pipeline/queue.py; now a policy value set per batch/run.
     # Heartbeat-based claims are deferred to the multi-instance
     # distribution step (SETUP.md distribution note).
     queue_lease_seconds: int = 300
     audit_sample_n: int = 50
     code_version: str = ""
-    # CANDIDATES source (E4): "pipeline" = the RER hybrid (spaCy ->
+    # CANDIDATES source: "pipeline" = the RER hybrid (spaCy ->
     # LLM fallback -> pairing); "llm" = the LLM proposer only
-    # (pilot/proposer.py: free triples + clause slots where the
+    # (pipeline/proposer.py: free triples + clause slots where the
     # profile declares categories); "both" = union, deduped.
     candidate_source: str = "pipeline"
     # Proposer model for candidate_source llm/both.
@@ -126,7 +125,7 @@ class Batch:
     updated_at: str = ""
     # Provenance: one entry per run that stamped a (new) code version.
     code_history: list = field(default_factory=list)
-    # Stage-0 setup profile this batch runs under (E1): the content
+    # Stage-0 setup profile this batch runs under: the content
     # hash from profiles/<family>/profile.json, recorded into the
     # manifest at INGEST. "" = no profile (legacy batches unchanged).
     profile_hash: str = ""
@@ -134,17 +133,17 @@ class Batch:
     # setup_config.json for the stages that consume it (CANDIDATES
     # proposer categories, ROUTE C1 whitelist, WRITE relation map).
     profile_family: str = ""
-    # Industry-pack provenance (PK-04 remainder, docs/PACK_DESIGN
+    # Industry-pack provenance (docs/PACK_DESIGN
     # .md §1.5): the pack_provenance() triple, stamped at creation
     # when a pack pins exactly the setup_config bytes this batch
-    # executes with (pilot.profile_config.pack_for_setup_config).
+    # executes with (pipeline.profile_config.pack_for_setup_config).
     # {} = no pack binds the run — legacy batches are unchanged.
     pack_provenance: dict = field(default_factory=dict)
-    # Connection-layer provenance (run 12): the Bindings
+    # Connection-layer provenance: the Bindings
     # .provenance() map stamped at creation — binding name
     # ("reference" | "custom") + per-seat host/model, never
     # a key name or value. {} = not recorded (batches
-    # created before run 12 are unchanged).
+    # created before binding provenance was recorded are unchanged).
     binding_provenance: dict = field(default_factory=dict)
 
     def __post_init__(self):
@@ -216,11 +215,11 @@ def write_manifest(b: Batch, sources: list[dict], root: Path) -> dict:
         # determinism premise ("same profile hash") is checkable.
         manifest["profile_hash"] = b.profile_hash
     if b.pack_provenance:
-        # PK-04 remainder: the pack identity triple beside the
+        # The pack identity triple beside the
         # profile pin (docs/PACK_DESIGN.md §1.5).
         manifest["pack_provenance"] = b.pack_provenance
     if b.binding_provenance:
-        # Run 12: the connection binding this batch was
+        # The connection binding this batch was
         # created under (host + model per seat; no secrets).
         manifest["binding"] = b.binding_provenance
     (d / "manifest.json").write_text(json.dumps(manifest, indent=1))
@@ -245,7 +244,7 @@ def save_state(b: Batch, root: Path, stages_completed: list[str],
     state = {
         "batch_id": b.batch_id,
         "run_id": b.run_id,
-        # The corpus name rides along (run 32): drift_check read
+        # The corpus name rides along: drift_check read
         # state.json's "source" for years while save_state never
         # wrote it, so the read silently yielded "". batch.json
         # stays the authoritative copy; this one is written so

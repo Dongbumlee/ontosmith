@@ -1,11 +1,12 @@
-"""Scoring-core tests (plan §2.2 corrected scoring).
+"""Scoring-core tests.
 
-Expected values are hand-computed from the lab instrument's
-formulas (Wilson interval, TN-1/TN-2 canonicalization, the
-S3 corrected-precision / ceiling-adjusted-recall arithmetic,
-the stratified estimator with finite-population correction);
-the run's MANIFEST entry records the direct equivalence
-check against the lab scorer module itself.
+Expected values are hand-computed from the reference
+instrument's formulas (Wilson interval, TN-1/TN-2
+canonicalization, the corrected-precision /
+ceiling-adjusted-recall arithmetic, the stratified estimator
+with finite-population correction); the run's MANIFEST entry
+records the direct equivalence check against the original
+scorer module itself.
 """
 import unittest
 

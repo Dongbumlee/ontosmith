@@ -1,4 +1,4 @@
-"""Mechanical documentation-drift guards (issue #42).
+"""Mechanical documentation-drift guards.
 
 The 2026-10-23 doc-sync audit (DS-1…DS-12) found drift in
 surfaces that predate the feature they describe. Three of

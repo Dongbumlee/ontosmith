@@ -5,7 +5,7 @@ Behavior targets are the lab cells' recorded discipline:
 the governing projection is the MAXIMUM scenario; a cell
 whose projection exceeds its stop-line does not start; the
 ledger is append-only with resume; the judging seat never
-escalates (R12), whatever the configuration says.
+escalates, whatever the configuration says.
 """
 import json
 import tempfile

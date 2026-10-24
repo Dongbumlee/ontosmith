@@ -1,11 +1,11 @@
 """Pack tests: public names, loader equivalence, profile lookup.
 
 Loader equivalence is pinned against goldens captured from the
-LAB pack loader (pilot/profile_config.py) before the rename:
+original pack loader (pipeline/profile_config.py) before the rename:
 the payload dict a staged pack loads must be byte-identical
-(canonical JSON) to the lab's, and the provenance triple must
+(canonical JSON) to the original's, and the provenance triple must
 match on every field except pack_id — which now carries the
-public slug per the D7 naming rule (dataset names are
+public slug per the naming rule (dataset names are
 provenance, not pack names).
 """
 import json
@@ -43,7 +43,7 @@ class TestPublicLayout(unittest.TestCase):
                 (ROOT / "packs" / slug / "pack.json").read_text())
             self.assertEqual(m["pack_id"], slug)
             self.assertEqual(m["validated_on"], dataset)
-            # Lab-provenance fields do not ship (run 29):
+            # Lab-provenance fields do not ship:
             # the codename lives in the lab record and in
             # these goldens' filenames, never in the manifest.
             self.assertNotIn("lab_codename", m)
@@ -83,7 +83,7 @@ class TestFittedQualifiers(unittest.TestCase):
         # harness.canonicalization.QUALIFIERS is Bio Medical
         # pack data, loaded at import from packs/bio-medical/
         # (fail-hard). The module is a harness measurement
-        # instrument since run 7 (placement decision, #73).
+        # instrument (placement decision).
         from harness import canonicalization
         data = json.loads(
             (ROOT / "packs" / "bio-medical"

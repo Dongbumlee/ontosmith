@@ -1,7 +1,7 @@
 """RegistryStore — file-backed reads over registry / batch artifacts.
 
-PRODUCTION_DESIGN.md §4 (E3): the registry is the source of truth and
-Neo4j is a rebuildable projection of it. In the pilot the registry's
+The registry is the source of truth and
+Neo4j is a rebuildable projection of it. In the original layout the registry's
 durable form is the batch artifact tree (`batches/<batch_id>/`:
 batch.json, routed.jsonl, written_triples.jsonl, ner.jsonl,
 texts.jsonl, tier2_index.pkl). This module is the ONLY file-side
@@ -19,7 +19,7 @@ from pathlib import Path
 
 
 class RegistryStore:
-    """File-backed registry reads (pilot form of the §4 RegistryStore)."""
+    """File-backed registry reads (file-backed form of the RegistryStore)."""
 
     def __init__(self, root: Path | None = None):
         # Default root: the batch state root (batch_cli.state_root

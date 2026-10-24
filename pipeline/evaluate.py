@@ -39,7 +39,7 @@ def load_records(path: str, p_field: str, label_field: str,
     str. The original row is kept under ``_raw``.
 
     Rows carrying an explicit ``error`` field are judge FAILURES,
-    not judgments (run 32, audit F17): they are excluded here —
+    not judgments: they are excluded here —
     the gate runners used to store a failed call as p_true=0.0,
     and scoring it as a judged negative would silently tax the
     gate for an infrastructure failure. ``error_record_count``

@@ -1,5 +1,4 @@
-"""Preflight binding checks (repair program W-01; fresh-eyes
-F-4 / B-3 code half).
+"""Preflight binding checks.
 
 The documented contract: a run whose pending stages need a seat
 with an unset key variable refuses with the connection layer's
@@ -172,7 +171,7 @@ class _GraphDouble:
 
 
 class TestStorePreflight(TmpRoot):
-    """BO-1: a build requires a reachable Neo4j. run_batch
+    """a build requires a reachable Neo4j. run_batch
     refuses BY NAME before any stage runs — the BYO walk died
     at WRITE on a raw connection error after the paid stages
     because nothing checked the store up front."""

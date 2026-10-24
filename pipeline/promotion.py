@@ -1,11 +1,11 @@
-"""E8 promotion gate (PRODUCTION_DESIGN §9, gap G-24).
+"""Promotion gate.
 
 A graph version — identified by (batch_id, run_id, profile_hash) —
 is promotable to served default only when ALL of these hold:
 
   (a0) the supplied profile_hash actually equals the one the
       batch recorded (batch.json / manifest pin) — the identity
-      is compared, not echoed (run 32);
+      is compared, not echoed;
   (a) an audit record is attached: a JSON record carrying sample
       size, decided count, precision + Wilson CI, sampler seed,
       and label provenance (who/what labeled, under which rubric);
@@ -23,15 +23,15 @@ batches/<batch>/promotion/<run_id>.json (the record is data in the
 repo, per §10's "audit numbers are data, visible per version").
 
 CLI:
-  python -m pipeline.promotion check --batch cuad-legal-full \
-      --run p3b-v6 --profile-hash sha256:f46cd0efb7b4b85c \
-      --docs GAP_REGISTER.md
+  python -m pipeline.promotion check --batch legal-full \
+      --run run-1 --profile-hash sha256:f46cd0efb7b4b85c \
+      --docs gap_register.md
 
 The doc-check lookup talks to the project's own Task Ledger
 (GitHub issues); the repository is deployment-specific, so it
 is named by the ONTOSMITH_LEDGER_REPO environment variable
 ("owner/name") — no deployment identifier is baked into the
-tree (plan §7 R14).
+tree.
 """
 from __future__ import annotations
 
@@ -94,7 +94,7 @@ def check_audit(batch_id: str, run_id: str) -> dict:
 def check_eval(batch_id: str, run_id: str) -> dict:
     """Pinned-QA eval from the production path. The production
     measurement artifact for the CUAD flagship is
-    eval/p3b_ab.json (pilot.query_stack.measure output: per-arm
+    eval/p3b_ab.json (pipeline.query_stack.measure output: per-arm
     recall over the pinned QA, computed by the production
     retrievers). Generic batches: eval/eval_results.json with the
     same shape."""
@@ -171,7 +171,7 @@ def check_docs(docs: list[str]) -> dict:
 def check_profile_hash(batch_id: str, profile_hash: str) -> dict:
     """Compare the supplied profile hash against the one the
     batch itself recorded (batch.json; the manifest pin as
-    fallback). Run 32 (audit F9): the gate used to echo the
+    fallback). The gate used to echo the
     caller's --profile-hash into the promotion record's version
     block without comparing it to anything, so a mistyped or
     stale hash 'passed' by construction — the version identity
@@ -227,7 +227,7 @@ def check_promotion(batch_id: str, run_id: str, profile_hash: str,
 
 
 def main() -> int:
-    ap = argparse.ArgumentParser(prog="pilot.promotion")
+    ap = argparse.ArgumentParser(prog="pipeline.promotion")
     sub = ap.add_subparsers(dest="cmd", required=True)
     ck = sub.add_parser("check", help="run the promotion gate")
     ck.add_argument("--batch", required=True)

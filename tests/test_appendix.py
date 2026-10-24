@@ -1,4 +1,4 @@
-"""Appendix integrity tests (Phase C run 2, D4).
+"""Appendix integrity tests.
 
 The staged appendix is the flagship record's evidence:
 adjudication samples, keys, per-file verdicts, the sample
@@ -48,9 +48,9 @@ EXPECTED_SHA256 = {
         "a0ccea3d5d6e100a8a22b9e3124e5fc50a57561e872173d1951c126f27bc0133",
     "raw_scores.json":
         "7396786e3b529b2e159b2a1fbeebcf7f9446e50773400afe0c5e85a1195b4802",
-    # The ruled verdict set (added run 33, 2026-10-22):
+    # The ruled verdict set (added 2026-10-22):
     # re-serialized per direction from the ruled run's
-    # ruled_verdicts.jsonl (appendix README, run-33 table).
+    # ruled_verdicts.jsonl (appendix README table).
     "judgments_ruled/a.jsonl":
         "178379e0e5943ab409b8496aced2a33dc0a5cfd8d7a41a875305a8d3f9c66ad1",
     "judgments_ruled/b.jsonl":
@@ -121,7 +121,7 @@ class TestAppendixCoverage(unittest.TestCase):
 
     def test_ruled_verdicts_cover_the_flagged_set(self):
         # The ruled set is exactly the 565 seam-flagged items
-        # (run 33): every ruled id is a sampled item, no
+        #: every ruled id is a sampled item, no
         # duplicates, verdicts inside the vocabulary, and
         # every row names the ruling that decided it.
         item_ids = set()

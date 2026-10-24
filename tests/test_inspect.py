@@ -1,5 +1,4 @@
-"""Evidence/provenance viewer (pipeline/inspect.py; plan
-§7 R9, issue #74).
+"""Evidence/provenance viewer (pipeline/inspect.py).
 
 Covered: normalization across the pipeline's record
 families (judged candidates, supplementary emissions,

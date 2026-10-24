@@ -1,7 +1,7 @@
 """Interactive CLI reviewer for the review band.
 
 Usage:
-    python -m pilot.review --input results/scale1k_jev-1.13_noul_v2.json
+    python -m pipeline.review --input results/scale1k_jev-1.13_noul_v2.json
 
 Keys:
     y = Yes (triple holds)    n = No (triple does not hold)

@@ -1,9 +1,9 @@
-"""Profile-config registry tests (Phase B, A2-F4 + pack finding).
+"""Profile-config registry tests.
 
-A2-F4: batch_run consumes three CANDIDATES guard keys that
-the registry did not register, so fail-closed validation
-rejected any pack payload declaring them — the issue #68
-guard relaxations could not ride a pack. Registration must
+The gap this closes: batch_run consumes three CANDIDATES
+guard keys that the registry did not register, so fail-closed
+validation rejected any pack payload declaring them — the
+pair-guard relaxations could not ride a pack. Registration must
 preserve fail-closed semantics exactly: the keys validate as
 booleans, wrong types are named errors, unregistered keys
 still fail, and absence keeps today's defaults (batch_run

@@ -77,7 +77,7 @@ notes, and `seam_applied` values are the run's own:
 | `judgments_ruled/b.jsonl` | `adb2aaa7e20adc1b096241827af67c88642163803289a3b0c071549a4cce9194` | Ruled verdicts, Direction B items (325 of the 565 flagged) |
 | `RULING.md` | `acff9f4f62bc1835deec788d648a761cae95db5a1a27e1fe02252dfef431ce24` | The ruling's provenance and the packet text verbatim (R1–R6), as the ruled judges received it |
 
-Added 2026-10-23 — the E-6 cross-family verdicts, from
+Added 2026-10-23 — the cross-family verdicts, from
 the post-ruling agreement re-measurement recorded in the
 whitepaper §5.4 addendum of the same date. A third verdict
 set, of a different kind: it feeds no estimate. A fresh

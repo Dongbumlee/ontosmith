@@ -1,7 +1,7 @@
 """Reference-profile pinning tests.
 
 The reference profile (pipeline/reference_profile.py) is the
-single home of the tested model bindings (D9). These tests pin
+single home of the tested model bindings. These tests pin
 (a) the bindings themselves to the values the quality record
 was measured with — the pre-tidying literals — and (b) every
 module default that was rewired to flow from it, so a silent
@@ -47,7 +47,7 @@ class TestReferenceProfileValues(unittest.TestCase):
             self.assertEqual(getattr(rp, name), expected, name)
 
     def test_unmeasured_names_are_not_preset_defaults(self):
-        # Run 26: the cast is exactly the models tested in
+        # The cast is exactly the models tested in
         # their roles. The bake-off candidate that lost to
         # Jev and the one-off drafting experiment are not
         # presented as defaults anywhere in the preset.
@@ -86,7 +86,7 @@ class TestRewiredDefaults(unittest.TestCase):
         self.assertEqual(sig.parameters["model"].default, rp.EMBED_MODEL)
 
     def test_setup_service_defaults(self):
-        # Run 26: the drafting seat ships unbound, so the
+        # The drafting seat ships unbound, so the
         # profile-setup draft model has no preset default —
         # it resolves from the caller's binding at run time.
         sig = inspect.signature(setup_service.run_setup)
@@ -111,7 +111,7 @@ class TestRewiredDefaults(unittest.TestCase):
                              rp.JUDGE_MODEL, fn.__name__)
 
     def test_batch_run_judge_constant(self):
-        # FE3-3: batch_run no longer re-exports (and stage
+        # batch_run no longer re-exports (and stage
         # code no longer reads) the frozen judge constant —
         # the ER identity pings take the batch's own
         # gate_model, resolved from the judge seat binding
@@ -138,7 +138,7 @@ class TestRewiredDefaults(unittest.TestCase):
         self.assertEqual(offenders, [])
 
     def test_provider_sort_single_home(self):
-        # Run 7 (finding T-2): the provider-routing preference
+        # The provider-routing preference
         # is a connection-layer knob with exactly one literal
         # home — the reference profile. Transports reference
         # the preset; none restates the value.

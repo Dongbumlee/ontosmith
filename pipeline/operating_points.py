@@ -10,7 +10,7 @@ the dev split and evaluated on the held-out split (doc-level, no leakage):
                          reject if p < t_lo, else human review.
                          Objective: min review rate s.t. auto precision >= 0.90
 
-Usage: python -m pilot.operating_points <result json> ...
+Usage: python -m pipeline.operating_points <result json> ...
 """
 from __future__ import annotations
 

@@ -85,7 +85,7 @@ ontosmith = "pipeline.__main__:main"
 packages = ["pipeline", "harness", "harness.verification", "api"]
 
 [tool.setuptools.package-data]
-# The bindings template ships INSIDE the package (FE3-1):
+# The bindings template ships INSIDE the package:
 # `ontosmith configure --emit-template` resolves it via
 # importlib.resources, so the door works from a wheel
 # install, not only from a source tree. docs/
@@ -94,7 +94,7 @@ packages = ["pipeline", "harness", "harness.verification", "api"]
 pipeline = ["bindings-template.env"]
 
 [tool.setuptools.data-files]
-# The demo app (R18): static files only, served by
+# The demo app: static files only, served by
 # `ontosmith serve` at / — resolved by the same
 # candidate discipline as the example build below
 # (api.server.app_candidates).

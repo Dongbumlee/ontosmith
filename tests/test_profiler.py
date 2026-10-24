@@ -1,5 +1,5 @@
-"""Corpus profiler (pipeline/profiler.py; plan §7 R5,
-issue #74): the stage-0 product command.
+"""Corpus profiler (pipeline/profiler.py): the stage-0
+product command.
 
 Covered: the extraction equivalence — the product surface
 over a fixture corpus produces the identical stage-0 profile

@@ -1,14 +1,15 @@
-"""Gold-audit sampling and verdict resolution (plan §2.2).
+"""Gold-audit sampling and verdict resolution.
 
-Extracted from the lab's gold-audit set builder and the S3
-verdict handling, generalized to caller records (the shapes
-in :mod:`harness.verification.scoring`). The audit's job is
-to measure the GOLD as well as the system: blind panels judge
-samples of what the system emitted and what gold contains,
-so scoring can correct for gold incompleteness instead of
-pretending the reference is perfect.
+Extracted from a gold-audit set builder and the verdict
+handling of the flagship build, generalized to caller
+records (the shapes in :mod:`harness.verification.scoring`).
+The audit's job is to measure the GOLD as well as the system:
+blind panels judge samples of what the system emitted and
+what gold contains, so scoring can correct for gold
+incompleteness instead of pretending the reference is
+perfect.
 
-The three judgment sets (the lab A/B/C design):
+The three judgment sets (the A/B/C design):
 
 - **Set A** — unmatched predicted records: is the system
   right where gold is silent? (gold-incompleteness signal)

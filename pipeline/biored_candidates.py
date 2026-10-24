@@ -4,7 +4,7 @@
 Positives from gold relations; hard negatives via entity_swap,
 relation_confusion, direction_flip (same recipe as hard_negatives.py).
 
-Usage: python -m pilot.biored_candidates --out results/candidates_biored1000.json
+Usage: python -m pipeline.biored_candidates --out results/candidates_biored1000.json
 """
 from __future__ import annotations
 

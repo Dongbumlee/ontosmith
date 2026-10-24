@@ -1,4 +1,4 @@
-"""Drift / spot-audit check (G-23, BATCH_DESIGN §4.8).
+"""Drift / spot-audit check.
 
 Compares the live graph store against the source rows a projection
 was built from, at ATTESTATION level: the key is
@@ -13,7 +13,7 @@ rule; the report counts, within the sampled key sets:
                  tier differs from the source row (tolerance 1e-9)
 
 This module is the single implementation: the batch VERIFY stage
-(stage 6, the store drift spot audit) imports it, and the CLI below
+imports it, and the CLI below
 runs the same core standalone:
 
   python -m pipeline.drift_check --batch <batch_id> [--root <root>]
@@ -33,8 +33,8 @@ the operator's state root (batch_cli.state_root), never beside
 this module — an installed copy has no batches/ or data/ tree
 next to its code. Callers pass ``root`` (the batch stages do);
 the default resolves the state root lazily. The lab's
-projection-source mode (expected rows from the p3b-v6 projection
-record) stays in the lab harness: it is pinned to that
+projection-source mode (expected rows from the flagship
+projection record) stays in the lab harness: it is pinned to that
 measurement's artifacts, not a product surface.
 
 Exit code: 0 = no drift in the sample AND the property join
@@ -122,7 +122,7 @@ def _resolve_registry(root: Path, batch_id: str):
 
     A per-batch registry file living in the batch's own directory
     (registry*.db — the convention for batch-scoped registries)
-    wins over the state-root default. Run 32 (audit F2): resolving
+    wins over the state-root default. Resolving
     the default for a batch whose entities live in its own file
     joins nothing, so the audit compares zero properties while
     reporting drift_free on key existence alone — that is how the
@@ -158,10 +158,10 @@ def expected_from_manifest(batch_id: str, root: Path | None = None,
     d = batch_dir(root, batch_id)
     if registry is None:
         registry = _resolve_registry(root, batch_id)
-    # Corpus (run 32, audit F2): batch.json's `source` is the
+    # Corpus: batch.json's `source` is the
     # authoritative field — it is written by save_batch from the
     # Batch record itself. state.json's `source` is only a legacy
-    # fallback: save_state did not write it before run 32, so the
+    # fallback: save_state did not always write it, so the
     # state read silently yielded "" and every resolve missed the
     # corpus namespace. (save_state now writes it too; batch.json
     # stays authoritative.)
@@ -271,7 +271,7 @@ def main(argv: list[str] | None = None) -> int:
     if args.out:
         Path(args.out).write_text(json.dumps(rep, indent=1))
     # A sample with zero property-compared attestations proves
-    # nothing about drift (run 32 guard, audit F2): it is not a
+    # nothing about drift: it is not a
     # pass, whatever the key-existence comparison says.
     return 0 if rep["drift_free"] and join_stats["joined"] > 0 \
         else 1

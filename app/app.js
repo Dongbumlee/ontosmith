@@ -1,5 +1,5 @@
 "use strict";
-/* OntoSmith demo app (plan §7 R18) — a thin client over
+/* OntoSmith demo app — a thin client over
    the sample API. It calls exactly the five JSON
    endpoints, with exactly these parameters (pinned by
    tests/test_app.py against api.server.API_ROUTES):

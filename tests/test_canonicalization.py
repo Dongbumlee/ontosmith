@@ -1,8 +1,8 @@
-"""Canonicalization placement (run 7, issue #73).
+"""Canonicalization placement.
 
 The module is a measurement instrument and lives in the
-harness since run 7; it was pipeline/canonicalization.py
-under a PK-03 experiment quarantine. The golden
+harness; it was pipeline/canonicalization.py
+under an experiment quarantine. The golden
 (tests/golden/canonicalization_fixture.json) was captured
 from the PRE-MOVE module on the fixture below — the moved
 module must reproduce it byte-for-byte: same enriched
@@ -86,7 +86,7 @@ class TestCanonicalizationGolden(unittest.TestCase):
             importlib.util.find_spec("harness.canonicalization"))
 
     def test_fitted_qualifiers_candidates_cover_installed_layout(self):
-        # Regression (run 23): the qualifier set is shipped
+        # Regression: the qualifier set is shipped
         # pack data; loading it through a repo-root-relative
         # path alone made the module unimportable from an
         # installed copy, where the packs live under the

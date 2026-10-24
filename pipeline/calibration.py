@@ -1,7 +1,7 @@
 """Calibration analysis: reliability bins + ECE per model/gate.
 
 Offline — uses stored p_true and labels from the 1K runs.
-Usage: python -m pilot.calibration --out results/calibration.json
+Usage: python -m pipeline.calibration --out results/calibration.json
 """
 from __future__ import annotations
 

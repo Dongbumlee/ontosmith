@@ -3,7 +3,7 @@
 cmd_create takes the profile family from the profile document.
 For a family it must (a) resolve the family's setup_config
 through the pack RESOLVER (core baseline + the family's
-pack, Phase B), freeze the resolved config into the batch
+pack), freeze the resolved config into the batch
 directory, and (b) stamp the batch with the binding pack's
 provenance. Runs against a temporary root mirroring the
 staging layout; the batch engine itself is unchanged shipped
@@ -38,7 +38,7 @@ class TestCmdCreateProfileWiring(unittest.TestCase):
             shutil.copy(STAGING / "packs" / "bio-medical" / "profile"
                         / name, pack_profile / name)
         # the resolver's baseline pack must exist in the
-        # mirrored root (Phase B: resolution fails closed
+        # mirrored root (resolution fails closed
         # without it)
         shutil.copytree(STAGING / "packs" / "core",
                         self.tmp / "packs" / "core")
@@ -226,7 +226,7 @@ class TestCmdCreateRefusesExistingId(unittest.TestCase):
 
 
 class TestIndexEmbedder(unittest.TestCase):
-    """Run 31: INDEX resolves hosted embedder models only."""
+    """INDEX resolves hosted embedder models only."""
 
     def test_non_hosted_name_refuses(self):
         from pipeline.batch_run import _index_embedder

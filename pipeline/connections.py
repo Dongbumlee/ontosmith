@@ -17,7 +17,7 @@ batch records state which binding produced a run
 (``Bindings.provenance()`` — host + model per seat, never
 a key).
 
-Declaration surface (run 12): environment variables.
+Declaration surface: environment variables.
 Connection settings across this codebase are env-only
 (``OPENROUTER_API_KEY``, ``NEO4J_*``), and keys must
 never land in a file: an override names the key's
@@ -37,7 +37,7 @@ upper-case in the variable names):
   ONTOSMITH_<S>_CAPABILITIES  capability declarations
                               (below)
 
-Provider dialects (provider generalization, issue #41):
+Provider dialects (provider generalization):
 a binding declares which request/response dialect its
 route speaks. ``openrouter`` (the shipped preset) may add
 OpenRouter-only request fields (``provider.sort``,
@@ -76,7 +76,7 @@ the seat's model id by the connection layer's derivation
 rules — the same rules, stated once, that the call sites
 used to apply ad hoc.
 
-The drafting seat ships **unbound** (run 26): the preset
+The drafting seat ships **unbound**: the preset
 declares its endpoint coordinates but no model — drafting
 is an authoring aid behind the human approve gate, not
 part of the measured pipeline, so no model is presented
@@ -104,7 +104,7 @@ helper (the rer LLM fallback) keeps its documented
 no-key behavior only while the seat carries no user
 declaration; a declared seat with an unresolvable key
 refuses there too. The embedder seat has no fallback at
-all (run 31): an embedder use whose key cannot be
+all: an embedder use whose key cannot be
 resolved refuses the same way, declared or not.
 
 Local seats (spaCy candidate structure, GLiNER NER) run
@@ -125,7 +125,7 @@ SEATS = ("proposer", "judge", "escalation",
 #: The preset key variable every shipped seat reads.
 PRESET_KEY_ENV = "OPENROUTER_API_KEY"
 
-#: Provider dialects a binding may declare (issue #41).
+#: Provider dialects a binding may declare.
 DIALECT_OPENAI = "openai"
 DIALECT_OPENROUTER = "openrouter"
 DIALECTS = (DIALECT_OPENAI, DIALECT_OPENROUTER)
@@ -135,7 +135,7 @@ COST_BASIS_PROVIDER = "provider-reported"
 COST_BASIS_ESTIMATED = "estimated"
 COST_BASIS_NOT_PROVIDED = "not-provided"
 
-#: Capability declarations (issue #41): model-behavior
+#: Capability declarations: model-behavior
 #: switches, declared per binding instead of guessed from
 #: name substrings at call sites.
 CAP_NO_TEMPERATURE = "no-temperature"
@@ -201,7 +201,7 @@ class SeatBinding:
     #: sit under the seat's base URL; a custom binding
     #: leaves this None and derives ``<base>/decisions``.
     decisions_url: str | None = None
-    #: Provider dialect the route speaks (issue #41):
+    #: Provider dialect the route speaks:
     #: ``openrouter`` may emit provider-only request fields
     #: and reports ``usage.cost``; ``openai`` is the
     #: portable subset. Custom bindings default to
@@ -351,7 +351,7 @@ class Bindings:
         a bound model (an unbound seat spends nothing):
         the single basis when all metering agrees, else
         ``mixed``. When NO seat carries a bound model the
-        basis is ``not-provided`` (FE3-10): nothing is
+        basis is ``not-provided``: nothing is
         metered because nothing can spend — ``mixed``
         would claim a disagreement that does not exist."""
         bases = {b.cost_basis for b in self.seats.values()
@@ -529,7 +529,7 @@ def seat(name: str, env: dict | None = None) -> SeatBinding:
 
 
 # ----------------------------------------------------------------------
-# Usage normalization + the stop-line rule (issue #41)
+# Usage normalization + the stop-line rule
 # ----------------------------------------------------------------------
 
 def normalize_usage(raw: dict | None,

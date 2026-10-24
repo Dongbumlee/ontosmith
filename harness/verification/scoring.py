@@ -1,11 +1,11 @@
-"""The scoring instrument (plan §2.2, corrected scoring).
+"""The scoring instrument.
 
-Extracted from the lab's shared scorer and the main-run S3
+Extracted from a shared scorer and the flagship build's
 aggregate, generalized to caller-supplied records: the caller
 brings predicted records, gold records, and (for corrections)
 verdicts; this module brings the arithmetic — and ONLY the
-arithmetic. The estimator functions carry the lab method
-verbatim in behavior (D4: the estimator code is the method).
+arithmetic. The estimator functions carry the method
+verbatim in behavior (the estimator code is the method).
 
 Record shapes (both are plain dicts):
 
@@ -24,7 +24,7 @@ declarations), never code constants here — the lab scorer
 read its table from a pack file; the product core takes the
 same table as an input.
 
-Corrections (the S3 method):
+Corrections:
 
 - corrected precision = (raw matches + judged-supported
   unmatched) / predicted — the unmatched pool's support rate
@@ -53,7 +53,7 @@ def norm_text(s) -> str:
     Verbatim from the lab instrument (``" ".join(str(s)
     .casefold().split())``) — including its consequence that
     a missing value normalizes to the string "none": the
-    scorer is the method (D4), so its edge behavior is
+    scorer is the method, so its edge behavior is
     inherited deliberately, not silently repaired. Callers
     validate record completeness upstream.
     """
@@ -232,7 +232,7 @@ def ceiling_adjusted_recall(matched_gold: int, gold_total: int,
 def stratified_estimate(groups: list[dict],
                         positive: str = "supported",
                         unlabeled: str = "unlabeled") -> dict:
-    """Stratified population estimate with CI (S3 estimator).
+    """Stratified population estimate with CI.
 
     Each group: ``{name, population, sampled, labels}`` where
     ``labels`` is the multiset of verdict labels for the

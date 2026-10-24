@@ -1,4 +1,4 @@
-"""Evidence/provenance viewer (plan §7 R9): ``ontosmith
+"""Evidence/provenance viewer: ``ontosmith
 inspect``.
 
 Every shipped triple is inspectable down to its evidence
@@ -211,7 +211,7 @@ def select(records: list[dict], index: int | None = None,
 
 
 def render_card(report: dict) -> str:
-    """The human report card (R15 style): the fact, its
+    """The human report card: the fact, its
     evidence, its provenance chain, its gaps."""
     t = report["triple"]
     lines = [
@@ -248,8 +248,8 @@ def main(argv=None) -> int:
     [--subject S] [--relation R] [--object O] [--json]``."""
     ap = argparse.ArgumentParser(
         prog="ontosmith inspect",
-        description="Evidence/provenance viewer (plan §7 "
-                    "R9): print one triple with its "
+        description="Evidence/provenance viewer: print one "
+                    "triple with its "
                     "evidence spans and provenance chain")
     ap.add_argument("artefact",
                     help="triple-records JSONL/.json file, "

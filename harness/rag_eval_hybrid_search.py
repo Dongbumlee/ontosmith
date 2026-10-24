@@ -1,6 +1,6 @@
 """Hybrid search eval: BM25 + dense (RRF) vs dense-only, same QA as rag_eval.
 
-Motivation (2026-10-12, Dongbum): modern vector engines ship hybrid
+Motivation (2026-10-12): modern vector engines ship hybrid
 search (dense + BM25) by default; a pure-dense baseline understates RAG.
 Gold criterion (exact entity string in chunk) favors keyword matching,
 so this tests how much of the graph's edge is an artifact of the baseline.
@@ -86,7 +86,7 @@ def bm25_scores(query, k1=1.5, b=0.75):
 # --- Question embeddings (large) ---
 import sys
 sys.path.insert(0, str(Path(__file__).parent))
-from pilot.embedder import OpenRouterEmbedder
+from pipeline.embedder import OpenRouterEmbedder
 embedder = OpenRouterEmbedder()
 
 def evaluate(qa, label):

@@ -1,11 +1,11 @@
-"""Run 32 hardening tests (audit F1/F2/F8/F9/F11/F12/F17).
+"""Hardening regression tests.
 
 Each test pins one branch the code audit found silently
 dishonest: a join that overwrote or defaulted scores, a drift
 audit that could pass without comparing anything, swallowed
 extraction failures, an invented text-judge label, an echoed
 profile hash, and a "confirmed" verdict no comparison produced.
-The F2 verify-guard and resolution tests live in
+The verify-guard and resolution tests live in
 tests/test_drift_check.py beside the audit's own suite; the
 gate-eval error shapes are pinned by the regenerated goldens in
 tests/test_gate_cli.py.
@@ -123,7 +123,7 @@ class TestAttestationJoin(TmpRoot):
 # ------------------------------------------------------- F17(a) rer
 
 class _FakeBinding:
-    """Minimal seat-binding double (issue #41 surface: the
+    """Minimal seat-binding double (the bindings surface: the
     portable dialect, no capabilities, no reported cost)."""
     chat_url = "http://stub/chat"
     is_openrouter_dialect = False
@@ -364,7 +364,7 @@ class TestEvaluateErrorRecords(TmpRoot):
 # ------------------------------------------------------------- F8
 
 class _EscBinding:
-    """Minimal seat-binding double (issue #41 surface, as
+    """Minimal seat-binding double (the bindings surface, as
     _FakeBinding)."""
     chat_url = "http://stub/chat"
     is_openrouter_dialect = False

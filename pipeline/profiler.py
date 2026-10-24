@@ -1,4 +1,4 @@
-"""Corpus profiler (plan §7 R5): the stage-0 product command.
+"""Corpus profiler: the stage-0 product command.
 
 Profiles a corpus directory *before any build*: document
 inventory and distributions, corpus conventions (as verified
@@ -93,7 +93,7 @@ def main(argv=None) -> int:
     [--sample-n N] [--json]`` — deterministic stage-0 census."""
     ap = argparse.ArgumentParser(
         prog="ontosmith profile",
-        description="Corpus profiler (plan §7 R5): stage-0 "
+        description="Corpus profiler: stage-0 "
                     "profile of a corpus directory — "
                     "deterministic, no LLM calls, no spend")
     ap.add_argument("corpus_dir",

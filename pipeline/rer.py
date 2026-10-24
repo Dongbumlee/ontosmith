@@ -1,6 +1,6 @@
 """Relation Extraction (RER) via spaCy dependency parsing.
 
-Design (2026-10-11, Dongbum):
+Design (2026-10-11):
 - RER is as necessary as NER. First-class pipeline stage.
 - Hybrid: spaCy (structure) → LLM (fallback) → Jev (validation).
 - spaCy proposes candidates; Jev judges. Role separation maintained.
@@ -135,7 +135,7 @@ def extract_triples_detailed(sentence: str, nlp=None) -> list[dict]:
             # One subject per agent phrase: Arm A emits a triple for
             # EVERY agent pobj ("bordered by X, ... by Y, ... by Z"),
             # so Arm B must too — keeping only the last agent silently
-            # dropped 6 Arm-A candidates in A/B round 1 (hard-gate find).
+            # dropped 6 Arm-A candidates in the first A/B round (a hard-gate find).
             agents = []
             for child in verb_tok.children:
                 if child.dep_ == "agent":
@@ -246,7 +246,7 @@ Triples:"""
 
 _ZERO_USAGE = {"input_tokens": 0, "output_tokens": 0, "cost": 0.0}
 
-# LLM-fallback call accounting (run 32, audit F17): the fallback
+# LLM-fallback call accounting: the fallback
 # returns [] on ANY exception — an unreachable provider and a
 # sentence with no triples were indistinguishable, so a dead
 # fallback silently degraded extraction to the pairing phase.
@@ -272,7 +272,7 @@ def extract_triples_llm_with_usage(
         model: str = PROPOSER_MODEL,
         api_key: str | None = None,
         timeout: int = 30) -> tuple[list[tuple[str, str, str]], dict]:
-    """LLM fallback with API usage (G-27): like extract_triples_llm,
+    """LLM fallback with API usage: like extract_triples_llm,
     but also returns the OpenRouter usage dict — same shape as the
     Jev decision calls (decisions.py): input_tokens / output_tokens
     / cost — so callers can record actual spend in the cost ledger.
@@ -298,14 +298,14 @@ def extract_triples_llm_with_usage(
         entities=", ".join(entities[:10]),
     )
 
-    # Extraction default switched DeepSeek -> Haiku 5.5 (Dongbum,
-    # 2026-10-14) on the clause bake-off: same gold recall, far
+    # Extraction default switched DeepSeek -> Haiku 5.5
+    # (2026-10-14) on the clause bake-off: same gold recall, far
     # fewer false fills (FP 34 vs 114), zero span-gate drops, lower
     # cost. Haiku 5.5 rejects non-default temperature (HTTP 400)
     # and counts thinking tokens toward max_tokens, so omit the
     # temperature and give the output headroom on that model.
     # The behavior switch is the seat's capability declaration
-    # now (issue #41; derived from the model id unless the
+    # now (derived from the model id unless the
     # binding declares capabilities explicitly).
     is_haiku55 = binding.has_capability(
         connections.CAP_NO_TEMPERATURE, model)

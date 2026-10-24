@@ -1,9 +1,9 @@
 """GraphStore — the production storage interface over Neo4j.
 
-PRODUCTION_DESIGN.md §4 (E3): this is the only way anything touches
-the graph. It wraps the existing Neo4jClient (pilot/neo4j_store.py —
+This is the only way anything touches
+the graph. It wraps the existing Neo4jClient (pipeline/neo4j_store.py —
 transport selection, tx vs Query API v2, stays inside that client)
-and exposes the §4 method set:
+and exposes the method set:
 
   upsert_entities / upsert_edges   idempotent MERGE writes
   neighborhood(ids, hops, tier)    tier-weighted traversal (§7 input)
@@ -23,11 +23,11 @@ Entity.entity_id / Chunk.chunk_id / Document.doc_id; a vector index
 on Chunk.embedding (text-embedding-3-large, 3072d, cosine); Lucene
 full-text indexes on Chunk.text and Entity.name.
 
-Note: pilot.registry.GraphStore is the pilot-era ABC (write_triples /
+Note: pipeline.registry.GraphStore is the legacy ABC (write_triples /
 traverse) implemented by Neo4jGraphStore in neo4j_store.py; this class
-is the §4 deployable interface and supersedes it for new code. The
+is the deployable interface and supersedes it for new code. The
 REL edge write semantics (attestation-level MERGE key — see
-upsert_edges, G-28) are identical to Neo4jGraphStore's, so both
+upsert_edges) are identical to Neo4jGraphStore's, so both
 writers produce the same projection.
 """
 from __future__ import annotations
@@ -79,7 +79,7 @@ class GraphStore:
                  entity_registry=None):
         self.c = client or Neo4jClient()
         self.rs = registry_store or RegistryStore()
-        # Optional EntityRegistry (G-13): when attached,
+        # Optional EntityRegistry: when attached,
         # project_from_registry takes entity records (names, aliases,
         # corpus) from the registry — the source of truth — instead of
         # reading them back out of the graph being rebuilt.
@@ -115,7 +115,7 @@ class GraphStore:
     def upsert_entities(self, entities, corpus: str | None = None) -> int:
         """MERGE entities by entity_id. Accepts dicts
         {entity_id, name, label?, aliases?, corpus?} or
-        pilot.registry.Entity objects. Returns rows written."""
+        pipeline.registry.Entity objects. Returns rows written."""
         rows = []
         for e in entities:
             if not isinstance(e, dict):
@@ -141,10 +141,10 @@ class GraphStore:
         return int(n)
 
     def upsert_edges(self, triples) -> int:
-        """MERGE REL edges at ATTESTATION level (G-28): the key is
+        """MERGE REL edges at ATTESTATION level: the key is
         {type, batch_id, run_id, doc_id, att_id}, where att_id is
         the content-derived attestation identity
-        (pilot.registry.attestation_id over endpoints, doc, and —
+        (pipeline.registry.attestation_id over endpoints, doc, and —
         when the writer carries them — the extractor surfaces,
         quote, and model). A fact attested in N documents is N
         edges, each carrying its own doc_id, p_true, tier, and
@@ -154,16 +154,16 @@ class GraphStore:
         edges to Document nodes — was rejected: it adds a hop to
         every graph-arm traversal and splits provenance across two
         edge types, while attestation edges cost only the duplicate
-        (fact, doc) rows themselves (+9.4% edges on p3b-v6:
-        18,710 vs 17,105). Writers without surface material (the
+        (fact, doc) rows themselves (+9.4% edges on the flagship
+        projection: 18,710 vs 17,105). Writers without surface material (the
         pipeline) get att_id over (fact, doc) — their previous
         semantics for exact duplicates, which they dedupe upstream.
 
         Accepts dicts {subject_id, object_id, relation, batch_id,
         run_id, doc_id, p_true?, tier?, tag?, model?, gate?,
         surface_s?, surface_o?, quote?, valid_at?, invalid_at?} or
-        pilot.registry.Triple objects. Entities must already exist
-        (registry-first, §4). Returns rows actually written (MATCH
+        pipeline.registry.Triple objects. Entities must already exist
+        (registry-first). Returns rows actually written (MATCH
         drops unknown ids).
 
         valid_at / invalid_at (OSS borrow #6, Graphiti bi-temporal
@@ -341,7 +341,7 @@ class GraphStore:
             raise FileNotFoundError(
                 f"{batch_id}: no tier2_index.pkl (INDEX stage output)")
         corpus = self.rs.corpus(batch_id)
-        # One-graph store (RR-2): the store's chunk projection
+        # One-graph store: the store's chunk projection
         # is the current build's — another batch's chunks are
         # cleared before this batch's are loaded, so a chunk
         # search can never range over a replaced graph's
@@ -472,7 +472,7 @@ class GraphStore:
         pre-manifest batches (projection not reconcilable from
         artifacts — the stage_verify precedent).
 
-        id_remap (issue #45): {merged_away_id: surviving_id} — an
+        id_remap: {merged_away_id: surviving_id} — an
         ER settlement's fold, as recorded in the registry's
         id_mapping. Manifest endpoints resolve through the map
         (chains followed), and the p_true carry-over lookup keys
@@ -490,7 +490,7 @@ class GraphStore:
         run_id = meta.get("run_id", "")
         model = meta.get("config", {}).get("gate_model", "")
 
-        # One-graph store (RR-2): a projection asserts this
+        # One-graph store: a projection asserts this
         # batch's graph as the store's graph. When the stamp
         # names a different graph, clear it first — the clear
         # keeps this batch's own edges, so the p_true
@@ -605,7 +605,7 @@ class GraphStore:
                 "model": model, "gate": "triple"})
         n_edges = self.upsert_edges(triples)
         # The projection is complete: (re)stamp the store
-        # with this graph's identity (RR-2), exactly as a
+        # with this graph's identity, exactly as a
         # build's WRITE does.
         if isinstance(self.c, Neo4jClient):
             from .neo4j_store import (

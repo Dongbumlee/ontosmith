@@ -1,4 +1,4 @@
-"""Relation normalization at WRITE (G-11).
+"""Relation normalization at WRITE.
 
 Relation strings enter the graph from heterogeneous sources: spaCy
 verb lemmas (pipeline), free-text verb phrases (LLM proposer), and

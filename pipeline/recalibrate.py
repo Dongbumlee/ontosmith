@@ -8,7 +8,7 @@ History format: JSONL, one record per line:
   {"p_true": 0.7, "label": 1, "ts": "2026-10-10T01:00:00", "source": "human"}
 
 Usage:
-  python -m pilot.recalibrate --history results/judgments.jsonl \\
+  python -m pipeline.recalibrate --history results/judgments.jsonl \\
       --deployed-threshold 0.25 --window 500 --out results/recalibration.json
 
 Exit code 2 + "DRIFT" in output when drift is detected (for cron alerting).

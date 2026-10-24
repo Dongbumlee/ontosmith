@@ -1,15 +1,14 @@
-"""Packaging metadata (pyproject.toml; plan §7 R1,
-issue #74).
+"""Packaging metadata (pyproject.toml).
 
 The install proof itself (wheel build + throwaway-venv
-install) is a recorded run step in MANIFEST.md; this suite
+install) is a recorded release step; this suite
 pins the metadata the proof depends on: the project
 identity, the console entry point, the package set, and —
 critically — that every pack file the metadata promises
 to ship actually exists in the tree (a data-files entry
 naming a missing file would silently ship a broken pack).
 Also pins that the new B3 commands are registered in the
-unified CLI, and the launch metadata (run 11, T1):
+unified CLI, and the launch metadata:
 classifiers, project URLs, and keywords — a metadata edit
 that drops one of these on the way to PyPI fails here
 first.
@@ -94,18 +93,17 @@ class TestPyproject(unittest.TestCase):
         self.assertIn("spacy", extras["nlp"])
         # The batch NER stage hard-imports gliner on the
         # default (pipeline) candidate path — the nlp extra
-        # is the surface that installs it (run 31 catch).
+        # is the surface that installs it.
         self.assertIn("gliner", extras["nlp"])
-        # No "embed" extra (run 31): there is no local
+        # No "embed" extra: there is no local
         # embedding path for an extra to install.
         self.assertNotIn("embed", extras)
 
     def test_app_assets_ship(self):
-        # The demo app (R18) is data, resolved by
+        # The demo app is data, resolved by
         # api.server.app_candidates from the installed
         # share/ layout — the promised set is exactly the
-        # five static files (the brand mark joined in
-        # run 21).
+        # five static files (the brand mark included).
         data_files = _pyproject()["tool"]["setuptools"][
             "data-files"]
         self.assertEqual(

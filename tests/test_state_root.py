@@ -1,4 +1,4 @@
-"""Batch state root (E-F6, Phase E clean room).
+"""Batch state root.
 
 Batch state — the batches/ tree, the registry — belongs
 to the user's project, not to the installed package tree.
@@ -61,7 +61,7 @@ class TestStateRootRule(unittest.TestCase):
 
 
 class TestCreateLandsInStateRoot(unittest.TestCase):
-    """The C-F4 layout, one step further: creation from an
+    """The installed layout, one step further: creation from an
     installed tree resolves packs from the installed data
     tree but writes the batch under the working directory."""
 

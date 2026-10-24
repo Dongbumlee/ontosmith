@@ -27,7 +27,7 @@ proposals for G-04/G-05):
                  profile's rule: role nouns are not identities);
                  only when the profile declares role-word rules.
   theme_missing  the relation is a bare prepositional phrase —
-                 no predicate, hence no theme (G-05 theme-presence).
+                 no predicate, hence no theme.
   theme_presence a verb+preposition relation whose object is not
                  attested in the quote itself — the C2 substitution
                  pattern (a prepositional object standing in the
@@ -39,18 +39,18 @@ pass the span gate (g1_quote) and per-(doc, category, value)
 dedupe; their subject is the document's own Document Name fill
 (fallback: source file stem), mirroring cuad_clause_tograph.py.
 
-Profile wiring (issue #51): the proposer takes an optional
+Profile wiring: the proposer takes an optional
 `guidance` string rendered from the corpus profile's setup_config
-(pilot/profile_config.derive_guidance — the EG-R2-1 channel). No
+(pipeline/profile_config.derive_guidance — the channel). No
 guidance -> the prompt is byte-identical to the recipe above. With
 guidance, the model is asked for typed endpoints (subject_type /
-object_type, EG-R2-2); guard_triples validates the tags against
+object_type); guard_triples validates the tags against
 the profile's endpoint-type vocabulary.
 
-Domain framing (PK-01): the prompt templates are domain-neutral;
+Domain framing: the prompt templates are domain-neutral;
 the framing line (and the slot rules block) that specialize them
 to a family are profile data threaded through the `framing` /
-`rules` parameters (pilot/profile_config.proposer_framing /
+`rules` parameters (pipeline/profile_config.proposer_framing /
 slot_framing / slot_rules). The standalone harnesses' contract
 text survives as the CUAD profile's declared framing — the
 prompt CUAD builds is byte-identical to the recipe above.
@@ -72,10 +72,10 @@ STEP = 19500
 MAX_PER_CHUNK = 10
 WINDOW = 500  # judge context = quote ± 500 chars (audit standard)
 
-# PK-01 (docs/GAP_REGISTER.md): the base templates below are
+# The base templates below are
 # domain-neutral core text. A family's domain framing — the
 # opening line of each prompt, and for slots the rules block —
-# is profile data (pilot/profile_config.py: proposer_framing /
+# is profile data (pipeline/profile_config.py: proposer_framing /
 # slot_framing / slot_rules), threaded in by stage_candidates.
 # Before this fix, CUAD's contract framing was compiled into
 # the core templates and every family ran under it (fiction,
@@ -111,7 +111,7 @@ SLOT_FRAMING_DEFAULT = \
 # Neutral core rules: value/quote discipline only. Category
 # semantics (what a category's value looks like, yes/no-style
 # categories, party handling) are the family's domain content,
-# declared as slot_rules in its profile (PK-01) — CUAD's rules
+# declared as slot_rules in its profile — CUAD's rules
 # block, carried verbatim in profiles/cuad/setup_config.json,
 # names its clause categories and is not core text.
 SLOT_RULES_DEFAULT = """- "value": the shortest complete value, as written in the
@@ -137,12 +137,12 @@ Excerpt:
 {text}
 ---"""
 
-# Prepositions for the theme-presence guard (G-05).
+# Prepositions for the theme-presence guard.
 PREPS = {"in", "on", "of", "for", "to", "with", "by", "at", "from",
          "under", "over", "between", "into", "upon", "against",
          "within", "without", "through", "per", "via", "as", "about"}
 
-# The role-word guard's vocabulary is NOT core data (A2-F2):
+# The role-word guard's vocabulary is NOT core data ():
 # role nouns are one domain's content, so the set lives in the
 # declaring pack (packs/legal-contract/role_words.json) and
 # reaches guard_triples as a parameter, resolved by
@@ -157,7 +157,7 @@ def norm_ws(s: str) -> str:
 
 def _is_haiku55(model: str) -> bool:
     # The Haiku behavior switch is a capability declaration
-    # now (issue #41): the rule table lives once, in the
+    # now: the rule table lives once, in the
     # connection layer (connections.derive_capabilities).
     return connections.CAP_NO_TEMPERATURE in \
         connections.derive_capabilities(model)
@@ -222,19 +222,19 @@ def _parse_array(content: str, salvage: bool) -> list:
 
 def _build_triple_prompt(chunk: str, guidance: str = "",
                          framing: str | None = None) -> str:
-    """The proposer prompt for one chunk (EG-R2-1 guidance channel).
+    """The proposer prompt for one chunk .
 
     The base is the domain-neutral TRIPLE_PROMPT template filled
-    with the family's declared framing (PK-01;
-    pilot/profile_config.proposer_framing) or, absent a
+    with the family's declared framing (profile data;
+    pipeline/profile_config.proposer_framing) or, absent a
     declaration, TRIPLE_FRAMING_DEFAULT. With the framing the
     CUAD profile declares, the construction is byte-identical to
-    the pre-PK-01 prompt — pinned by
-    scripts/test_profile_wiring.py against the golden string
+    the pre-framing prompt — pinned by
+    the profile-wiring tests against the golden string
     captured before the guidance channel existed, and per family
-    by scripts/test_domain_boundary.py. With guidance (rendered
+    by the domain-boundary tests. With guidance (rendered
     from the corpus profile by
-    pilot/profile_config.derive_guidance), the guidance block is
+    pipeline/profile_config.derive_guidance), the guidance block is
     appended after the base prompt.
     """
     base = TRIPLE_PROMPT.format(
@@ -280,7 +280,7 @@ def propose_triples_for_doc(doc_id: str, text: str, key: str,
                     "object": str(it["object"]).strip(),
                     "quote": str(it["quote"]).strip(),
                     "chunk_idx": idx, "chunk_norm": norm_ws(chunk)}
-                # EG-R2-2: typed endpoints, when the proposer emits
+                # Typed endpoints, when the proposer emits
                 # them (guidance asks for them). Carried verbatim
                 # here; guard_triples validates them against the
                 # profile's endpoint-type vocabulary.
@@ -313,11 +313,11 @@ def propose_slots_for_doc(doc_id: str, text: str,
     """Raw clause-slot fills for one document (unguarded).
 
     The prompt is the domain-neutral SLOT_PROMPT template filled
-    with the family's declared framing + rules block (PK-01;
-    pilot/profile_config.slot_framing / slot_rules) or the
+    with the family's declared framing + rules block (profile data;
+    pipeline/profile_config.slot_framing / slot_rules) or the
     neutral core defaults. With the framing and rules the CUAD
     profile declares, the construction is byte-identical to the
-    pre-PK-01 prompt (scripts/test_domain_boundary.py)."""
+    pre-framing prompt (pinned by the domain-boundary tests)."""
     tasks = _chunks(text)
     cats = ", ".join(categories)
 
@@ -389,7 +389,7 @@ def quote_window(text: str, quote: str, half: int = WINDOW) -> str:
 
 
 # ------------------------------------------------------------------
-# Deterministic guards (G-04 / G-05 re-scoped to LLM proposals)
+# Deterministic guards
 # ------------------------------------------------------------------
 _PUNCT_SPACE_RX = re.compile(r"\s*([^\w\s])\s*")
 
@@ -419,13 +419,13 @@ def guard_triples(items: list[dict], doc_text: str,
 
     `role_words` is the role-word guard's vocabulary — the
     normalized role nouns, supplied as pack data and resolved
-    by profile_config (A2-F2). An endpoint whose normalized
+    by profile_config (). An endpoint whose normalized
     surface is in the set is blocked (l0_role_word): a bare
     role word is not an identity. None (the default) disables
     the guard; profiles that declare no role-word rules run
     with it off.
 
-    EG-R2-2 typing: a proposed subject_type / object_type survives
+    typing: a proposed subject_type / object_type survives
     into the kept (and blocked) record only when it belongs to the
     profile's endpoint-type vocabulary (`entity_types`); an
     out-of-vocabulary tag is dropped — the triple itself is NOT
@@ -433,7 +433,7 @@ def guard_triples(items: list[dict], doc_text: str,
     With entity_types=None (no profile vocabulary), proposed tags
     pass through as-is.
 
-    Two opt-in relaxations (issue #68 phase 2; both default to
+    Two opt-in relaxations (both default to
     the legacy behavior, byte-identical):
 
     - `quote_punct_insensitive`: G1 also accepts a quote that

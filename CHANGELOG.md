@@ -354,7 +354,7 @@ and the project adheres to
   instead of one run-on paragraph, and §8 References is
   now purely external sources: the internal release-plan
   citation is deleted, the in-body decision-number
-  citations (D9) are rewritten as the paper's own
+  citations are rewritten as the paper's own
   statements, and the product repository's artifacts
   moved to an unnumbered Artifacts note (2026-10-22).
 - VERIFY's store drift spot audit now ships inside the
@@ -406,7 +406,7 @@ publication checkpoint.)
   (rebuildable from the registry, never the source of
   truth), hybrid retrieval (vector + full-text + graph),
   an HTTP API, and a demo app.
-- The demo app (`app/`, plan §7 R18): a static,
+- The demo app (`app/`): a static,
   build-free page served by `ontosmith serve` at `/`
   over the sample API — search box, triple/evidence
   inspector, entity report, and a click-to-walk

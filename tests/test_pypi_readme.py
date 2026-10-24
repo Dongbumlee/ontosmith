@@ -1,5 +1,4 @@
-"""PyPI README variant (scripts/build_pypi_readme.py;
-issue #78, run 19).
+"""PyPI README variant (scripts/build_pypi_readme.py).
 
 PyPI does not resolve repository-relative links or
 images, so the GitHub master README cannot ship as the
@@ -14,7 +13,7 @@ committed pyproject keeps pointing at the master —
 the publish-time selection swaps file content in the
 release checkout, never the metadata.
 
-Run 30 exception: the README badge row (PyPI version,
+One exception: the README badge row (PyPI version,
 PyPI Python versions, CI status) is external by design
 — shields.io renders the PyPI badges and GitHub serves
 the CI badge — so those image URLs are the master's
@@ -80,22 +79,21 @@ class TestVariant(unittest.TestCase):
     def test_rewrite_counts_equal_the_audit(self):
         # 19 relative links (18 files + the benchmarks/
         # directory) and 4 relative images in the master
-        # — the run-19 audit counted 21 targets (3
-        # images); the run-21 brand banner is the
-        # fourth image; run 22 added the anchored
+        # — the audit counted 21 targets (3
+        # images); the brand banner is the
+        # fourth image; a later revision added the anchored
         # Optimized-for-Jev link to Connections (a file
         # target, rewritten to blob form with its
-        # fragment preserved). Run 27 added four file
-        # targets: the PACK_DESIGN contract link, the
+        # fragment preserved). Four more file
+        # targets followed: the PACK_DESIGN contract link, the
         # Connections link in the reference-profile
         # section, and two hands-on links in the start
-        # table (Track 3 / appendix track). Run 30
-        # added the built-graph figure — the fifth
-        # relative image. The repair program added two
-        # targets: the llms.txt link in the start table
+        # table. The built-graph figure followed — the fifth
+        # relative image. Two more targets: the llms.txt link
+        # in the start table
         # (a file target) and the reproduce/ directory
-        # link in step 2 (the second tree target). The
-        # BO repair program added two file targets: the
+        # link in step 2 (the second tree target). Two
+        # more file targets: the
         # Connections links carrying the Neo4j
         # prerequisite, in the Requirements list and in
         # step 3.

@@ -110,7 +110,7 @@ class WorkQueue:
                 items: list[dict], max_attempts: int = 3) -> int:
         """Add items. Idempotent per run: re-enqueueing the same
         (batch_id, run_id, item_id) won't duplicate, while a retry
-        under a NEW run_id enqueues a fresh set of rows (G-08)."""
+        under a NEW run_id enqueues a fresh set of rows."""
         now = time.time()
         with self._conn:
             for it in items:

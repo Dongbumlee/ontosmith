@@ -1,4 +1,4 @@
-"""Connection-layer tests (run 12): provider-neutral bindings.
+"""Connection-layer tests: provider-neutral bindings.
 
 Three proofs:
 1. PRESET EQUIVALENCE — under the reference preset, the
@@ -433,7 +433,7 @@ class TestRefusals(StubServerCase):
                 embedder.default_embedder()
 
     def test_embedder_undeclared_keyless_refuses(self):
-        # Run 31: there is no local fallback — an
+        # There is no local fallback — an
         # undeclared, keyless embedder use refuses by name,
         # exactly like the declared case above.
         with binding_env():
@@ -444,7 +444,7 @@ class TestRefusals(StubServerCase):
         self.assertIn("OPENROUTER_API_KEY", msg)
 
     def test_neo4j_registry_keyless_candidate_search_refuses(self):
-        # Run 31: candidate search over the Neo4j registry
+        # Candidate search over the Neo4j registry
         # must not silently downgrade to substring when the
         # embedder binding's key is missing — the refusal
         # propagates out of find_candidates by name.
@@ -527,7 +527,7 @@ class TestResolution(unittest.TestCase):
     def test_decision_env_vars_are_inert(self):
         # The decision seat is gone (its work moved
         # to the escalation seat). ONTOSMITH_DECISION_* —
-        # the run-24 no-op rule — resolve nothing and do
+        # the no-op rule — resolve nothing and do
         # not make the binding custom.
         with binding_env({
                 "ONTOSMITH_DECISION_MODEL": "x/y",
@@ -609,7 +609,7 @@ class TestBatchProvenanceStamp(unittest.TestCase):
             escalation_band_hi=None, candidate_source="pipeline",
             # The custom gateway binding is cost-less (portable
             # dialect, no declared rates): creating under a USD
-            # cap would refuse by name (issue #41), so this
+            # cap would refuse by name, so this
             # provenance-focused creation declares no cap.
             no_cost_cap=True)
         with binding_env({
@@ -638,7 +638,7 @@ class TestBatchProvenanceStamp(unittest.TestCase):
         self.assertEqual(b.binding_provenance, {})
 
     def test_legacy_provenance_with_removed_seat_loads(self):
-        # Run 24: batches created before the sllm seat was
+        # Batches created before the sllm seat was
         # removed carry it in their stored binding
         # provenance. Provenance is historical data: it
         # loads and re-embeds in the manifest unchanged —
@@ -667,10 +667,10 @@ class TestBatchProvenanceStamp(unittest.TestCase):
         self.assertEqual(manifest["binding"], prov)
 
     def test_legacy_provenance_with_decision_seat_loads(self):
-        # Run 26: batches created while the preset carried
+        # Batches created while the preset carried
         # a "decision" seat name it in their stored binding
         # provenance (its model was the gate-evaluation
-        # default of the day). Same rule as the run-24 sllm
+        # default of the day). Same rule as the sllm
         # fixture: provenance is historical data — it loads
         # and re-embeds in the manifest unchanged.
         import tempfile

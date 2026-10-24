@@ -24,7 +24,7 @@ ignore = [
 # one-letter loop names in the measured engine; renaming is
 # churn against frozen measurement code. B905 — the WRITE
 # stage's zip(triples, tier1) truncation behavior is today's
-# semantics; strictness is a Phase B design question.
+# semantics; strictness is a design question.
 "pipeline/batch_run.py" = ["B023", "E741", "B905"]
 # batch: UP042 — BatchStatus(str, Enum) is the persisted batch
 # status representation; StrEnum changes str() semantics.
@@ -32,9 +32,9 @@ ignore = [
 # roster_pass: E501 — proposer prompt literals are byte-pinned
 # behavior (prompt text is measured configuration).
 "pipeline/roster_pass.py" = ["E501"]
-# query_stack: measured retrieval code, productization is
-# Phase G1 — zip strictness, long literal lines, legacy names
-# are reviewed there, not in the tidying pass.
+# query_stack: measured retrieval code; zip strictness,
+# long literal lines, and legacy names are reviewed in a
+# later productization pass, not in the tidying pass.
 "pipeline/query_stack.py" = ["B905", "E741", "E501", "RUF059", "B007"]
 "pipeline/review.py" = ["E741"]
 "pipeline/retrieval_eval.py" = ["E501"]
@@ -52,7 +52,7 @@ ignore = [
 "harness/rag_eval_embedder.py" = ["B007"]
 "harness/make_graph_image.py" = ["E402"]
 "packs/fetch_btt.py" = ["E741"]
-# run_e6: the E-6 cross-family measurement runner, archived
+# run_e6: the cross-family measurement runner, archived
 # verbatim as executed (2026-10-23; appendix README records
 # its sha256). Renaming its legacy loop names would falsify
 # the run record; the deferral covers the archive copy only.

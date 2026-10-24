@@ -1,4 +1,4 @@
-"""Pack schema tests (run 29).
+"""Pack schema tests.
 
 The pack format's field-level definition lives in
 packs/pack.schema.json + packs/conformance.schema.json

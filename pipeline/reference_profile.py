@@ -1,15 +1,15 @@
 """The reference profile: OntoSmith's tested model bindings.
 
 This module is the single home of the model/endpoint bindings
-that ship as the product's **default connection preset** (plan
-§7 R14 layer 2; decision D9). The published quality record was
+that ship as the product's **default connection preset**.
+The published quality record was
 measured with exactly these bindings, so a default install
 reproduces the published measurements; a user who edits the
 connection layer runs a *custom binding* and re-measures on
 their own account (runs record which binding was used).
 
 Every binding declared here is the measured occupant of its
-seat (run 26): the cast is exactly the models tested in
+seat: the cast is exactly the models tested in
 their roles — no name is presented as a default on any
 other basis. The one seat that declares **no** model here
 is drafting: an authoring aid behind the human approve
@@ -17,7 +17,7 @@ gate, exercised once in the lab and never part of the
 measured pipeline, so the preset ships it unbound and the
 user binds it explicitly (``pipeline/connections.py``).
 
-Layer discipline (R14):
+Layer discipline:
   - Domain config (packs / profiles) declares only *capability
     tiers* (proposer / judge / escalation) — never these names.
   - The names live here (the shipped preset) and in the user's
@@ -42,7 +42,7 @@ SYSTEMONE_URL = PROVIDER_BASE_URL + "/systemone"
 #: Provider-routing preference sent with chat/embedding calls
 #: (the OpenRouter "provider.sort" request field): a
 #: connection-layer routing knob. Shipped payloads may still
-#: declare it as legacy metadata (run-7 finding T-2), but the
+#: declare it as legacy metadata, but the
 #: live value is this preset, never a domain-layer setting.
 PROVIDER_SORT = "throughput"
 

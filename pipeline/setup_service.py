@@ -1,7 +1,7 @@
-"""Setup service (stage 0, E1): corpus-family profile production.
+"""Setup service (stage 0): corpus-family profile production.
 
-Implements docs/CORPUS_SETUP_PLAYBOOK.md as a runnable stage
-(docs/PRODUCTION_DESIGN.md section 2). Runs ONCE per corpus family,
+Implements the corpus setup playbook as a runnable stage.
+Runs ONCE per corpus family,
 before the first batch:
 
   1. A dispersed sample is drawn (length strata, deterministic
@@ -26,11 +26,11 @@ Every claim carries an evidence grade: FULL (machine count over the
 whole corpus), SAMPLE n=<k> (read from the dispersed sample), or
 JUDGMENT (a human/model call awaiting approval). profile_hash is a
 stable content hash over the profile's substantive content; batches
-record it in their manifest (pilot/batch.py write_manifest) so the
+record it in their manifest (pipeline/batch.py write_manifest) so the
 section-3 determinism premise ("same profile hash") is testable.
 
 Usage:
-    python -m pilot.setup_service profile <corpus_dir> --family <name>
+    python -m pipeline.setup_service profile <corpus_dir> --family <name>
         [--sample-n 12] [--model <drafting model>] [--out DIR]
         [--no-draft]
 """
@@ -533,7 +533,7 @@ def _chat(model: str, system: str, user: str, api_key: str,
         "max_tokens": max_tokens,
     }
     if _binding.is_openrouter_dialect:
-        # OpenRouter-dialect fields (issue #41): emitted only
+        # OpenRouter-dialect fields: emitted only
         # when the drafting seat's dialect declares them.
         # Frontier drafting at low reasoning effort (bench_frontier
         # precedent: default effort burns the cap on hidden tokens).
@@ -613,7 +613,7 @@ def verify_claims(claims: list[dict], docs, gold, csv_path) -> list[dict]:
             c["measured"] = result
             match = _expected_matches(c.get("expected"),
                                       result.get("value"))
-            # Run 32 (audit F12): match is None when there is
+            # Match is None when there is
             # nothing to compare (the claim carries no expected
             # value, or the scanner measured none) — the old
             # ternary read that as "confirmed", a verdict no
@@ -807,7 +807,7 @@ def run_setup(corpus_dir: Path, family: str, out_dir: Path,
     draft_key = _draft_binding.key_or_none()
 
     if draft:
-        # The drafting seat ships unbound (run 26): the
+        # The drafting seat ships unbound: the
         # model is the caller's argument or the seat's
         # declared binding, and an unbound seat refuses
         # here — before any request — with the named error.
@@ -921,7 +921,7 @@ def run_setup(corpus_dir: Path, family: str, out_dir: Path,
 
 
 def main(argv=None) -> int:
-    ap = argparse.ArgumentParser(prog="pilot.setup_service")
+    ap = argparse.ArgumentParser(prog="pipeline.setup_service")
     sub = ap.add_subparsers(dest="cmd", required=True)
     p = sub.add_parser("profile", help="Run stage-0 setup for a corpus")
     p.add_argument("corpus_dir")
