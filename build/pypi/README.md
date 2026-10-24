@@ -11,7 +11,8 @@ ontology, build the graph under it, and serve it — search,
 API, and app — from one pipeline.**
 
 *Powered by Jev — the decision (judge) model inside
-OntoSmith.*
+OntoSmith — and built on Neo4j, the graph store
+underneath, with native vector search.*
 
 The stack has two named pillars: **Jev** judges what is
 true enough to write, and **Neo4j** stores the graph —
