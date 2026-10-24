@@ -1,0 +1,444 @@
+# Changelog
+
+All notable changes to OntoSmith are recorded here. The
+format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
+and the project adheres to
+[Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## [Unreleased]
+
+### Changed
+
+- **The store holds one graph (RR program).** Neo4j
+  now holds exactly one graph — the current build's,
+  written under a completed ontology. WRITE stamps
+  the store with the graph's identity (pack + version
+  or profile lineage, batch, triple count). A build
+  under a changed ontology **replaces** the previous
+  graph instead of accumulating beside it: the
+  preflight names the graph in the store before
+  anything is spent, the WRITE stage names the
+  replacement and records what it removed, and
+  content no stamp identifies stops the run by name
+  rather than being overwritten. Same-build rewrites
+  stay idempotent (VERIFY unchanged). Search (CLI and
+  `serve`) is scope-free by construction over Neo4j:
+  it resolves the store's one graph from the stamp —
+  an unstamped or empty store refuses by name, and a
+  `--batch`/`--source` naming a different build is an
+  expectation check that refuses by name, not a
+  scope. The file read-back path is unchanged. The
+  registry still keeps every replaced graph's full
+  history — the store is current-state only. The
+  `er-apply` projection asserts the same one-graph
+  rule and names any graph it replaces. Docs aligned
+  to the settled store story everywhere it is told
+  (release notes, serving, connections), including a
+  stated scope for the schema itself — a flat
+  extraction contract, not a formal ontology — on the
+  README, Pages, and `llms.txt`.
+- The WRITE hold line in `batch run` output now names
+  its remedy — `ontosmith batch er-review <batch>` —
+  and Track 3 §5 of the hands-on signposts the ER
+  settlement flow where a hold under an authored pack
+  can occur.
+- The CLI reference explains the ER pair-id sequence:
+  ids are one registry-wide `er_decisions` sequence
+  shared with machine rows, so held-pair listings
+  skip numbers by design.
+
+### Added
+
+- An ER review-band settlement surface (issue #45):
+  `ontosmith batch er-review` lists a batch's held
+  entity-resolution pairs with the evidence to decide
+  them (both registry entities, the gate's `p_same`,
+  triple counts, sample contexts); `batch er-decide`
+  records a human merge / keep-separate decision as an
+  append-only `er_decisions` row — a merge also folds
+  the pair in the registry (the source of truth) at
+  once, preserving every surface as an alias and the
+  fold in `id_mapping`; `batch er-apply` amends the
+  WRITE manifest through that mapping and re-projects
+  the graph (re-pointed edges keep their `p_true`).
+  A keep-separate pair is never re-held by later runs.
+- The connection layer generalized beyond its original
+  provider, and a front door for declaring bindings
+  (issue #41). Seats now declare a **dialect**
+  (`openrouter` for the shipped preset; a custom binding
+  defaults to the portable `openai` subset), and
+  provider-specific request fields are sent only under
+  the dialect that declares them. Cost accounting is
+  stamped with its basis — `provider-reported`,
+  `estimated` from user-declared per-seat rates, or
+  `not-provided` — an unknown cost is recorded as
+  unknown (the former built-in rate fallback is gone),
+  and a USD cap over a seat that cannot meter cost
+  refuses by name unless the run is explicitly created
+  with `--no-cost-cap`. **`ontosmith configure`** is the
+  declaration path: an interactive wizard that walks
+  the seats from the preset's values and validates the
+  result with zero-spend probes, with a non-interactive
+  twin — fill in `docs/bindings-template.env` and run
+  `configure --from-file`. Both write the same
+  `ontosmith-bindings.env`, stamped with the binding's
+  provenance. The reference preset itself is unchanged,
+  byte for byte.
+- A photograph of the product's output in the README:
+  `docs/assets/built-graph.png`, a rendering of a real
+  built graph — the Bellicum × Miltenyi neighborhood of
+  one CUAD supply agreement, as built by the Legal
+  Contract pack (42 entities, 77 Tier-1 triples, all from
+  the shipped build's Neo4j projection; no mock data).
+  The caption carries the corpus credit (CUAD, The
+  Atticus Project, CC BY 4.0).
+- A badge row under the README banner: PyPI version,
+  PyPI Python versions, and the GitHub Actions CI badge
+  (all dynamic; the PyPI badges resolve once the package
+  publishes at launch).
+- `docs/PACK_DESIGN.md` — the pack-format contract
+  (manifest, pinning, resolution, fail-closed loading,
+  conformance measurement, the core/pack boundary)
+  ported into the product tree, so the shipped pack
+  manifests' `design` citations resolve in-tree.
+- The pack format's field-level schemas:
+  `packs/pack.schema.json` and
+  `packs/conformance.schema.json` (JSON Schema draft
+  2020-12), shipped in the wheel. The loader validates
+  every manifest at load and refuses — naming the
+  defect — any field the schema does not define, any
+  bad enum value, any malformed pin. pack_format stays
+  1: the schemas formalize the format, they do not
+  replace it. `docs/PACK_DESIGN.md` §1.6 carries the
+  human field tables, kept in set-equality with the
+  schemas by a test.
+- `ontosmith ontology check <pack-dir>` — the
+  contributor validation command: schema-validates a
+  pack's manifest and conformance record and runs the
+  loader's pin + payload validation; exit 0 when
+  clean, 1 with each defect named.
+
+### Changed
+
+- The chat embedder class is renamed
+  `OpenRouterEmbedder` → `SeatEmbedder`: the embedder is
+  a seat binding, not a provider class (the old name
+  survives as a code alias). In the same pass,
+  model-name pattern matching for request shape is
+  replaced by per-seat capability declarations
+  (`ONTOSMITH_<SEAT>_CAPABILITIES`); a seat that
+  declares none still derives its capabilities from
+  the model id, as before.
+- The flagship quality record (whitepaper §5) is
+  restructured around the **ruled adjudication
+  contract**. After the record was frozen, its 740
+  verdicts were stress-tested under a pre-registered
+  cross-family blind recheck (agreement 0.815 against a
+  0.95 bar — a registered FAIL); the disagreement
+  localized to six surface situations the as-typed
+  contract had never defined, those situations were
+  settled by explicit ruling (new standing spec:
+  `docs/ADJUDICATION.md`), and all 565 flagged items
+  were re-judged blind under the ruled contract.
+  Re-priced through the identical estimator, the
+  record's headlines are now corrected precision
+  **0.9110** [0.8919–0.9275] (FULL-500) and
+  ceiling-adjusted recall **0.2028**; ĝ_B is 0.5244 —
+  under the ruled contract only about half of the
+  sampled gold survives as typed. The original-protocol
+  estimate (0.9765) remains in the record as a single
+  provenance passage (§5.4) and in the replay. The ruled
+  verdict set ships in the benchmark appendix
+  (`judgments_ruled/` + `RULING.md`), and
+  `examples/demo/replay_scores.py` now computes both
+  estimates — the ruled set is the headline, the
+  original set reproduces beside it. Core pack GC-4
+  restated to the ruled figures (pack 0.3.0 → 0.4.0).
+- The method figure (`docs/assets/method.png`, generated
+  by `harness/render_charts.py`): the Verify box below the
+  flow is gone — the figure tells one story, how a graph
+  is built and served (Verify lives in-flow as pipeline
+  stage 8; the measurement discipline stays as the
+  figure's footer line). Serving is drawn, not written:
+  Graph projects into a "Serving store / Neo4j
+  projection" element feeding Search, API, and App boxes
+  in place of the old gray "served from Neo4j" text note.
+  Emphasis rebalanced — the proposer is a muted clay,
+  the Jev gates + judge box carries the figure's
+  strongest navy, the graph steps down a shade — and
+  Profile's subline drops its "· $0" badge: a box says
+  what the step is, not what it costs.
+- The connection layer's seat cast now states exactly
+  the models tested in their roles. A new **escalation**
+  seat carries `anthropic/claude-sonnet-5.5` — the
+  measured occupant of the lab's adjudication-escalation
+  record — and the gate-evaluation judges
+  (`pipeline.decisions` defaults, the `gate triple`
+  default model) resolve through it. The **drafting**
+  seat ships **unbound**: the preset declares its
+  endpoint but no model, and a drafting call without a
+  user-declared model (`ONTOSMITH_DRAFTING_MODEL` or the
+  command's `--model`) refuses with a named error before
+  any request. Drafting is an authoring aid behind the
+  human approve gate; it was exercised once in the lab
+  and is not part of the measured pipeline, so no model
+  is presented as its default.
+- The user documentation now teaches the concepts where
+  a new user first meets them (2026-10-22). The hands-on
+  guide is rebuilt as three tracks over the reader's own
+  documents — your documents; your documents + an
+  industry pack; your documents → your own ontology —
+  each ending at the same serve / search / inspect
+  finish line, with the former reference-build walkthrough
+  demoted to an appendix track. The README gains a
+  Requirements block at the head of its install section
+  (Linux tested; Windows under WSL2), plain profile-vs-
+  pack paragraphs, and a five-seat reference-profile
+  table — the **Provider route row is removed**: the
+  table states bindings, and route provenance now lives
+  only in `docs/connections.md`, which records that the
+  measured record ran over the OpenRouter route for the
+  routed seats and that the judge's calls go to Jev's
+  pinned decisions endpoint instead. The live-build
+  export of the preset key variable is framed at the
+  command itself, `inspect`'s directory form leads
+  (with its Gaps line explained), `binding: reference`
+  is glossed at batch creation, and
+  `--frontier-escalation` is documented as recorded in
+  the batch config but not wired in v1.
+- A documentation audit pass (2026-10-22) corrected the
+  shipped documents against the code and the source
+  records. Decorative "$0" badges came off the step
+  headings (README, hands-on, release notes, site):
+  cost is stated as a run's own record, not as
+  decoration. Internal decision IDs and lab shorthand
+  were rewritten as their substance throughout the
+  benchmarks documents, the adjudication appendix, the
+  release notes, and `CONTRIBUTING.md`. The whitepaper's
+  §4.1 binding table now lists all five seats of the
+  shipped preset (the stray provider-route row is gone
+  there too). The flagship corrected-precision interval
+  now reads [0.9641–0.9847] everywhere it is published —
+  the value the shipped replay recomputes from the
+  appendix (after the ruled re-pricing recorded above,
+  that interval survives as labelled provenance, §5.4) — and the stage enumerations in the README
+  and hands-on match the pipeline's eight stages.
+- The CLI dispatcher now honors the exit codes its
+  command mains return (`ontology`, `profile`,
+  `inspect`, `search`, `serve`, `verify` all documented
+  process exit codes that were previously dropped, so
+  every invocation exited 0).
+
+### Removed
+
+- The `decision` connection seat. The seat named the
+  judge bake-off's candidate slot; after Jev took the
+  judge seat, its remaining consumers moved off it —
+  the gate-evaluation judges to the **escalation** seat
+  (recorded above), and the `llm` evaluation judge,
+  which had resolved its endpoint through the decision
+  seat, now resolves through the **judge** seat. The
+  connection layer ships five seats — proposer, judge,
+  escalation, drafting, embedder — and
+  `ONTOSMITH_DECISION_*` variables are inert. (Earlier
+  entries below that name the decision seat describe
+  the cast as it stood when they were written.)
+- The local-embedding fallback and the `[embed]` extra.
+  The embedder is the embedder seat's hosted binding
+  only: the one local model measured against it
+  (all-MiniLM-L6-v2) missed candidates the hosted model
+  catches, and no published figure was ever produced
+  with it. Where an embedder is required — `search
+  --embed`, `serve --embed`, candidate search over a
+  Neo4j registry, a build's INDEX stage — a seat whose
+  key cannot be resolved now refuses by name
+  (`BindingKeyError`; INDEX refuses a config naming a
+  non-hosted model) instead of silently embedding with
+  the weaker local model. Surfaces that need no embedder
+  (lexical + graph search without `--embed`) are
+  unchanged.
+- Lab-provenance fields from the shipped packs: the
+  `issue` and `lab_codename` fields leave all four
+  manifests (and the two conformance records that
+  carried the codename), `design` citations point only
+  at documents in this tree, and the Bio Medical pack's
+  status joins the common vocabulary (`active` →
+  `in_force`). Manifest-only changes; every pack's
+  payload bytes and pins are untouched, and each
+  changed pack's version bumps (Core 0.3.0, Open
+  Domain 0.4.0, Bio Medical 0.3.0, Legal Contract
+  0.2.0). The Core conformance record's GC-5 entry is
+  corrected to the shipped seat cast (escalation
+  Sonnet, drafting unbound) — it previously claimed a
+  GPT-5 escalation/drafting combination the preset
+  never carried.
+- The `decision` seat and the preset's
+  `DECISION_MODEL` / `DRAFT_MODEL` defaults.
+  `microsoft/microsoft-decision-1` was the bake-off
+  candidate that lost the judge seat to Jev; it survives
+  only as the historical record of that comparison and
+  can still be named explicitly per evaluation run, but
+  it is no longer any default. `ONTOSMITH_DECISION_*`
+  variables are now inert. Binding provenance stored by
+  earlier batches is historical data and still loads
+  unchanged.
+- The `sllm` connection seat and its gate variant: the
+  connection layer now ships five seats (proposer, judge,
+  decision, drafting, embedder); `decisions.sllm_judge`,
+  the `triple --gate sllm` variant (with `--sllm-model`),
+  and the `llm --logprobs` mode are gone, and the preset
+  no longer binds a small-LLM model. The seat was an
+  evaluation-only baseline — nothing in the build path
+  ever called it; the gate-evaluation record that
+  measured it stands in the white paper. The `llm`
+  evaluation judge (text Yes/No) is unchanged apart from
+  resolving its endpoint through the decision seat.
+  Binding provenance stored by earlier batches is
+  historical data and still loads unchanged.
+
+### Fixed
+
+- `batch create` over an existing batch id no longer
+  leaves an incoherent record (issue #46): it used to
+  rewrite `batch.json` (new run_id, status CREATED)
+  over the previous run's untouched `state.json` and
+  stage artifacts. Create is now fresh-only and
+  refuses by name — run/resume the existing batch, or
+  create the new build under a different `--batch-id`.
+- Hardening (2026-10-22): the silent paths the code audit
+  found are now counted, marked, or blocking. The query
+  stack's attestation join keeps each attestation's own
+  recorded score (the previous dict join overwrote
+  duplicate keys and defaulted misses to (0.3, 2)); the
+  counts of unmatched/unscored rows ride in the eval
+  output. The drift audit resolves the batch's own
+  registry file and the corpus from `batch.json`, and a
+  property join of 0 attestations now fails VERIFY
+  instead of passing on key existence alone. Batch
+  metrics count RER-LLM fallback failures, Phase-2
+  worker errors, NER document/chunk failures, per-doc
+  candidate-cap hits, and checkpoint resets, and stamp
+  the RER env toggles when active; INDEX emits Tier-2
+  doc ids in sorted order. Gate-eval error records carry
+  an explicit `error` field and every summary reports
+  the error count; the eval harness excludes error
+  records rather than scoring them as negatives. An
+  unparseable text-judge answer is marked
+  `parse_failed` instead of silently taking the last
+  yes/no token as the verdict. The promotion gate
+  compares the profile hash against the batch record
+  instead of echoing it, and profile-claim verification
+  says "unverifiable" when no comparison happened
+  instead of "confirmed".
+- The appendix replay's pinned interval for the flagship
+  corrected precision read [0.9642, 0.9847]; the true
+  lower bound is 0.9641 (a documentation pass corrected
+  the whitepaper
+  prose but missed this constant — the replay passed
+  only inside its ±0.002 tolerance). The pin now reads
+  [0.9641, 0.9847] and the replay reproduces it exactly.
+- Install surfaces now cover what the build loads: the
+  `gliner` package joins the `[nlp]` extra (the batch
+  NER stage hard-imports it on the default candidate
+  path, and no extra installed it), and the spaCy
+  English-model download step is stated where a reader
+  needs it — CONTRIBUTING's setup and the hands-on
+  guide's prerequisites, whose LIVE build tracks also
+  name the `[nlp]` extra they require.
+- CONTRIBUTING's printed quality gates match CI exactly
+  (byte-compile includes `api`; coverage spans
+  pipeline + harness + api with the 45% floor), and its
+  cost-claims rule records the one sanctioned exception:
+  the whitepaper §5.6 reference-run per-stage table.
+- The whitepaper's front matter renders as a table
+  instead of one run-on paragraph, and §8 References is
+  now purely external sources: the internal release-plan
+  citation is deleted, the in-body decision-number
+  citations (D9) are rewritten as the paper's own
+  statements, and the product repository's artifacts
+  moved to an unnumbered Artifacts note (2026-10-22).
+- VERIFY's store drift spot audit now ships inside the
+  package (`pipeline.drift_check`): an installed copy no
+  longer dies at VERIFY looking for a `scripts/` tree the
+  wheel never contained. Workspace-anchored paths that
+  assumed the source tree (the registry's default root,
+  the DocRED data cache, gate-eval results, a JF-F1 pack
+  artefact, pack-data loading in the harness) now resolve
+  against the state root / the shipped-data candidates.
+
+Everything below is staged for the first release. (This
+changelog is a pre-release draft until the 0.1.0
+publication checkpoint.)
+
+## [0.1.0] — initial release (draft — not yet published)
+
+### Added
+
+- The batch pipeline: nine stages (create → fetch →
+  roster → enumerate → judge → gate → entities → write →
+  report) with per-stage state persisted under the batch —
+  a failed run resumes where it stopped and never
+  re-spends — and calibrated gate routing into Tier 1
+  (verified), Tier 2 (human review band), and a recorded
+  Tier 0 dropped queue.
+- Three domain packs — Open Domain, Bio Medical,
+  Legal Contract — over the Core baseline, each a pinned
+  manifest plus payload (ontology, extraction framing,
+  gate and entity-resolution defaults) and a conformance
+  record of the measurements that adopted it, rejections
+  included.
+- The setup service (`ontosmith profile`): a corpus
+  census whose claims are scanner-verified and whose
+  decision points are a human's to approve; the approved
+  profile compiles into the pack payload a build runs
+  under.
+- The ontology builder (`ontosmith ontology`): draft →
+  validate → approve → emit, with fail-closed validation,
+  human approval bound to the schema hash, and
+  load-verified pack emission.
+- The verification tooling (`ontosmith verify`): raw and
+  audit-corrected precision, ceiling-adjusted recall, a
+  failure-anatomy census that assigns every gold item
+  exactly one fate, judge-fitting cells with
+  pre-registered gates, and counted cost projections that
+  price a build before it runs.
+- Serving: a Neo4j projection of the Tier-1 graph
+  (rebuildable from the registry, never the source of
+  truth), hybrid retrieval (vector + full-text + graph),
+  an HTTP API, and a demo app.
+- The demo app (`app/`, plan §7 R18): a static,
+  build-free page served by `ontosmith serve` at `/`
+  over the sample API — search box, triple/evidence
+  inspector, entity report, and a click-to-walk
+  neighborhood view. Neo4j-backed graphs link out to
+  Neo4j Browser for rendered exploration; no custom
+  canvas.
+- The project [whitepaper](docs/whitepaper.md): the
+  long-form technical report and the canonical text of
+  the quality records (§5), with its figures wired to
+  the shipped chart assets.
+- A $0 hands-on path: a small demo corpus fetched from
+  its source, and a replay that recomputes the flagship
+  quality record's headlines from the shipped adjudication
+  appendix — no API key, no model calls.
+- The quality records' evidence in-tree: the adjudication
+  appendix (samples, key files, verdicts — machine
+  judgments, labeled as such) and the claim-level index
+  in `benchmarks/README.md`. The records' canonical text
+  is the project [whitepaper](docs/whitepaper.md).
+- Brand identity: the Forged Triad logo —
+  mark, tile, and lockups in `assets/brand/`, with the
+  1280×640 title banner heading the README, the Pages
+  hero, and the PyPI page, and the tile serving as the
+  demo app's and the site's favicon.
+
+### Changed
+
+- Pack names, pre-release (2026-10-22): the baseline pack
+  `general` ("General") is now `core` ("Core"), and the
+  domain pack `general-documents` ("General Documents") is
+  now `open-domain` ("Open Domain"). The old names collided
+  — a baseline layer and a domain pack are different kinds
+  of thing and now read differently. Both packs were
+  version-bumped and re-pinned per pack discipline; no
+  operating content changed.

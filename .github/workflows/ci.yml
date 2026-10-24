@@ -1,0 +1,57 @@
+# OntoSmith CI — the test gate for the public repo.
+#
+# Runs on every push and pull request: byte-compile, lint
+# (ruff, config in ruff.toml), and the full test suite with
+# coverage. The coverage floor is the CI-measured total on
+# the last green run before the ratchet (45.10%, floored to
+# 45) — a ratchet: it may only go up, never down.
+#
+# Note (assembly record): this workflow was authored in the
+# local staging tree before the public repo existed; it was
+# validated by executing exactly these commands locally and
+# parsing this YAML. It activates when the repo is created.
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install pytest pytest-cov ruff numpy requests neo4j matplotlib
+
+      - name: Byte-compile all sources
+        run: python -m compileall -q pipeline harness tests packs api
+
+      - name: Lint (ruff)
+        run: ruff check .
+
+      - name: Tests with coverage
+        run: >
+          python -m pytest tests/ -q
+          --cov=pipeline --cov=harness --cov=api
+          --cov-report=term --cov-report=xml
+          --cov-fail-under=45
+
+      - name: Coverage summary
+        if: always()
+        run: |
+          python -m coverage report >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload coverage report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-xml
+          path: coverage.xml
