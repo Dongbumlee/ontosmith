@@ -1,0 +1,1 @@
+{"summary": {"model": "fake:1", "n": 3, "accuracy": 0.6666666666666666, "latency_ms_p50": 5.0, "errors": 1}, "records": [{"doc_id": "d1", "label": 1, "pred": 1, "latency_ms": 5.0}, {"doc_id": "d1", "label": 0, "pred": -1, "latency_ms": 0.0, "error": "stubbed ollama failure"}, {"doc_id": "d2", "label": 1, "pred": 1, "latency_ms": 5.0}]}

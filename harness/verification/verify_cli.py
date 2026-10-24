@@ -1,0 +1,164 @@
+"""Command-line surface for the verification cores.
+
+One-command forms of the three user-runnable loops (plan §2.2
+/ R10), over JSONL inputs in the documented record shapes
+(see :mod:`harness.verification.scoring`):
+
+    python -m pipeline verify score --predicted P.jsonl \
+        --gold G.jsonl [--normalization T.json] [--out R.json]
+    python -m pipeline verify audit-sets --predicted P.jsonl \
+        --gold G.jsonl --out-dir DIR [--seed N] \
+        [--a-n N] [--b-n N] [--c-n N]
+    python -m pipeline verify project --counts unit=n,... \
+        --unit-cost unit=usd,... [--scenario name:...] \
+        --cap USD [--stop-line USD]
+    python -m pipeline verify report --predicted P.jsonl \
+        --gold G.jsonl [--out R.md] [--title T]
+
+A normalization table file is JSON:
+``{"symmetric": [...], "inverses": {"inv": "primary"}}`` —
+the domain pack's TN declarations, supplied as data.
+"""
+from __future__ import annotations
+
+import argparse
+import json
+import sys
+from pathlib import Path
+
+from .audit import build_audit_sets
+from .config import CountedProjection, StopLine, StopLineExceeded
+from .report import build_report, render_markdown
+from .scoring import NormalizationTable, match_records
+
+
+def load_jsonl(path) -> list[dict]:
+    """Read a JSONL file into a list of dicts."""
+    return [json.loads(line) for line in
+            Path(path).read_text().splitlines() if line.strip()]
+
+
+def load_table(path) -> NormalizationTable | None:
+    """Load a TN normalization table from JSON, or None."""
+    if not path:
+        return None
+    d = json.loads(Path(path).read_text())
+    return NormalizationTable(
+        symmetric=frozenset(d.get("symmetric", [])),
+        inverses=dict(d.get("inverses", {})))
+
+
+def _kv_pairs(text: str) -> dict[str, float]:
+    """Parse 'unit=value,unit=value' into a float dict."""
+    out: dict[str, float] = {}
+    for part in (text or "").split(","):
+        part = part.strip()
+        if not part:
+            continue
+        unit, _, value = part.partition("=")
+        out[unit.strip()] = float(value)
+    return out
+
+
+def main(argv=None) -> int:
+    """CLI entry point; returns a process exit code."""
+    ap = argparse.ArgumentParser(
+        prog="ontosmith verify", description=__doc__.splitlines()[0])
+    sub = ap.add_subparsers(dest="cmd", required=True)
+
+    p_score = sub.add_parser("score", help="raw exact-match scores")
+    p_score.add_argument("--predicted", required=True)
+    p_score.add_argument("--gold", required=True)
+    p_score.add_argument("--normalization")
+    p_score.add_argument("--out")
+
+    p_audit = sub.add_parser("audit-sets",
+                             help="build the A/B/C judgment sets")
+    p_audit.add_argument("--predicted", required=True)
+    p_audit.add_argument("--gold", required=True)
+    p_audit.add_argument("--normalization")
+    p_audit.add_argument("--out-dir", required=True)
+    p_audit.add_argument("--seed", type=int, default=0)
+    p_audit.add_argument("--a-n", type=int)
+    p_audit.add_argument("--b-n", type=int)
+    p_audit.add_argument("--c-n", type=int)
+
+    p_proj = sub.add_parser(
+        "project", help="counted cost projection vs a stop-line")
+    p_proj.add_argument("--counts", required=True,
+                        help="unit=count,... for the base scenario")
+    p_proj.add_argument("--scenario", action="append", default=[],
+                        help="name:unit=count,... (extra scenario)")
+    p_proj.add_argument("--unit-cost", required=True,
+                        help="unit=usd,... caller-supplied prices")
+    p_proj.add_argument("--cap", type=float, required=True)
+    p_proj.add_argument("--stop-line", type=float)
+
+    p_rep = sub.add_parser("report", help="full evaluation report")
+    p_rep.add_argument("--predicted", required=True)
+    p_rep.add_argument("--gold", required=True)
+    p_rep.add_argument("--normalization")
+    p_rep.add_argument("--out")
+    p_rep.add_argument("--title", default="Evaluation report")
+
+    args = ap.parse_args(argv)
+
+    if args.cmd == "score":
+        m = match_records(load_jsonl(args.predicted),
+                          load_jsonl(args.gold),
+                          load_table(args.normalization))
+        payload = json.dumps(m.raw_scores(), indent=1)
+    elif args.cmd == "audit-sets":
+        sets = build_audit_sets(
+            load_jsonl(args.predicted), load_jsonl(args.gold),
+            sizes={"A": args.a_n, "B": args.b_n, "C": args.c_n},
+            seed=args.seed, table=load_table(args.normalization))
+        out_dir = Path(args.out_dir)
+        out_dir.mkdir(parents=True, exist_ok=True)
+        for tag in ("A", "B", "C"):
+            with open(out_dir / f"set_{tag}.jsonl", "w") as f:
+                for item in sets[tag]:
+                    f.write(json.dumps(item) + "\n")
+        (out_dir / "frame.json").write_text(
+            json.dumps(sets["frame"], indent=1))
+        payload = json.dumps(
+            {"frame": sets["frame"],
+             "sets": {t: len(sets[t]) for t in "ABC"}}, indent=1)
+    elif args.cmd == "project":
+        scenarios = {"base": _kv_pairs(args.counts)}
+        for spec in args.scenario:
+            name, _, counts = spec.partition(":")
+            scenarios[name.strip()] = _kv_pairs(counts)
+        proj = CountedProjection(
+            unit_costs=_kv_pairs(args.unit_cost), scenarios=scenarios)
+        stop = StopLine(cap_usd=args.cap, stop_line_usd=args.stop_line)
+        try:
+            governing = proj.assert_within(stop)
+            verdict = "within stop-line — the cell may start"
+        except StopLineExceeded as exc:
+            governing = proj.governing()
+            verdict = f"STOP: {exc}"
+        payload = json.dumps(
+            {"scenarios": proj.totals(), "governing_usd": governing,
+             "cap_usd": args.cap, "stop_line_usd": stop.stop_line,
+             "verdict": verdict}, indent=1)
+    else:  # report
+        rep = build_report(load_jsonl(args.predicted),
+                           load_jsonl(args.gold),
+                           load_table(args.normalization))
+        payload = render_markdown(rep, title=args.title)
+        if args.out:
+            Path(args.out).write_text(payload)
+            print(f"report written: {args.out}", file=sys.stderr)
+            return 0
+    out = getattr(args, "out", None)
+    if args.cmd in ("score",) and out:
+        Path(out).write_text(payload)
+        print(f"scores written: {out}", file=sys.stderr)
+        return 0
+    print(payload)
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

@@ -1,0 +1,204 @@
+[
+ {
+  "call": "proposer._chat",
+  "headers": {
+   "authorization": "Bearer sk-capture-key"
+  },
+  "payload": {
+   "max_tokens": 64,
+   "messages": [
+    {
+     "content": "CONTENT-P",
+     "role": "user"
+    }
+   ],
+   "model": "anthropic/claude-haiku-5.5",
+   "provider": {
+    "sort": "throughput"
+   }
+  },
+  "transport": "requests",
+  "url": "https://openrouter.ai/api/v1/chat/completions"
+ },
+ {
+  "call": "rer.extract_triples_llm_with_usage",
+  "headers": {
+   "authorization": "Bearer sk-capture-key"
+  },
+  "payload": {
+   "max_tokens": 2000,
+   "messages": [
+    {
+     "content": "Extract subject-verb-object triples from the sentence below.\nThe sentence may contain OCR errors. Do your best to understand it.\nReturn ONLY a JSON list of triples, each with \"subject\", \"verb\", \"object\".\nUse the exact entity names provided when possible.\nIf no clear relation exists, return [].\n\nSentence: Alice met Bob.\n\nEntities: Alice, Bob\n\nTriples:",
+     "role": "user"
+    }
+   ],
+   "model": "anthropic/claude-haiku-5.5",
+   "provider": {
+    "sort": "throughput"
+   }
+  },
+  "transport": "requests",
+  "url": "https://openrouter.ai/api/v1/chat/completions"
+ },
+ {
+  "call": "decisions.validate_triple",
+  "headers": {
+   "authorization": "Bearer sk-capture-key",
+   "content-type": "application/json",
+   "x-title": "ontosmith"
+  },
+  "payload": {
+   "model": "anthropic/claude-sonnet-5.5",
+   "questions": {
+    "holds": {
+     "instructions": "Does the document support that the relation 'met' holds between 'Alice' and 'Bob'? Answer true only if the document states or clearly implies it.",
+     "type": "noul"
+    }
+   },
+   "state": "Document:\nDOC\n\nCandidate triple: (Alice | met | Bob)"
+  },
+  "transport": "requests",
+  "url": "https://openrouter.ai/api/alpha/decisions"
+ },
+ {
+  "call": "decisions.llm_text_judge",
+  "headers": {
+   "authorization": "Bearer sk-capture-key",
+   "content-type": "application/json",
+   "x-title": "ontosmith"
+  },
+  "payload": {
+   "max_tokens": 300,
+   "messages": [
+    {
+     "content": "Document:\nDOC\n\nCandidate triple: (Alice | met | Bob)\n\nDoes the document support that the relation 'met' holds from 'Alice' to 'Bob' (in this direction)? Pay close attention to direction: if the document only supports the reverse direction, answer No. Respond with JSON only: {\"answer\": \"Yes\"} or {\"answer\": \"No\"}.",
+     "role": "user"
+    }
+   ],
+   "model": "some/model-x",
+   "response_format": {
+    "type": "json_object"
+   },
+   "temperature": 0
+  },
+  "transport": "requests",
+  "url": "https://openrouter.ai/api/v1/chat/completions"
+ },
+ {
+  "call": "setup_service._chat",
+  "headers": {
+   "authorization": "Bearer sk-capture-key"
+  },
+  "payload": {
+   "max_tokens": 8000,
+   "messages": [
+    {
+     "content": "SYS",
+     "role": "system"
+    },
+    {
+     "content": "USER",
+     "role": "user"
+    }
+   ],
+   "model": "openai/gpt-5",
+   "provider": {
+    "sort": "throughput"
+   },
+   "reasoning": {
+    "effort": "low"
+   },
+   "usage": {
+    "include": true
+   }
+  },
+  "transport": "requests",
+  "url": "https://openrouter.ai/api/v1/chat/completions"
+ },
+ {
+  "call": "query_stack._chat",
+  "headers": {
+   "authorization": "Bearer sk-capture-key"
+  },
+  "payload": {
+   "max_tokens": 100,
+   "messages": [
+    {
+     "content": "question?",
+     "role": "user"
+    }
+   ],
+   "model": "anthropic/claude-haiku-5.5",
+   "provider": {
+    "sort": "throughput"
+   }
+  },
+  "transport": "requests",
+  "url": "https://openrouter.ai/api/v1/chat/completions"
+ },
+ {
+  "call": "embedder.embed",
+  "headers": {
+   "authorization": "Bearer sk-capture-key",
+   "content-type": "application/json"
+  },
+  "payload": {
+   "input": [
+    "alpha",
+    "beta"
+   ],
+   "model": "openai/text-embedding-3-large"
+  },
+  "transport": "urllib",
+  "url": "https://openrouter.ai/api/v1/embeddings"
+ },
+ {
+  "call": "batch_cli._decide_fn",
+  "headers": {
+   "authorization": "Bearer sk-capture-key",
+   "content-type": "application/json",
+   "x-title": "ontosmith"
+  },
+  "payload": {
+   "model": "typesafe/jev-1.13",
+   "questions": {
+    "q1": {
+     "criteria": {
+      "false": "The document does not support the relation.",
+      "true": "The document states or clearly implies the relation holds."
+     },
+     "instructions": "Does the document support that the relation 'met' holds between 'Alice' and 'Bob'? Answer true only if the document states or clearly implies it.",
+     "type": "noul"
+    }
+   },
+   "state": "Document excerpt:\nCTX\n\nCandidate triple: (Alice | met | Bob)"
+  },
+  "transport": "urllib",
+  "url": "https://openrouter.ai/api/v1/systemone"
+ },
+ {
+  "call": "batch_cli._er_decide_fn",
+  "headers": {
+   "authorization": "Bearer sk-capture-key",
+   "content-type": "application/json",
+   "x-title": "ontosmith"
+  },
+  "payload": {
+   "model": "typesafe/jev-1.13",
+   "questions": {
+    "q1": {
+     "criteria": {
+      "false": "They are different entities, or it is ambiguous.",
+      "true": "Both mentions refer to the same real-world entity."
+     },
+     "instructions": "Decide whether the two mentions refer to the same real-world entity (person, organization, or place). Consider spelling variants, abbreviations, and OCR noise (e.g. 'OSWALD' vs 'OSW.\\LD'). Answer true only if they are clearly the same entity.",
+     "type": "noul"
+    }
+   },
+   "state": "Context: CTX\n\nMention A: 'Alice' (label: person)\nMention B: 'Alicia'\n\nDo A and B refer to the same real-world entity?"
+  },
+  "transport": "urllib",
+  "url": "https://openrouter.ai/api/v1/systemone"
+ }
+]

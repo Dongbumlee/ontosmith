@@ -1,0 +1,167 @@
+{
+ "candidates_brca1": [
+  [
+   "brca1 gene",
+   "A4"
+  ],
+  [
+   "brca1 gene mutation",
+   "A4"
+  ]
+ ],
+ "enriched": [
+  {
+   "aliases": [
+    {
+     "rule": "A1",
+     "surface": "acme corp"
+    },
+    {
+     "rule": "A1",
+     "surface": "ac"
+    },
+    {
+     "rule": "A3",
+     "surface": "acme"
+    }
+   ],
+   "surface": "acme corp (ac)",
+   "type": "ORG"
+  },
+  {
+   "aliases": [
+    {
+     "rule": "A2",
+     "surface": "smith"
+    },
+    {
+     "rule": "A2",
+     "surface": "jones"
+    }
+   ],
+   "surface": "smith/jones",
+   "type": "ORG"
+  },
+  {
+   "aliases": [
+    {
+     "rule": "A3",
+     "surface": "delta"
+    },
+    {
+     "rule": "A3",
+     "surface": "delta air"
+    }
+   ],
+   "surface": "delta air lines",
+   "type": "ORG"
+  },
+  {
+   "aliases": [],
+   "surface": "globex",
+   "type": "ORG"
+  },
+  {
+   "aliases": [],
+   "surface": "globex corp (globex)",
+   "type": "ORG"
+  },
+  {
+   "aliases": [
+    {
+     "rule": "A3",
+     "surface": "red"
+    },
+    {
+     "rule": "A3",
+     "surface": "red cross"
+    }
+   ],
+   "surface": "red cross society",
+   "type": "ORG"
+  },
+  {
+   "aliases": [],
+   "surface": "red cross foundation",
+   "type": "ORG"
+  },
+  {
+   "aliases": [
+    {
+     "rule": "A4",
+     "surface": "brca1 gene"
+    },
+    {
+     "rule": "A4",
+     "surface": "brca1 gene mutation"
+    }
+   ],
+   "surface": "brca1",
+   "type": "Gene"
+  }
+ ],
+ "qualifiers": [
+  "antibody",
+  "antigen",
+  "channel",
+  "channels",
+  "deficiency",
+  "disease",
+  "dna",
+  "enzyme",
+  "expression",
+  "factor",
+  "gene",
+  "genes",
+  "kinase",
+  "mrna",
+  "mutation",
+  "polymorphism",
+  "protein",
+  "proteins",
+  "receptor",
+  "receptors",
+  "rna",
+  "snp",
+  "symporter",
+  "syndrome",
+  "transporter",
+  "variant"
+ ],
+ "stats": {
+  "admitted": 11,
+  "generated": 14,
+  "per_rule": {
+   "A1": {
+    "admitted": 2,
+    "generated": 3,
+    "refused": 1,
+    "refused_a": 1,
+    "refused_b": 0
+   },
+   "A2": {
+    "admitted": 2,
+    "generated": 2,
+    "refused": 0,
+    "refused_a": 0,
+    "refused_b": 0
+   },
+   "A3": {
+    "admitted": 5,
+    "generated": 7,
+    "refused": 2,
+    "refused_a": 0,
+    "refused_b": 2
+   },
+   "A4": {
+    "admitted": 2,
+    "generated": 2,
+    "refused": 0,
+    "refused_a": 0,
+    "refused_b": 0
+   }
+  },
+  "refusal_rate": 0.2143,
+  "refused": 3
+ }
+}

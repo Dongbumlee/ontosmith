@@ -1,0 +1,110 @@
+{
+ "former_core_role_words": [
+  "affiliate",
+  "company",
+  "consultant",
+  "employer",
+  "executive",
+  "parties",
+  "party",
+  "party a",
+  "party b",
+  "service provider",
+  "service recipient"
+ ],
+ "off": {
+  "blocked": [],
+  "kept": [
+   {
+    "attest": "quote",
+    "object": "John Smith",
+    "quote": "The Company employs John Smith",
+    "relation": "employs",
+    "subject": "Company"
+   },
+   {
+    "attest": "quote",
+    "object": "Globex",
+    "quote": "Party A owns Globex",
+    "relation": "owns",
+    "subject": "Party A"
+   },
+   {
+    "attest": "quote",
+    "object": "Acme Corp",
+    "quote": "The Service Provider advises Acme Corp",
+    "relation": "advises",
+    "subject": "Service Provider"
+   },
+   {
+    "attest": "quote",
+    "object": "Globex",
+    "quote": "Acme Corp acquired Globex",
+    "relation": "acquired",
+    "subject": "Acme Corp"
+   },
+   {
+    "attest": "quote",
+    "object": "John Smith",
+    "quote": "The Affiliate reports to John Smith",
+    "relation": "reports to",
+    "subject": "Affiliate"
+   },
+   {
+    "attest": "quote",
+    "object": "earnings",
+    "quote": "The company announced earnings",
+    "relation": "announced",
+    "subject": "The Company"
+   }
+  ]
+ },
+ "on": {
+  "blocked": [
+   {
+    "object": "John Smith",
+    "quote": "The Company employs John Smith",
+    "reason": "l0_role_word",
+    "relation": "employs",
+    "subject": "Company"
+   },
+   {
+    "object": "Globex",
+    "quote": "Party A owns Globex",
+    "reason": "l0_role_word",
+    "relation": "owns",
+    "subject": "Party A"
+   },
+   {
+    "object": "Acme Corp",
+    "quote": "The Service Provider advises Acme Corp",
+    "reason": "l0_role_word",
+    "relation": "advises",
+    "subject": "Service Provider"
+   },
+   {
+    "object": "John Smith",
+    "quote": "The Affiliate reports to John Smith",
+    "reason": "l0_role_word",
+    "relation": "reports to",
+    "subject": "Affiliate"
+   }
+  ],
+  "kept": [
+   {
+    "attest": "quote",
+    "object": "Globex",
+    "quote": "Acme Corp acquired Globex",
+    "relation": "acquired",
+    "subject": "Acme Corp"
+   },
+   {
+    "attest": "quote",
+    "object": "earnings",
+    "quote": "The company announced earnings",
+    "relation": "announced",
+    "subject": "The Company"
+   }
+  ]
+ }
+}

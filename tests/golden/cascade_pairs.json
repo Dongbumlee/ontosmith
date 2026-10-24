@@ -1,0 +1,20 @@
+[
+ {
+  "doc_id": "DocA",
+  "text": "Alice Paris Dan",
+  "subject": "Alice",
+  "object": "Paris",
+  "options": [
+   "born_in"
+  ]
+ },
+ {
+  "doc_id": "DocB",
+  "text": "Carol Rome",
+  "subject": "Carol",
+  "object": "Rome",
+  "options": [
+   "born_in"
+  ]
+ }
+]

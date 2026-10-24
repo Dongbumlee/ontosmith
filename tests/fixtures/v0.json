@@ -1,0 +1,1 @@
+[{"doc_id": "d1", "text": "t", "subject": "Alice", "relation": "born_in", "object": "Paris", "label": 1, "neg_kind": null}, {"doc_id": "d1", "text": "t", "subject": "Bob", "relation": "spouse", "object": "Carol", "label": 0, "neg_kind": "random"}]

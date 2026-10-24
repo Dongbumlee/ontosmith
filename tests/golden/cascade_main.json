@@ -1,0 +1,1 @@
+{"records": [{"idx": 0, "doc_id": "DocA", "subject": "Alice", "object": "Paris", "choice": "born_in", "choice_conf": 0.8, "p_true": 0.32, "accepted": false}, {"idx": 1, "doc_id": "DocB", "subject": "Carol", "object": "Rome", "choice": "none", "choice_conf": 0.9, "accepted": false}], "n_pairs": 2, "threshold": 0.5, "accepted": 0}
