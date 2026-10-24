@@ -19,12 +19,14 @@ generates the PyPI variant from it:
     verified — the build refuses if it is missing — and
     rewritten to its absolute raw URL like every other
     image;
-  * the clone-install wording is substituted with the
-    PyPI form (`pip install ontosmith`) — on the PyPI
-    page the reader is already there. The substitutions
-    are anchored to exact master text and the build
-    FAILS if an anchor is missing, so master and variant
-    cannot drift apart silently;
+  * the install wording: since 0.1.0 was published the
+    master itself carries the PyPI form (`Install from
+    PyPI:` / `pip install ontosmith`), and the build
+    verifies those presence anchors occur exactly once —
+    a regression to the clone form aborts the build. The
+    remaining substitutions are anchored to exact master
+    text and the build FAILS if an anchor is missing, so
+    master and variant cannot drift apart silently;
   * the master is audited first: raw HTML, GitHub alert
     syntax, HTML comments, and fragment-only links are
     PyPI-hostile or unrewritable, and any of them aborts
@@ -83,19 +85,18 @@ DEFAULT_BRANCH = "main"
 BANNER_IMAGE = "assets/brand/banner.png"
 BANNER_LINE = f"![OntoSmith]({BANNER_IMAGE})"
 
+# Presence anchors: the master carries the PyPI install
+# form itself since 0.1.0 was published; each anchor must
+# occur EXACTLY once in the master (the variant inherits
+# the wording unchanged).
+INSTALL_ANCHORS: tuple[str, ...] = (
+    "Install from PyPI:",
+    "$ pip install ontosmith",
+)
+
 # Anchored substitutions: (master text, PyPI text). Each
 # master text must occur EXACTLY once in the master.
 SUBSTITUTIONS: tuple[tuple[str, str], ...] = (
-    (
-        "Install from a clone of this repository (at launch this\n"
-        "becomes `pip install ontosmith` on PyPI; the clone route\n"
-        "is the one that works today):",
-        "Install from PyPI:",
-    ),
-    (
-        "$ pip install .",
-        "$ pip install ontosmith",
-    ),
     (
         "Optional surfaces install as extras: `pip install .[nlp]`\n"
         "(the pipeline candidate path's local NER), `.[viz]`.\n"
@@ -181,6 +182,13 @@ def build_variant(master: str, base: str = DEFAULT_BASE,
             f"{BANNER_LINE!r} exactly once (found "
             f"{master.count(BANNER_LINE)}) — the logo "
             "lands in the master first")
+
+    for anchor in INSTALL_ANCHORS:
+        if master.count(anchor) != 1:
+            raise AuditFailure(
+                f"install anchor occurs {master.count(anchor)}x "
+                f"(expected 1): {anchor!r} — the master must "
+                "carry the PyPI install form exactly once")
 
     text = master
     for old, new in SUBSTITUTIONS:

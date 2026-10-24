@@ -79,12 +79,10 @@ in `pipeline/` — rendered by `harness/render_charts.py`.*
   [Connections](docs/connections.md).
 
 **Step 1 · Look around (no key, two minutes).**
-Install from a clone of this repository (at launch this
-becomes `pip install ontosmith` on PyPI; the clone route
-is the one that works today):
+Install from PyPI:
 
 ```console
-$ pip install .
+$ pip install ontosmith
 $ ontosmith profile examples/corpus --family demo
 Corpus profile
   family          demo

@@ -181,8 +181,8 @@ class TestRefusals(unittest.TestCase):
 
     def test_missing_substitution_anchor_refused(self):
         master = _master().replace(
-            "Install from a clone of this repository",
-            "Install from a mirror of this repository")
+            "Install from PyPI:",
+            "Install from a mirror:")
         with self.assertRaises(gen.AuditFailure):
             gen.build_variant(master)
 
