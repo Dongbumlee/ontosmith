@@ -365,17 +365,34 @@ run before it starts (appendix track).
 
 ```console
 $ ontosmith serve --batch demo-4docs
-ontosmith serve: file store (… triples, 4 documents) at http://127.0.0.1:8765 — /search /entity /neighborhood /triple /health
+ontosmith serve: neo4j store (15 triples, 4 documents) at http://127.0.0.1:8765 — /search /entity /neighborhood /triple /health
 ontosmith serve: demo app at http://127.0.0.1:8765/
 
 $ ontosmith search --batch demo-4docs "Who founded Alder & Finch?"
 $ ontosmith inspect batches/demo-4docs
 ```
 
-`search` answers with ranked documents, linked entities,
-and evidence-carrying triples — no generated prose: what
-you see is what the graph holds. The demo app at `/` is
-the same surface in a browser.
+Which store serves depends on the environment you
+carry into this step. With §3's store variables still
+exported, `serve` and `search` read the graph store
+the build wrote — the banner names it (`neo4j store`,
+as above). Without them, the same commands read the
+batch's **file store** instead (banner: `file
+store`), which needs no running Neo4j at all. The
+endpoints and the answer shape are the same either
+way.
+
+`search` answers with linked entities and
+evidence-carrying triples, and — when the store
+holds document chunks — ranked documents as well.
+The file store always carries the document texts;
+the graph store carries chunks when the build
+projected Tier-2 chunks into it (a build whose
+candidates all landed Tier 1 has none, and the
+Documents section then reads `(no chunk matched)`).
+No generated prose: what you see is what the graph
+holds. The demo app at `/` is the same surface in a
+browser.
 
 `inspect` is pointed at the batch **directory** — that
 is the form with the full view (resolved names, quoted

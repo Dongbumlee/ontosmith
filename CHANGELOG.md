@@ -7,6 +7,20 @@ and the project adheres to
 
 ## [Unreleased]
 
+### Fixed
+
+- **Hands-on Track 1 §4 named the wrong store.** The
+  finish line printed the file-store serve banner and
+  promised ranked documents unconditionally; a reader
+  arriving from §3 with the store variables still
+  exported is served by the graph store instead, and
+  its Documents section depends on whether the build
+  projected Tier-2 chunks. The section now shows the
+  graph-store banner, states the environment rule that
+  picks the store, and conditions the ranked-documents
+  promise on chunks being present. Found by the
+  retroactive vanilla-VM verification of Tracks 1–3.
+
 ## [0.1.1] - 2026-10-27
 
 Release notes: [v0.1.1 on GitHub](https://github.com/Dongbumlee/ontosmith/releases/tag/v0.1.1).
