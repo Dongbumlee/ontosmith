@@ -35,7 +35,9 @@ measurement gate) converts enumerated pairs into
 candidate triples, and deterministic gates and the Jev
 decision model decide what is true enough to write, and
 every written
-triple carries its evidence span and provenance. Operating
+triple carries its evidence span and provenance.
+
+Operating
 points are adopted only through pre-registered measurement
 gates; configurations that miss their gate stay off, and the
 rejections are part of the published record.
@@ -52,6 +54,7 @@ Tier-1 set of the sentence-window configuration (§5.1).
 The shipped default configuration differs in enumeration
 (§5.6), and the shipped Tier-1 set includes 186 promoted
 triples whose corrected precision is not recomputed.
+
 The record keeps its failures in place: one pre-registered
 criterion failed, the rejected judge configurations are
 listed, and the failure anatomy separates the two
@@ -238,6 +241,7 @@ proposer's own model (`anthropic/claude-haiku-5.5`) in
 a second, separately fitted configuration, and one
 call per enumerated pair both judges whether the pair
 supports a triple and emits the triple it supports.
+
 So the separation this architecture actually enforces
 is not "the proposer never judges" — the pair call
 judges. It is this: **nothing is written on the
@@ -330,7 +334,9 @@ models in the connection layer. That is a **custom
 binding**: supported by design, and its numbers are the
 user's to re-measure. Run records state which binding
 produced them; API keys are environment values, never
-settings. The measured configurations behind this record
+settings.
+
+The measured configurations behind this record
 rest on comparative measurement where comparisons were
 run — the extraction bake-off and the judge-configuration
 gates, whose records are §5.5 and §5.8. The
@@ -358,7 +364,9 @@ meter cost refuses by name instead of silently never
 tripping. Model-name pattern matching for request
 shape is replaced by declared capabilities, with
 model-id derivation retained only as the undeclared
-default. What
+default.
+
+What
 deliberately did **not** change: the reference
 profile's values above — the preset request bytes are
 unchanged, guarded by byte-identical request fixtures —
@@ -393,6 +401,7 @@ triples. This separation is deliberate: the store can be
 rebuilt, replaced, or re-projected without touching the
 evidence-bearing record, and every served triple can be
 inspected back to its evidence span and provenance chain.
+
 The same-QA comparison the product cares about — graph +
 hybrid vs. plain hybrid retrieval — is measured, with its
 scope, in §5.7–§5.8: the graph's advantage is real on long
@@ -465,7 +474,9 @@ at 1.0 by construction) or, for the 1,669 triples with no
 exact gold match, judged supported under the ruled
 adjudication contract (§5.4) — so of every 100 Tier-1
 triples the fitted configuration emits, ≈ 91 count as
-supported in one of those two senses. The estimator
+supported in one of those two senses.
+
+The estimator
 prices exact gold matches at face value; if the matched
 stratum is instead priced at the support rate the same
 contract measured among the re-checked matched triples
@@ -607,7 +618,9 @@ Anthropic line) agreed with the shipped verdicts on
 scored 29/40 on freshly planted blind controls. (On the
 same counts, Cohen's κ ≈ 0.45 — at this verdict base
 rate the raw agreement figure overstates concordance,
-and both numbers are reported.) The
+and both numbers are reported.)
+
+The
 disagreements were one-directional (35 of 37 flips ran
 supported → not-supported) and concentrated in six
 recurring surface situations the contract had never
@@ -618,7 +631,9 @@ under the ruled contract by the stricter judge family —
 not-supported; the demonym ruling changed none of the 22
 items it decided) — and the record was re-priced through
 the identical estimator, which first reproduces the
-original figures from the original verdicts. The
+original figures from the original verdicts.
+
+The
 original panel's readings were sound where the contract
 was explicit and loose exactly where it was silent; the
 contract now ships with its rulings stated, not implied.
@@ -642,6 +657,7 @@ those 110 pairs. The fresh judge's verdicts over all
 150 items: supported 127, not-supported 19, and 4
 recorded *unlabeled* (supported readings whose evidence
 quote failed the contract's verbatim verification).
+
 Both κ conventions are reported, labelled: (a)
 three-category, over all 110 comparable pairs —
 agreement 0.7727, Cohen's κ = 0.4271; (b) decisive-only,
@@ -655,6 +671,7 @@ contract runs lenient, against the ruled set's stricter
 readings. This measurement prices agreement between two
 judge families under one contract; it re-prices
 nothing, and no figure in §5.2–§5.3 changes.
+
 Limitation: the shipped appendix does not carry the
 first recheck's item list, so overlap between this
 fresh-seeded sample and the original 200-item recheck
@@ -769,7 +786,9 @@ boundary examples) sits in front of the proposer as pack
 data (profile v4) — with the J3 pair judge (abstract
 context × evidence-forced instruction), roster v2,
 sentence-window enumeration, and the Jev gates
-(`typesafe/jev-1.13`, pinned thresholds). Output: 2,058
+(`typesafe/jev-1.13`, pinned thresholds).
+
+Output: 2,058
 Tier-1 rows; 5,505 candidate pairs judged, 0 errors. The
 run's ledgered spend was $4.0026.
 
@@ -968,7 +987,9 @@ builder's approval loop (§3.4) *is* a schema-change
 process; pack versioning with hash pins makes a change a
 new version rather than a silent edit; the conformance
 record remembers negative results so a rejected fitting is
-not re-proposed. A laboratory prototype also exists for
+not re-proposed.
+
+A laboratory prototype also exists for
 the data-driven half — mining high-purity patterns from a
 built graph to *propose* schema extensions, gated by the
 decision model with a human review band (on its 60-item
@@ -986,6 +1007,7 @@ itself is versioned, with a change ledger (what changed,
 why, whose approval); (ii) every triple carries a stamp of
 the schema version it was judged under; (iii) a change
 that measures badly is reverted by reverting the file.
+
 When a schema version changes, the graph is re-derived
 under the new version: candidate pairs and evidence are
 retained in the registry, so a rebuild is a *re-judgment*
