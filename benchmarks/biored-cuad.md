@@ -30,6 +30,16 @@ is [`benchmarks/README.md`](README.md).
   with their scope (the graph's measured advantage is a
   long-document result), and both limitation sets.
 
+Dataset sources: **BioRED** — Luo et al., *BioRED:
+a rich biomedical relation extraction dataset*
+(Briefings in Bioinformatics, 2022); source:
+[NCBI](https://ftp.ncbi.nlm.nih.gov/pub/lu/BioRED/).
+**CUAD** — Hendrycks et al., *CUAD: An
+Expert-Annotated NLP Dataset for Legal Contract
+Review* (NeurIPS 2021); source:
+[github.com/TheAtticusProject/cuad](https://github.com/TheAtticusProject/cuad),
+CC BY 4.0. Terms for both: the [NOTICE](../NOTICE).
+
 > **Label.** Corrected numbers in the BioRED record rest
 > on **machine adjudication** under the P2 pattern (blind
 > samples, machine judges, quote verification, embedded

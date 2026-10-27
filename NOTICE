@@ -14,18 +14,24 @@ time and is not bundled in this repository.
   contexts — the sampled documents' Wikipedia-derived
   abstracts — shipped as measurement evidence for the
   quality record and labeled machine judgments.
+  Source: https://github.com/tonytan48/Re-DocRED
 - CUAD — CC BY 4.0 (attribution). Fetch-only: the corpus
   is downloaded from its source and is not redistributed
   here.
+  Source: https://github.com/TheAtticusProject/cuad
+  (The Atticus Project)
 - BioRED — distributed by its source (NCBI) under its own
   terms. OntoSmith ships no BioRED text.
+  Source: https://ftp.ncbi.nlm.nih.gov/pub/lu/BioRED/
 - Project Gutenberg — public domain. packs/fetch_gutenberg.py
   downloads texts from gutenberg.org at run time; no
   Gutenberg text is bundled.
+  Source: https://www.gutenberg.org
 - Behind the Tech with Kevin Scott transcripts —
   packs/fetch_btt.py fetches them at run time from the
   public podscripts.co mirror; no transcript text is
   bundled.
+  Source: https://podscripts.co/podcasts/behind-the-tech-with-kevin-scott
 - Example and demo corpora (examples/) — self-authored for
   this project (fictional studios and workshops); they
   contain no third-party text.

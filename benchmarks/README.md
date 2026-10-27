@@ -25,6 +25,22 @@ whitepaper) rather than restating the figures.
 | CUAD certification (Legal Contract pack) | CUAD v1, full corpus (510 documents); production retrieval path | promotion verdict **PROMOTABLE**; certification audit precision 0.7185; pinned-QA recall@20 graph+hybrid **0.7115** (long documents) | [whitepaper](../docs/whitepaper.md) §5.8; in-tree pointer: [`biored-cuad.md`](biored-cuad.md) |
 | Pack conformance (all four packs) | per-entry: gate, instrument, population, delta | 21 registered entries — adoptions, measured rejections, and closures, negatives included | `packs/*/conformance.json`; indexed below |
 
+## Datasets
+
+The three datasets the records measure on — none is
+bundled in this repository (the appendix exception is
+stated in the [NOTICE](../NOTICE)); each is fetched
+from its source.
+
+| Dataset | Records | Source | Paper | License / terms |
+|---|---|---|---|---|
+| Re-DocRED | Flagship build (Open Domain pack) — dev split, all 500 documents | [github.com/tonytan48/Re-DocRED](https://github.com/tonytan48/Re-DocRED) | Tan, Xu, Bing, Ng & Aljunied, *Revisiting DocRED – Addressing the False Negative Problem in Relation Extraction*, EMNLP 2022 | Dataset MIT; document text derives from Wikipedia and remains CC BY-SA |
+| BioRED | Bio Medical pilot — dev split, 100 documents | [ftp.ncbi.nlm.nih.gov/pub/lu/BioRED](https://ftp.ncbi.nlm.nih.gov/pub/lu/BioRED/) | Luo, Lai, Wei, Arighi & Lu, *BioRED: a rich biomedical relation extraction dataset*, Briefings in Bioinformatics, 2022 | Distributed by NCBI under its own terms (cite the authors) |
+| CUAD v1 | Legal Contract certification — full corpus, 510 documents | [github.com/TheAtticusProject/cuad](https://github.com/TheAtticusProject/cuad) (The Atticus Project) | Hendrycks, Burns, Chen & Ball, *CUAD: An Expert-Annotated NLP Dataset for Legal Contract Review*, NeurIPS 2021 | CC BY 4.0 |
+
+Redistribution terms for every third-party source are
+the [NOTICE](../NOTICE).
+
 ## Evidence and replay
 
 - [`appendix/`](appendix/) — the flagship record's

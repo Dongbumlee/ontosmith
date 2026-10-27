@@ -24,6 +24,13 @@ that **failed**, recorded as a failure — the gate
 adoptions and rejections, the shipped operating point,
 and the reference run's aggregate cost.
 
+Dataset: **Re-DocRED** — Tan et al., *Revisiting
+DocRED – Addressing the False Negative Problem in
+Relation Extraction* (EMNLP 2022). Source:
+[github.com/tonytan48/Re-DocRED](https://github.com/tonytan48/Re-DocRED)
+(dataset MIT; document text CC BY-SA — terms in the
+[NOTICE](../NOTICE)).
+
 > **Label.** Every corrected number in the record rests
 > on **machine adjudication**: blind samples judged by
 > machine judges under the adjudication contract
