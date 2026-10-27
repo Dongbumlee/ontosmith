@@ -209,6 +209,7 @@ to Neo4j over HTTP and needs the server, not the extra.)
 
 | I want to… | Start here |
 |---|---|
+| Watch it run first | The three films, in order — [Demo](https://www.youtube.com/watch?v=qmCFIIOCCqA) · [Tutorial](https://www.youtube.com/watch?v=Vz2SIyquMXQ) · [Teardown](https://www.youtube.com/watch?v=PO6F9QdRxR8) (also collected on the [project site](https://dongbumlee.github.io/ontosmith/#watch)) |
 | See if my corpus fits | Step 1 above — profile it; the census names the decision points |
 | Check the quality claims myself | Step 2 — the replay; the full record is the [whitepaper](https://github.com/Dongbumlee/ontosmith/blob/main/docs/whitepaper.md) (§5) |
 | Build a graph from my documents | [Hands-on](https://github.com/Dongbumlee/ontosmith/blob/main/docs/hands-on.md), Track 1 |

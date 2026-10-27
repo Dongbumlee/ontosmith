@@ -61,6 +61,19 @@ BADGE_IMAGE_URLS = {
     "/actions/workflows/ci.yml/badge.svg",
 }
 
+# The start table's deliberate external destinations:
+# the three films on YouTube and the project site's
+# Watch section. Like the badges, they are absolute by
+# design and pass through the variant unchanged —
+# wherever the reader is (GitHub or PyPI), the films
+# live at these URLs, not under the repo base.
+EXTERNAL_LINK_URLS = {
+    "https://www.youtube.com/watch?v=qmCFIIOCCqA",
+    "https://www.youtube.com/watch?v=Vz2SIyquMXQ",
+    "https://www.youtube.com/watch?v=PO6F9QdRxR8",
+    "https://dongbumlee.github.io/ontosmith/#watch",
+}
+
 
 def _relative(text: str) -> list[str]:
     return [t for t in _targets(text)
@@ -106,8 +119,8 @@ class TestVariant(unittest.TestCase):
 
     def test_rewritten_targets_are_absolute_under_the_base(self):
         for target in _targets(self.variant):
-            if target in BADGE_IMAGE_URLS:
-                continue  # run-30 badges: external by design
+            if target in BADGE_IMAGE_URLS | EXTERNAL_LINK_URLS:
+                continue  # badges + film/site links: external by design
             self.assertTrue(
                 target.startswith(gen.DEFAULT_BASE + "/"),
                 target)
@@ -118,7 +131,7 @@ class TestVariant(unittest.TestCase):
         self.assertTrue(all(
             t.startswith("https://example.invalid/o/r/")
             for t in _targets(variant)
-            if t not in BADGE_IMAGE_URLS))
+            if t not in BADGE_IMAGE_URLS | EXTERNAL_LINK_URLS))
 
     def test_images_use_the_raw_form(self):
         for name in ("pipeline-flow.png", "method.png",

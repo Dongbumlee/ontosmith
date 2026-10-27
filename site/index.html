@@ -85,6 +85,9 @@
   .card{background:#fff; border:1px solid var(--line); border-radius:12px; overflow:hidden; transition:transform .25s ease, box-shadow .25s ease}
   .card:hover{transform:translateY(-5px); box-shadow:0 18px 40px rgba(18,33,46,.14)}
   .card img{width:100%; display:block; aspect-ratio:16/9; object-fit:cover}
+  .card a.poster{display:block}
+  .card h3 a{color:inherit; text-decoration:none}
+  .card h3 a:hover{text-decoration:underline}
   .card .body{padding:18px 20px 22px}
   .card h3{font-size:19px; font-weight:600; color:var(--navy)}
   .card .dur{color:var(--clay); font-size:12.5px; letter-spacing:.14em}
@@ -225,28 +228,28 @@
     <p class="lede">See it work, do it yourself, then look inside.</p>
     <div class="cards">
       <div class="card">
-        <img src="assets/poster-demo.jpg" alt="Demo poster frame">
+        <a class="poster" href="https://www.youtube.com/watch?v=qmCFIIOCCqA"><img src="assets/poster-demo.jpg" alt="Demo poster frame"></a>
         <div class="body">
           <div class="dur">DEMO · 6:00</div>
-          <h3>See it build</h3>
+          <h3><a href="https://www.youtube.com/watch?v=qmCFIIOCCqA">See it build</a></h3>
           <p>A real build, start to finish: documents in, a judged and queryable graph out.</p>
           <p><a href="https://github.com/Dongbumlee/ontosmith#try-it--step-1-needs-no-api-key">Follow along in the README →</a></p>
         </div>
       </div>
       <div class="card">
-        <img src="assets/poster-tutorial.jpg" alt="Tutorial poster frame">
+        <a class="poster" href="https://www.youtube.com/watch?v=Vz2SIyquMXQ"><img src="assets/poster-tutorial.jpg" alt="Tutorial poster frame"></a>
         <div class="body">
           <div class="dur">TUTORIAL · 5:38</div>
-          <h3>Do it yourself</h3>
+          <h3><a href="https://www.youtube.com/watch?v=Vz2SIyquMXQ">Do it yourself</a></h3>
           <p>Install, set the seats, run a small build, then serve, search, and read the evidence.</p>
           <p><a href="https://github.com/Dongbumlee/ontosmith/blob/main/docs/hands-on.md">The hands-on guide →</a></p>
         </div>
       </div>
       <div class="card">
-        <img src="assets/poster-teardown.jpg" alt="Teardown poster frame">
+        <a class="poster" href="https://www.youtube.com/watch?v=PO6F9QdRxR8"><img src="assets/poster-teardown.jpg" alt="Teardown poster frame"></a>
         <div class="body">
           <div class="dur">TEARDOWN · 7:02</div>
-          <h3>Look inside</h3>
+          <h3><a href="https://www.youtube.com/watch?v=PO6F9QdRxR8">Look inside</a></h3>
           <p>The pipeline, the gates, the packs — and how the published numbers were audited.</p>
           <p><a href="https://github.com/Dongbumlee/ontosmith/blob/main/docs/whitepaper.md">The whitepaper record →</a></p>
         </div>
