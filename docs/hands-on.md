@@ -1,8 +1,8 @@
-# Hands-on — three tracks over your own documents
+# Hands-on — four tracks over your own documents
 
 This guide is organized the way a new user actually
 arrives: *I have documents — what do I run to search
-them?* Three tracks, all over **your** documents, each
+them?* Four tracks, all over **your** documents, each
 changing one thing:
 
 - **Track 1 · Your documents** — install → connect →
@@ -15,6 +15,15 @@ changing one thing:
   shipped pack fits, so you draft one with the ontology
   builder, approve it, and build under it. This track
   doubles as the pack-authoring guide.
+- **Track 4 · Your documents + an ontology you already
+  have** — your domain already has a public ontology
+  (a standard, a consortium vocabulary). Import it:
+  scope it into a flat extraction contract, run it
+  through the same builder gates as Track 3, and build
+  under it. The worked example imports FIBO, the
+  financial industry's ontology, over the CUAD
+  contracts of Track 2 — and measures what an imported
+  schema can and cannot see in them.
 
 Every track ends at the **same finish line**: the build
 served, one question searched, and one fact opened to
@@ -44,13 +53,40 @@ appears.
   key at all; connect when you are ready to build.
 - **Neo4j** (5.x) running — for the **LIVE** builds
   only: it is the graph store the build writes into.
-  Install and the connection variables are in
+  Setup is one Docker command, given in full at the
+  point of first need (Track 1 §3, "the store") and in
   [connections.md](connections.md) (Neo4j — the graph
-  store); with a local install, setting
-  `NEO4J_PASSWORD` is the whole configuration. A run
-  checks the store before it spends and refuses by
-  name if it is not serving; the keyless steps never
-  touch it.
+  store); with that setup, exporting `NEO4J_PASSWORD`
+  is the whole configuration. A run checks the store
+  before it spends and refuses by name if it is not
+  serving; the keyless steps never touch it.
+
+**First, choose your candidate path — it decides what
+you install.** A build gets its candidate triples from
+one of two paths, chosen per batch by
+`--candidate-source`:
+
+| | **Hands-on tracks** | **Product default** |
+|---|---|---|
+| `--candidate-source` | `llm` | `pipeline` |
+| Who proposes candidates | the proposer seat (a model call) | the local pipeline (NER + a structural pass) |
+| Extra install | **none** | `ontosmith[nlp]`, plus a spaCy model download |
+| GLiNER | never loaded | does the NER / entity spotting |
+| spaCy | not used | its dependency parse feeds the structural (RER) candidate pass |
+
+Every track in this guide runs `--candidate-source
+llm`. On that path GLiNER is never loaded — the build
+log says so, verbatim:
+
+```text
+NER: GLiNER skipped (candidate_source=llm; removed from the LLM path)
+```
+
+and spaCy's structural pass is simply absent. **If
+you are here for the tracks, install nothing extra:**
+no `[nlp]` extra, no spaCy model. The block further
+below is only for readers who later run the product
+default.
 
 Install the package from PyPI:
 
@@ -67,28 +103,30 @@ $ git clone https://github.com/Dongbumlee/ontosmith.git
 $ cd ontosmith
 ```
 
-The extraction extra — GLiNER and spaCy — is required
-by **one candidate path only**:
+Checkpoint: `ontosmith --help` answers, and you are
+at the clone's root. Everything in the tracks up to
+each **LIVE** build now runs — profiling, batch
+creation, validation, inspection all work with no
+key and no store.
 
-- `--candidate-source pipeline` (the product default
-  outside these tracks): NER runs locally on GLiNER,
-  so the extra is required.
-- `--candidate-source llm` (the path every track below
-  uses): proposals come from the proposer seat — GLiNER
-  is never loaded (the build log says so: `NER: GLiNER
-  skipped (candidate_source=llm …)`) and spaCy's
-  structural pass is simply absent. The extra is not
-  needed; installing it changes nothing on this path.
+#### Only if you chose the pipeline path
+
+The product default outside these tracks,
+`--candidate-source pipeline`, spots entities locally
+and needs the extraction extra:
 
 ```console
 $ pip install "ontosmith[nlp]"   # pipeline candidate path only
 $ python -m spacy download en_core_web_sm
 ```
 
-(The spaCy model is a separate download; without it a
+What each piece does there: **GLiNER** runs the NER
+stage (its model downloads itself on first load).
+**spaCy** — the separate model download — feeds the
+structural RER pass, which reads dependency parses
+for relation verbs. Without the spaCy model, a
 pipeline-path build logs the miss and continues
-without the structural pass. The GLiNER model
-downloads itself on first load.)
+without the structural pass; it does not stop.
 
 Size warning: the extra pulls the CUDA torch stack —
 several gigabytes of wheels, and slow on a constrained
@@ -128,6 +166,7 @@ repository bundles no dataset text):
 | 1 | **Open Domain** — Re-DocRED dev subset (general documents) | `open-domain` (family `redocred`) | [Re-DocRED dataset repository](https://raw.githubusercontent.com/tonytan48/Re-DocRED/main/data/dev_revised.json) — fetched by `examples/demo/fetch_demo.py`, which writes a `SOURCE.md` beside the documents | Dataset: MIT. Document text derives from Wikipedia and remains under upstream **CC BY-SA** — fetched for use, never bundled here |
 | 2 | **Legal Contract** — CUAD v1 (510 commercial contracts, 41 clause categories) | `legal-contract` (family `cuad`) | [The Atticus Project — CUAD](https://github.com/TheAtticusProject/cuad) | **CC BY 4.0** (source contracts are SEC EDGAR filings, public domain). Download the v1 archive from the project and unpack it beside your work |
 | 3 | **Bio Medical** — BioRED (600 PubMed abstracts, document-level relations) | `bio-medical` (family `biored`) | [NLM — BioRED download](https://ftp.ncbi.nlm.nih.gov/pub/lu/BioRED/) | Freely available from NLM for research use; the abstracts are PubMed records. Fetch from NLM under its terms — do not re-host |
+| 4 | **Legal Contract, imported ontology** — the same CUAD contracts as row 2, under a schema imported from a public ontology instead of a fitted pack | `fibo-contracts` (family `fibo-cuad`) | Documents: CUAD as row 2. Schema: [FIBO](https://github.com/edmcouncil/fibo) (EDM Council), pinned release `master_2026Q3`, fetched in Track 4 | Documents **CC BY 4.0** as row 2. FIBO is **MIT**-licensed; "FIBO" is an EDM Council trademark — the ontology is credited, never rebranded |
 
 ## Track 1 — Your documents
 
@@ -186,6 +225,15 @@ Three lines deserve a word:
   the batch. Nothing has been spent; creation is
   keyless.
 
+Checkpoint: the batch id ends in the document count
+(`demo-4docs`). If that count is not your corpus's,
+the `--docs` glob did not match what you meant —
+patterns are matched relative to your working
+directory, and an unquoted `*` may be expanded by
+your shell before the tool sees it. Quote the
+pattern, as above. Zero matches refuse by name
+(`no documents matched`) and create nothing.
+
 ### 3. Build — LIVE (the one step that spends)
 
 First, the key. The export names **the preset's** key
@@ -195,6 +243,14 @@ binding — not a product requirement:
 ```console
 $ export OPENROUTER_API_KEY=...   # the reference preset's key variable, env only
 $ ontosmith batch run demo-4docs
+```
+
+If the key is not set, the run refuses before any
+stage runs — the error names the seat and the
+variable, and nothing is spent:
+
+```text
+error: proposer seat: API key environment variable OPENROUTER_API_KEY is not set (binding host openrouter.ai, model anthropic/claude-haiku-5.5); set OPENROUTER_API_KEY or rebind the proposer seat
 ```
 
 OntoSmith needs *a* connection, not *this* one.
@@ -222,17 +278,60 @@ contract without the file — the file is what
 `configure` writes, and you can write it by hand. The
 full contract is in [connections.md](connections.md).
 
-Second, the store. A build writes into **Neo4j** —
-start yours before running (install, and the
-connection variables `NEO4J_URL` / `NEO4J_USER` /
-`NEO4J_PASSWORD`, are in
-[connections.md](connections.md#neo4j--the-graph-store-required-for-builds)).
-With a local default install and its password set,
-exporting `NEO4J_PASSWORD` is all the configuration
-there is. The run probes the store before the first
-stage: unreachable, or rejecting the credentials, it
-refuses with a named error and spends nothing — it
-never runs the paid stages and dies at WRITE.
+Second, the store. A build writes into **Neo4j**,
+and this is the point of first need — set it up now.
+The recommended route is the official Docker image;
+one command starts a store with its password set:
+
+```console
+$ docker run -d --name ontosmith-neo4j \
+    -p 7474:7474 -p 7687:7687 \
+    -e NEO4J_AUTH=neo4j/choose-a-password \
+    -v ontosmith-neo4j-data:/data \
+    neo4j:5
+```
+
+Replace `choose-a-password` with a password of
+yours, and export **the same password** — with a
+local store at the default address, this variable
+is the whole configuration (the full variable set,
+`NEO4J_URL` / `NEO4J_USER` / `NEO4J_PASSWORD`, is in
+[connections.md](connections.md#neo4j--the-graph-store-required-for-builds)):
+
+```console
+$ export NEO4J_PASSWORD=choose-a-password   # the same password as NEO4J_AUTH above
+```
+
+**Verify before you proceed** — the store takes a
+few seconds to boot; when this prints `200`, it is
+serving:
+
+```console
+$ curl -s -o /dev/null -w "%{http_code}\n" http://localhost:7474
+200
+```
+
+(`000` means not up yet — wait a few seconds and
+retry. Opening http://localhost:7474 in a browser
+and logging in as `neo4j` with your password is the
+same check, with a face.)
+
+Skip the store and the run tells you, before the
+first stage and with nothing spent — it never runs
+the paid stages and dies at WRITE:
+
+```text
+error: Neo4j at http://localhost:7474 is unreachable (…). A build requires a running Neo4j (the graph store) — start one and check NEO4J_URL / NEO4J_USER / NEO4J_PASSWORD; setup is documented in docs/connections.md (Neo4j — the graph store).
+```
+
+Other routes — a server install (which needs a Java
+17/21 runtime and the initial-password step),
+Neo4j Desktop, or a hosted Aura instance — are
+covered as notes beside the same golden path in
+[connections.md](connections.md#neo4j--the-graph-store-required-for-builds).
+Whichever route you take, the checkpoint is the
+same: the store answers, and `NEO4J_PASSWORD`
+matches it.
 
 The run
 executes the staged pipeline (ingest → NER/roster →
@@ -352,6 +451,7 @@ The shipped pairings:
 |---|---|---|
 | General documents (Re-DocRED set) | `redocred` | `open-domain` |
 | Contracts (CUAD set) | `cuad` | `legal-contract` |
+| Contracts (CUAD set), under an imported ontology | `fibo-cuad` | `fibo-contracts` (Track 4) |
 | Biomedical abstracts (BioRED set) | `biored` | `bio-medical` |
 | Anything else | your name | Core baseline (Track 1), or your own pack (Track 3) |
 
@@ -567,9 +667,315 @@ Track 1 §4's *Held pairs, settled*
 (`batch er-review` → `er-decide` → `er-apply`); it
 works unchanged under a pack you authored.
 
+## Track 4 — Your documents + an ontology you already have
+
+Track 3 assumed no schema exists and drafted one.
+Often one does: an industry standard, a consortium
+vocabulary, a public ontology your domain already
+maintains. Track 4 is the **BYO-schema** path — bring
+your own ontology, scope it honestly into a flat
+extraction contract, and run it through the same
+builder gates. Nothing about the gates changes: an
+imported draft validates, is approved, and emits
+exactly like a drafted one. What the import buys is
+that the schema's content — its inventory, its
+definitions — comes from the ontology, not from a
+drafting pass.
+
+The worked example is real, and its artifacts ship:
+**FIBO** (the Financial Industry Business Ontology,
+maintained by the EDM Council) imported over the
+**CUAD** contracts of Track 2. The pack is
+`packs/fibo-contracts`; the import's working papers —
+extractor, inventories, scoping spec, scoping record,
+and the coverage account this track ends with — are
+in [`examples/fibo-import/`](../examples/fibo-import/).
+
+### 1. Fetch the ontology (pinned)
+
+```console
+$ git clone https://github.com/edmcouncil/fibo.git examples/fibo-import/fibo
+$ cd examples/fibo-import/fibo
+$ git checkout master_2026Q3
+$ cd ../../..
+```
+
+Pin the release: an ontology is a moving document,
+and the scoping record below names the exact version
+it scopes (here, release `master_2026Q3`, commit
+`2d73435a`). FIBO is MIT-licensed; the contracts
+slice is the **FND Agreements** module —
+`FND/Agreements/Agreements.rdf` and
+`FND/Agreements/Contracts.rdf` — plus
+`FND/AgentsAndPeople/People.rdf`, the one file
+Contracts imports for party concepts. ("FIBO" is an
+EDM Council trademark: credit the source, as the
+pack does — never rebrand it.)
+
+### 2. Extract the inventory
+
+An OWL file is not yet something a scoping decision
+can be made over. The extractor flattens it to an
+**inventory**: every declared class and property
+with its IRI, label, definition, parents, and
+domain/range. It is a small stdlib-only script —
+parsing RDF/XML needs no product dependency:
+
+```console
+$ python examples/fibo-import/extract_fibo.py
+wrote examples/fibo-import/fibo-agreements-inventory.json (87 entries)
+wrote examples/fibo-import/fibo-people-inventory.json (53 entries)
+```
+
+Checkpoint: 87 concepts in the scoped module (55
+classes, 29 object properties, 3 datatype
+properties). Read a few entries: each carries FIBO's
+own `skos:definition` where FIBO states one — those
+definitions are what the import will carry into the
+pack verbatim. (The two inventory files also ship
+pinned in `examples/fibo-import/`, so every step
+after this one runs without the fetch; the fetch is
+the provenance path, and how you would inventory an
+ontology of your own.)
+
+### 3. Scope it — the spec is the judgment
+
+An ontology is a hierarchy with axioms; a pack is a
+flat extraction contract. The distance between them
+is closed by a **scoping spec**: a JSON document
+that declares, per target type, which source
+concepts fold into it and which of them supplies the
+definition — and accounts for everything else. The
+shipped spec is
+[`examples/fibo-import/fibo-contracts.spec.json`](../examples/fibo-import/fibo-contracts.spec.json);
+its calls, in summary:
+
+- **Merge the kind taxonomy.** FIBO's fifteen
+  agreement/contract classes (written/verbal,
+  uni/bi/multilateral, master, transferable and its
+  negations, collateral…) collapse to one `Contract`
+  type — the kinds are classification, not extraction
+  signal in contract text.
+- **Roles become relations.** FIBO models
+  `ContractParty`, `Counterparty`, `Beneficiary` and
+  kin as *classes* (roles a party plays). A flat
+  contract extracts the party itself — an
+  `Organization` or a `Person` — and carries the role
+  in the linking relation (`HasContractParty`,
+  `HasCounterparty`, `HasBeneficiary`, …).
+- **Flatten subtrees that out-split the corpus.**
+  FIBO's seven netting classes, written for
+  derivatives documentation, become one
+  `NettingProvision`.
+- **Demote datatype properties.** Durations,
+  timestamps, booleans (`isAssignable`), legal
+  descriptions: a flat extraction contract has no
+  datatype channel, so each is demoted to a recorded
+  note on its type — visible in the record, not
+  silently lost.
+- **Drop with reasons, or not at all.** Occurrence
+  classes (breach is an event, not a contract
+  entity), pre-contractual forms (term sheets), the
+  abstract commitment family, properties FIBO
+  declares with neither domain nor range — each drop
+  in the spec states its reason.
+
+Boundary material — form examples, not-entities,
+relation boundary examples — is **authored in the
+spec**: FIBO states definitions, not extraction
+boundaries. So are three definitions. `Organization`,
+`Jurisdiction`, and `Date` are grounded in **OMG
+Commons** classes FIBO references but does not define
+in these files; the spec authors their definitions
+and the scoping record marks them `authored`, never
+dressed as FIBO's words.
+
+The accounting is exact, and the import enforces it:
+every concept in the scoped files must be claimed
+exactly once — as a type source, a role conversion,
+a demotion, or a reasoned drop — or the import
+refuses and names the unaccounted concepts.
+
+### 4. Import
+
+```console
+$ ontosmith ontology import \
+    --spec examples/fibo-import/fibo-contracts.spec.json \
+    --inventory examples/fibo-import/fibo-agreements-inventory.json \
+    --inventory examples/fibo-import/fibo-people-inventory.json \
+    --out drafts/fibo-contracts.json \
+    --scoping-out examples/fibo-import/fibo-contracts.scoping.json
+draft written: drafts/fibo-contracts.json (status DRAFT_NOT_APPROVED, 15 entity types, 13 relation types, schema hash sha256:72db0ede0a392262e8a04170f5d77c7405a90258f2643f9ccaef38ea2a5372d1)
+scoping record: examples/fibo-import/fibo-contracts.scoping.json (88 scoped concepts: 19 kept, 21 merged, 14 flattened, 5 role-converted, 8 demoted, 21 dropped; 3 external entities)
+validation: clean
+```
+
+Two outputs: an ordinary builder **draft** (the same
+document kind Track 3 produces), and the **scoping
+record** — the complete account, per concept: what
+it became, or why it did not, with its FIBO parent
+chain. The draft arrives with validation already
+clean, because the spec had to be complete to
+produce it.
+
+### 5. The builder gates — unchanged
+
+```console
+$ ontosmith ontology brief drafts/fibo-contracts.json
+$ ontosmith ontology approve drafts/fibo-contracts.json --approver "A. Reader"
+approval recorded: drafts/approval_2026-10-26.json
+  schema hash sha256:72db0ede0a392262e8a04170f5d77c7405a90258f2643f9ccaef38ea2a5372d1
+
+$ ontosmith ontology emit drafts/fibo-contracts.json \
+    --approval drafts/approval_2026-10-26.json --out-root .
+pack emitted: ./packs/fibo-contracts
+  payload pin sha256:0d77115fb79acf07…
+
+$ ontosmith ontology check packs/fibo-contracts
+pack check: clean — fibo-contracts 0.1.0 (manifest + conformance record satisfy the pack schemas; payload pin verifies)
+```
+
+The approval brief is where the scoping decisions
+are settled: the draft's decision points restate the
+judgment calls of step 3, and approving binds the
+record to the schema hash exactly as in Track 3. The
+shipped pack is this flow's output, unmodified — its
+conformance record opens, honestly, at
+`emitted_unmeasured`.
+
+### 6. Profile and create over the corpus
+
+The documents are Track 2's CUAD set (example sets,
+row 4). For a first build, take a priced subset —
+the first 100 contracts in sorted filename order
+from the unpacked archive:
+
+```console
+$ mkdir cuad-subset-100
+$ ls <the unpacked CUAD folder>/*.txt | sort | head -100 | \
+    while read f; do cp "$f" cuad-subset-100/; done
+
+$ ontosmith profile cuad-subset-100 --family fibo-cuad
+Corpus profile
+  family          fibo-cuad
+  status          COMPLETE
+  documents       100
+  claims          6
+  decision points 0
+  profile hash    sha256:b54c32666bb16ea7
+  spend           $0.0000
+  written         profiles/fibo-cuad (profile.json, setup_config.json, profile.md)
+```
+
+(The profiler's census counts 99 unique contents —
+the corpus holds one duplicate pair; it names it in
+the profile.) The family is `fibo-cuad`, **not**
+Track 2's `cuad`: the profile's family is what binds
+the pack, and binding the imported pack to a profile
+of the fitted pack's family is refused by name —
+that refusal is the two experiments staying
+separate.
+
+```console
+$ ontosmith batch create --source cuad-subset-100 \
+    --collection fibo-cuad-100 \
+    --docs "cuad-subset-100/*.txt" \
+    --profile profiles/fibo-cuad/profile.json \
+    --candidate-source llm --pack fibo-contracts \
+    --max-cost-usd 10
+profile: fibo-cuad sha256:b54c32666bb16ea7
+pack: fibo-contracts 0.1.0 (payload sha256:0d77115fb79acf07…)
+binding: reference
+setup_config: resolved (core baseline + fibo-contracts, 26 keys) -> setup_config.resolved.json
+created batch fibo-cuad-100-100docs with 100 docs
+```
+
+The price discipline is the appendix track's: a
+hard cap, frozen at creation. For scale, the fitted
+Legal build's recorded governing total is 3.8¢ per
+document — at that rate 100 documents price near
+$3.80, inside the $10 cap with room. Treat that as a
+planning expectation, not a quote: the imported
+pack's own rate is its first build's to measure.
+
+### 7. Build — LIVE, and the finish line
+
+```console
+$ export OPENROUTER_API_KEY=...   # as Track 1 §3
+$ export NEO4J_PASSWORD=...       # the store from Track 1 §3, running
+$ ontosmith batch run fibo-cuad-100-100docs
+```
+
+With the key set and the store serving, the build
+runs the staged pipeline under the imported pack,
+and the finish line is the same as every track's:
+`ontosmith serve --batch fibo-cuad-100-100docs`,
+one `search`, one fact opened with `inspect`.
+
+Stated plainly, because this guide does not
+fabricate transcripts: **the recorded run of this
+walkthrough stopped at the run's first line.** The
+environment it was recorded in held no provider key,
+and the run refused — by name, before any stage,
+with $0 spent — exactly as Track 1 §3 shows:
+
+```text
+error: proposer seat: API key environment variable OPENROUTER_API_KEY is not set (binding host openrouter.ai, model anthropic/claude-haiku-5.5); set OPENROUTER_API_KEY or rebind the proposer seat
+```
+
+The batch stands created and priced; the build is
+one export away whenever a key is. What follows is
+therefore a coverage account, not a quality claim —
+no graph under this pack has been measured yet, and
+this guide reports none.
+
+### What the imported schema gives you — and where its ceiling is
+
+What FIBO gave, concretely: a principled inventory
+(88 concepts, each with a stated definition, carried
+verbatim), a party/role structure that survived
+flattening as relations, and a schema that went from
+clone to approved pack in one working session. That
+is the honest case for importing: weeks of schema
+design, done by a consortium, with the definitions
+already written.
+
+The ceiling is equally concrete, and it is measured,
+not asserted. CUAD's own annotation scheme has 41
+clause categories; the shipped account
+([`examples/fibo-import/coverage.md`](../examples/fibo-import/coverage.md))
+maps every one to the imported pack:
+
+- **7 of 41 covered** by a dedicated type or
+  relation — the dates, governing law, renewal,
+  termination for convenience, notice periods,
+  third-party beneficiaries.
+- **34 of 41 partial** — the content extracts, but
+  into the generic provision buckets: the graph
+  records that a clause is there, not that it is a
+  non-compete, a liability cap, or a license grant.
+- **0 of 41 invisible** — the catch-all provision
+  type receives every clause. Nothing is lost; most
+  of it is unlabeled.
+
+That is the BYO lesson. A public ontology models its
+domain as its authors understood it; a corpus's
+clause semantics are a *different* artifact — the
+fitted Legal pack's 41 categories exist because CUAD
+annotates them, not because contract law does.
+Import when the ontology's distinctions are the ones
+you need (this pack types provisions, roles,
+supersession and subordination that CUAD never
+annotates — questions the fitted graph cannot
+answer). Fit, or draft, when the corpus's own
+categories are the point. And read the scoping
+record before you build: it is the one place the
+import tells you, concept by concept, what you
+actually bought.
+
 ## Appendix track — reproduce the reference build
 
-The three tracks above are how you use OntoSmith. This
+The four tracks above are how you use OntoSmith. This
 track is how you **check its published record**: the
 flagship build's whole loop — profile → counted
 projection → gold audit → capped live run → corrected

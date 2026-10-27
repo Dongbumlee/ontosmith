@@ -1,0 +1,1034 @@
+[
+  {
+    "iri": "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Agreements/Agreement",
+    "kind": "class",
+    "label": "agreement",
+    "definition": "negotiated understanding between two or more parties, reflecting the offer and acceptance of commitments on the part of either party",
+    "parents": [
+      "https://www.omg.org/spec/Commons/PartiesAndSituations/Situation"
+    ],
+    "domain": null,
+    "range": null,
+    "source_file": "FND/Agreements/Agreements.rdf"
+  },
+  {
+    "iri": "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Agreements/Beneficiary",
+    "kind": "class",
+    "label": "beneficiary",
+    "definition": "party that receives some benefit or advantage or profits from something",
+    "parents": [
+      "https://www.omg.org/spec/Commons/PartiesAndSituations/PartyRole"
+    ],
+    "domain": null,
+    "range": null,
+    "source_file": "FND/Agreements/Agreements.rdf"
+  },
+  {
+    "iri": "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Agreements/BilateralAgreement",
+    "kind": "class",
+    "label": "bilateral agreement",
+    "definition": "agreement where two parties commit to perform specific actions or obligations towards each other",
+    "parents": [
+      "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Agreements/Agreement"
+    ],
+    "domain": null,
+    "range": null,
+    "source_file": "FND/Agreements/Agreements.rdf"
+  },
+  {
+    "iri": "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Agreements/Commitment",
+    "kind": "class",
+    "label": "commitment",
+    "definition": "promise made by some party to act or refrain from acting in some manner",
+    "parents": [
+      "https://www.omg.org/spec/Commons/PartiesAndSituations/Situation"
+    ],
+    "domain": null,
+    "range": null,
+    "source_file": "FND/Agreements/Agreements.rdf"
+  },
+  {
+    "iri": "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Agreements/CommitmentAtLarge",
+    "kind": "class",
+    "label": "commitment at large",
+    "definition": "commitment made by some party without direct involvement from the potential beneficiaries of that commitment",
+    "parents": [
+      "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Agreements/UnilateralCommitment"
+    ],
+    "domain": null,
+    "range": null,
+    "source_file": "FND/Agreements/Agreements.rdf"
+  },
+  {
+    "iri": "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Agreements/MultilateralAgreement",
+    "kind": "class",
+    "label": "multilateral agreement",
+    "definition": "agreements that involve or include multiple parties",
+    "parents": [
+      "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Agreements/Agreement"
+    ],
+    "domain": null,
+    "range": null,
+    "source_file": "FND/Agreements/Agreements.rdf"
+  },
+  {
+    "iri": "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Agreements/Obligee",
+    "kind": "class",
+    "label": "obligee",
+    "definition": "party to whom some commitment or obligation is owed, either legally or per the terms of an agreement",
+    "parents": [
+      "https://www.omg.org/spec/Commons/PartiesAndSituations/PartyRole"
+    ],
+    "domain": null,
+    "range": null,
+    "source_file": "FND/Agreements/Agreements.rdf"
+  },
+  {
+    "iri": "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Agreements/Obligor",
+    "kind": "class",
+    "label": "obligor",
+    "definition": "party that is bound legally or by agreement to repay a debt, make a payment, do something, or refrain from doing something",
+    "parents": [
+      "https://www.omg.org/spec/Commons/PartiesAndSituations/PartyRole"
+    ],
+    "domain": null,
+    "range": null,
+    "source_file": "FND/Agreements/Agreements.rdf"
+  },
+  {
+    "iri": "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Agreements/UnilateralCommitment",
+    "kind": "class",
+    "label": "unilateral commitment",
+    "definition": "commitment (promise or obligation) made by one party without requiring a reciprocal promise from another party",
+    "parents": [
+      "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Agreements/Commitment"
+    ],
+    "domain": null,
+    "range": null,
+    "source_file": "FND/Agreements/Agreements.rdf"
+  },
+  {
+    "iri": "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Agreements/hasObligation",
+    "kind": "object_property",
+    "label": "has obligation",
+    "definition": "identifies a duty or obligation that a given party has taken on",
+    "parents": [],
+    "domain": "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Agreements/Obligor",
+    "range": null,
+    "source_file": "FND/Agreements/Agreements.rdf"
+  },
+  {
+    "iri": "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Agreements/isObligationOf",
+    "kind": "object_property",
+    "label": "is obligation of",
+    "definition": "identifies a party that has a given obligation",
+    "parents": [
+      "https://www.omg.org/spec/Commons/PartiesAndSituations/hasPartyRole"
+    ],
+    "domain": null,
+    "range": "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Agreements/Obligor",
+    "source_file": "FND/Agreements/Agreements.rdf"
+  },
+  {
+    "iri": "https://spec.edmcouncil.org/fibo/ontology/FND/AgentsAndPeople/People/BirthCertificate",
+    "kind": "class",
+    "label": null,
+    "definition": null,
+    "parents": [],
+    "domain": null,
+    "range": null,
+    "source_file": "FND/Agreements/Contracts.rdf"
+  },
+  {
+    "iri": "https://spec.edmcouncil.org/fibo/ontology/FND/AgentsAndPeople/People/DeathCertificate",
+    "kind": "class",
+    "label": null,
+    "definition": null,
+    "parents": [],
+    "domain": null,
+    "range": null,
+    "source_file": "FND/Agreements/Contracts.rdf"
+  },
+  {
+    "iri": "https://spec.edmcouncil.org/fibo/ontology/FND/AgentsAndPeople/People/IdentityDocument",
+    "kind": "class",
+    "label": null,
+    "definition": null,
+    "parents": [],
+    "domain": null,
+    "range": null,
+    "source_file": "FND/Agreements/Contracts.rdf"
+  },
+  {
+    "iri": "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Contracts/AssignableContract",
+    "kind": "class",
+    "label": "assignable contract",
+    "definition": "contract in which contract holder (assignor) may transfer some or all of their rights and obligations to another party (assignee)",
+    "parents": [
+      "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Contracts/TransferableContract"
+    ],
+    "domain": null,
+    "range": null,
+    "source_file": "FND/Agreements/Contracts.rdf"
+  },
+  {
+    "iri": "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Contracts/BilateralContract",
+    "kind": "class",
+    "label": "bilateral contract",
+    "definition": "contract where two parties commit to perform specific actions or obligations towards each other",
+    "parents": [
+      "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Agreements/BilateralAgreement",
+      "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Contracts/WrittenContract"
+    ],
+    "domain": null,
+    "range": null,
+    "source_file": "FND/Agreements/Contracts.rdf"
+  },
+  {
+    "iri": "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Contracts/BilateralNettingProvision",
+    "kind": "class",
+    "label": "bilateral netting provision",
+    "definition": "netting provision that occurs between two parties, in which mutual obligations are offset to determine a single net payment",
+    "parents": [
+      "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Contracts/NettingProvision"
+    ],
+    "domain": null,
+    "range": null,
+    "source_file": "FND/Agreements/Contracts.rdf"
+  },
+  {
+    "iri": "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Contracts/BreachOfContract",
+    "kind": "class",
+    "label": "breach of contract",
+    "definition": "classifier of events representing a violation of an express, or implied, condition of a contract to do or not to do something, without a legitimate excuse",
+    "parents": [
+      "https://spec.edmcouncil.org/fibo/ontology/FND/DatesAndTimes/Occurrences/OccurrenceKind"
+    ],
+    "domain": null,
+    "range": null,
+    "source_file": "FND/Agreements/Contracts.rdf"
+  },
+  {
+    "iri": "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Contracts/BreachOfCovenant",
+    "kind": "class",
+    "label": "breach of covenant",
+    "definition": "classifier of events representing breaking a promise specified in a contract to do or not to do something, without a legitimate excuse",
+    "parents": [
+      "https://spec.edmcouncil.org/fibo/ontology/FND/DatesAndTimes/Occurrences/OccurrenceKind"
+    ],
+    "domain": null,
+    "range": null,
+    "source_file": "FND/Agreements/Contracts.rdf"
+  },
+  {
+    "iri": "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Contracts/CloseOutNettingProvision",
+    "kind": "class",
+    "label": "close-out netting provision",
+    "definition": "netting provision that may be triggered when a counterparty defaults, leading to the termination of all outstanding transactions between the parties",
+    "parents": [
+      "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Contracts/NettingProvision"
+    ],
+    "domain": null,
+    "range": null,
+    "source_file": "FND/Agreements/Contracts.rdf"
+  },
+  {
+    "iri": "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Contracts/CollateralAgreement",
+    "kind": "class",
+    "label": "collateral agreement",
+    "definition": "written contract related to another contract designed to provide clarity and additional protection for all parties involved, that is separate from the primary contract and that can be independently enforced",
+    "parents": [
+      "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Contracts/WrittenContract"
+    ],
+    "domain": null,
+    "range": null,
+    "source_file": "FND/Agreements/Contracts.rdf"
+  },
+  {
+    "iri": "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Contracts/ConditionPrecedent",
+    "kind": "class",
+    "label": "condition precedent",
+    "definition": "stipulation that specifies conditions that must be met before some aspect of a contract takes effect",
+    "parents": [
+      "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Contracts/ContractualElement"
+    ],
+    "domain": null,
+    "range": null,
+    "source_file": "FND/Agreements/Contracts.rdf"
+  },
+  {
+    "iri": "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Contracts/Contract",
+    "kind": "class",
+    "label": "contract",
+    "definition": "voluntary, deliberate agreement between competent parties to which the parties agree to be legally bound, and for which the parties provide valuable consideration",
+    "parents": [
+      "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Agreements/Agreement"
+    ],
+    "domain": null,
+    "range": null,
+    "source_file": "FND/Agreements/Contracts.rdf"
+  },
+  {
+    "iri": "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Contracts/ContractDocument",
+    "kind": "class",
+    "label": "contract document",
+    "definition": "legal document that records the formal terms and conditions of some contract",
+    "parents": [
+      "https://www.omg.org/spec/Commons/Documents/LegalDocument"
+    ],
+    "domain": null,
+    "range": null,
+    "source_file": "FND/Agreements/Contracts.rdf"
+  },
+  {
+    "iri": "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Contracts/ContractMilestone",
+    "kind": "class",
+    "label": "contract milestone",
+    "definition": "classifier for an event (milestone), or set of events related to the status or level of completion of a designated activity, task, or segment of work required for contract fulfillment",
+    "parents": [
+      "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Contracts/ConditionPrecedent",
+      "https://spec.edmcouncil.org/fibo/ontology/FND/DatesAndTimes/Occurrences/OccurrenceKind"
+    ],
+    "domain": null,
+    "range": null,
+    "source_file": "FND/Agreements/Contracts.rdf"
+  },
+  {
+    "iri": "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Contracts/ContractParty",
+    "kind": "class",
+    "label": "contract party",
+    "definition": "legally competent party that has entered into a binding agreement, accepting and conceding obligations, responsibilities, and benefits as specified",
+    "parents": [
+      "https://www.omg.org/spec/Commons/PartiesAndSituations/PartyRole"
+    ],
+    "domain": null,
+    "range": null,
+    "source_file": "FND/Agreements/Contracts.rdf"
+  },
+  {
+    "iri": "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Contracts/ContractPrincipal",
+    "kind": "class",
+    "label": "contract principal",
+    "definition": "party that originates a contract and is identified as the first party to that contract, in the event that the contract distinguishes any party as such",
+    "parents": [
+      "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Contracts/ContractParty"
+    ],
+    "domain": null,
+    "range": null,
+    "source_file": "FND/Agreements/Contracts.rdf"
+  },
+  {
+    "iri": "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Contracts/ContractThirdParty",
+    "kind": "class",
+    "label": "contract third party",
+    "definition": "party that is indirectly involved in, but not a counterparty to, an agreement",
+    "parents": [
+      "https://www.omg.org/spec/Commons/PartiesAndSituations/PartyRole"
+    ],
+    "domain": null,
+    "range": null,
+    "source_file": "FND/Agreements/Contracts.rdf"
+  },
+  {
+    "iri": "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Contracts/ContractualCommitment",
+    "kind": "class",
+    "label": "contractual commitment",
+    "definition": "provision specifying something that the contracting parties agree to, i.e., a promise or pledge made by one of the parties to perform some action or fulfill some duty",
+    "parents": [
+      "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Contracts/ContractualElement"
+    ],
+    "domain": null,
+    "range": null,
+    "source_file": "FND/Agreements/Contracts.rdf"
+  },
+  {
+    "iri": "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Contracts/ContractualDefinition",
+    "kind": "class",
+    "label": "contractual definition",
+    "definition": "contractual element that specifies the meaning of a term in a legal document, whose definition is substitutable for the term whenever it occurs in the body of that document",
+    "parents": [
+      "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Contracts/ContractualElement"
+    ],
+    "domain": null,
+    "range": null,
+    "source_file": "FND/Agreements/Contracts.rdf"
+  },
+  {
+    "iri": "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Contracts/ContractualElement",
+    "kind": "class",
+    "label": "contractual element",
+    "definition": "element, such as an arrangement, provision, requirement, rule, specification, and standard that forms an integral part of an agreement",
+    "parents": [
+      "https://www.omg.org/spec/Commons/Collections/Constituent"
+    ],
+    "domain": null,
+    "range": null,
+    "source_file": "FND/Agreements/Contracts.rdf"
+  },
+  {
+    "iri": "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Contracts/Counterparty",
+    "kind": "class",
+    "label": "counterparty",
+    "definition": "party to a contract with whom one negotiates on a given agreement",
+    "parents": [
+      "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Contracts/ContractParty"
+    ],
+    "domain": null,
+    "range": null,
+    "source_file": "FND/Agreements/Contracts.rdf"
+  },
+  {
+    "iri": "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Contracts/DisclosureProvision",
+    "kind": "class",
+    "label": "disclosure provision",
+    "definition": "contractual provision that outlines the requirements and responsibilities of one or both parties to reveal certain information to each other",
+    "parents": [
+      "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Contracts/ContractualCommitment"
+    ],
+    "domain": null,
+    "range": null,
+    "source_file": "FND/Agreements/Contracts.rdf"
+  },
+  {
+    "iri": "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Contracts/EarlyTerminationProvision",
+    "kind": "class",
+    "label": "early termination provision",
+    "definition": "termination of an agreement for any reason prior to its expiration date",
+    "parents": [
+      "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Contracts/TerminationProvision"
+    ],
+    "domain": null,
+    "range": null,
+    "source_file": "FND/Agreements/Contracts.rdf"
+  },
+  {
+    "iri": "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Contracts/ExtensionProvision",
+    "kind": "class",
+    "label": "extension provision",
+    "definition": "contract terms that specify the conditions under which a contract can be extended",
+    "parents": [
+      "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Contracts/ContractualCommitment"
+    ],
+    "domain": null,
+    "range": null,
+    "source_file": "FND/Agreements/Contracts.rdf"
+  },
+  {
+    "iri": "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Contracts/MasterAgreement",
+    "kind": "class",
+    "label": "master agreement",
+    "definition": "contract between named parties that outlines the terms and conditions designed to apply to a number of accounts, transactions, or other activities between the parties, and that consolidates and provides overarching terms for separate but related agreements",
+    "parents": [
+      "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Contracts/WrittenContract"
+    ],
+    "domain": null,
+    "range": null,
+    "source_file": "FND/Agreements/Contracts.rdf"
+  },
+  {
+    "iri": "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Contracts/MilestoneEvent",
+    "kind": "class",
+    "label": "milestone event",
+    "definition": "event related to the status or level of completion of a designated activity, task, or segment of work required for contract fulfillment",
+    "parents": [
+      "https://spec.edmcouncil.org/fibo/ontology/FND/DatesAndTimes/Occurrences/Occurrence"
+    ],
+    "domain": null,
+    "range": null,
+    "source_file": "FND/Agreements/Contracts.rdf"
+  },
+  {
+    "iri": "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Contracts/MilestoneSchedule",
+    "kind": "class",
+    "label": "milestone schedule",
+    "definition": "schedule of milestone events, observations, or other occurrences and the associated dates and/or times when they will be done",
+    "parents": [
+      "https://spec.edmcouncil.org/fibo/ontology/FND/DatesAndTimes/FinancialDates/Schedule"
+    ],
+    "domain": null,
+    "range": null,
+    "source_file": "FND/Agreements/Contracts.rdf"
+  },
+  {
+    "iri": "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Contracts/MultilateralContract",
+    "kind": "class",
+    "label": "multilateral contract",
+    "definition": "contract where multiple parties (i.e., more than two) commit to perform specific actions or obligations towards each other",
+    "parents": [
+      "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Agreements/MultilateralAgreement",
+      "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Contracts/WrittenContract"
+    ],
+    "domain": null,
+    "range": null,
+    "source_file": "FND/Agreements/Contracts.rdf"
+  },
+  {
+    "iri": "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Contracts/MultilateralNettingProvision",
+    "kind": "class",
+    "label": "multilateral netting provision",
+    "definition": "netting provision that, when triggered, is facilitated by a central clearinghouse or financial institution",
+    "parents": [
+      "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Contracts/NettingProvision"
+    ],
+    "domain": null,
+    "range": null,
+    "source_file": "FND/Agreements/Contracts.rdf"
+  },
+  {
+    "iri": "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Contracts/NettingProvision",
+    "kind": "class",
+    "label": "netting provision",
+    "definition": "contractual element that specifies the method of reducing credit, settlement and other risks by aggregating (combining) two or more obligations to achieve a reduced net obligation",
+    "parents": [
+      "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Contracts/ContractualCommitment"
+    ],
+    "domain": null,
+    "range": null,
+    "source_file": "FND/Agreements/Contracts.rdf"
+  },
+  {
+    "iri": "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Contracts/NonBindingTerm",
+    "kind": "class",
+    "label": "non-binding term",
+    "definition": "contractual element that is not legally binding on any party to the agreement",
+    "parents": [
+      "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Contracts/ContractualElement"
+    ],
+    "domain": null,
+    "range": null,
+    "source_file": "FND/Agreements/Contracts.rdf"
+  },
+  {
+    "iri": "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Contracts/NonTransferableContract",
+    "kind": "class",
+    "label": "non-transferable contract",
+    "definition": "contract between whose individual rights and obligations are not transferable to another party without prior written permission",
+    "parents": [
+      "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Contracts/WrittenContract"
+    ],
+    "domain": null,
+    "range": null,
+    "source_file": "FND/Agreements/Contracts.rdf"
+  },
+  {
+    "iri": "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Contracts/NotificationProvision",
+    "kind": "class",
+    "label": "notification provision",
+    "definition": "provision indicating that notification is required prior to the occurrence of a relevant event",
+    "parents": [
+      "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Contracts/ContractualCommitment"
+    ],
+    "domain": null,
+    "range": null,
+    "source_file": "FND/Agreements/Contracts.rdf"
+  },
+  {
+    "iri": "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Contracts/NovateableContract",
+    "kind": "class",
+    "label": "novateable contract",
+    "definition": "contract that may be replaced by another contract, and in that event, extinguishes the rights and obligations in effect under the original contract with those in the new agreement",
+    "parents": [
+      "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Contracts/TransferableContract"
+    ],
+    "domain": null,
+    "range": null,
+    "source_file": "FND/Agreements/Contracts.rdf"
+  },
+  {
+    "iri": "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Contracts/NovationNettingProvision",
+    "kind": "class",
+    "label": "novation netting provision",
+    "definition": "contractual element that specifies what should be done with respect to netting when a given contract is replaced with another",
+    "parents": [
+      "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Contracts/NettingProvision"
+    ],
+    "domain": null,
+    "range": null,
+    "source_file": "FND/Agreements/Contracts.rdf"
+  },
+  {
+    "iri": "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Contracts/PaymentNettingProvision",
+    "kind": "class",
+    "label": "payment netting provision",
+    "definition": "netting provision that specifies the way in which all payments in a single currency owed between parties will be aggregated for each traded currency per value date and within the larger aggregate obligation",
+    "parents": [
+      "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Contracts/NettingProvision"
+    ],
+    "domain": null,
+    "range": null,
+    "source_file": "FND/Agreements/Contracts.rdf"
+  },
+  {
+    "iri": "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Contracts/Representation",
+    "kind": "class",
+    "label": "representation",
+    "definition": "contractual element that is a statement made by a party to the contract, before or at the time of making the contract, in regard to some fact, circumstance, or state of affairs pertinent to the contract, which the counterparty(ies) rely on, or is influential in bringing about the contract",
+    "parents": [
+      "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Contracts/ContractualCommitment"
+    ],
+    "domain": null,
+    "range": null,
+    "source_file": "FND/Agreements/Contracts.rdf"
+  },
+  {
+    "iri": "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Contracts/SettlementNettingProvision",
+    "kind": "class",
+    "label": "settlement netting provision",
+    "definition": "netting provision that specifies the way in which on a given payment date, each party will aggregate the amounts of a currency to be delivered by it, and only the difference in the aggregate amounts will be delivered by the party with the larger aggregate obligation",
+    "parents": [
+      "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Contracts/NettingProvision"
+    ],
+    "domain": null,
+    "range": null,
+    "source_file": "FND/Agreements/Contracts.rdf"
+  },
+  {
+    "iri": "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Contracts/TermSheet",
+    "kind": "class",
+    "label": "term sheet",
+    "definition": "nonbinding agreement setting forth the basic terms and conditions under which a proposed business deal may be made",
+    "parents": [
+      "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Agreements/Agreement"
+    ],
+    "domain": null,
+    "range": null,
+    "source_file": "FND/Agreements/Contracts.rdf"
+  },
+  {
+    "iri": "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Contracts/TerminationProvision",
+    "kind": "class",
+    "label": "termination provision",
+    "definition": "contractual element that specifies the circumstances under which the parties can dissolve their legal relationship and discontinue the fulfillment of their obligations under the contract",
+    "parents": [
+      "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Contracts/ContractualCommitment"
+    ],
+    "domain": null,
+    "range": null,
+    "source_file": "FND/Agreements/Contracts.rdf"
+  },
+  {
+    "iri": "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Contracts/TransferableContract",
+    "kind": "class",
+    "label": "transferable contract",
+    "definition": "contract in which the rights and obligations of one party may be transferred to another party",
+    "parents": [
+      "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Contracts/WrittenContract"
+    ],
+    "domain": null,
+    "range": null,
+    "source_file": "FND/Agreements/Contracts.rdf"
+  },
+  {
+    "iri": "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Contracts/UnilateralContract",
+    "kind": "class",
+    "label": "unilateral contract",
+    "definition": "contract in which one party makes an offer that can only be accepted through performance rather than a return promise",
+    "parents": [
+      "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Contracts/WrittenContract"
+    ],
+    "domain": null,
+    "range": null,
+    "source_file": "FND/Agreements/Contracts.rdf"
+  },
+  {
+    "iri": "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Contracts/UseOfProceedsProvision",
+    "kind": "class",
+    "label": "use of proceeds provision",
+    "definition": "contract provision specifying how funds obtained through financing, such as through a credit agreement, offering, warrant, or other instrument are intended to be used",
+    "parents": [
+      "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Contracts/ContractualCommitment"
+    ],
+    "domain": null,
+    "range": null,
+    "source_file": "FND/Agreements/Contracts.rdf"
+  },
+  {
+    "iri": "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Contracts/VerbalContract",
+    "kind": "class",
+    "label": "verbal contract",
+    "definition": "contract that exists as a result of some verbal exchange",
+    "parents": [
+      "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Contracts/Contract"
+    ],
+    "domain": null,
+    "range": null,
+    "source_file": "FND/Agreements/Contracts.rdf"
+  },
+  {
+    "iri": "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Contracts/Warranty",
+    "kind": "class",
+    "label": "warranty",
+    "definition": "contractual element that is a statement of fact",
+    "parents": [
+      "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Contracts/ContractualCommitment"
+    ],
+    "domain": null,
+    "range": null,
+    "source_file": "FND/Agreements/Contracts.rdf"
+  },
+  {
+    "iri": "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Contracts/WrittenContract",
+    "kind": "class",
+    "label": "written contract",
+    "definition": "formal contract that is written and signed by the parties thereto",
+    "parents": [
+      "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Contracts/Contract"
+    ],
+    "domain": null,
+    "range": null,
+    "source_file": "FND/Agreements/Contracts.rdf"
+  },
+  {
+    "iri": "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Contracts/definesTermsFor",
+    "kind": "object_property",
+    "label": "defines terms for",
+    "definition": "relates a contract to something for which the contract defines legally binding terms and conditions",
+    "parents": [
+      "https://www.omg.org/spec/Commons/Designators/defines"
+    ],
+    "domain": "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Contracts/Contract",
+    "range": null,
+    "source_file": "FND/Agreements/Contracts.rdf"
+  },
+  {
+    "iri": "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Contracts/hasBeneficiary",
+    "kind": "object_property",
+    "label": "has beneficiary",
+    "definition": "party that receives some benefit or advantage or profits from something as specified in the agreement",
+    "parents": [
+      "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Contracts/hasCounterparty",
+      "https://www.omg.org/spec/Commons/PartiesAndSituations/actsOn"
+    ],
+    "domain": null,
+    "range": "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Agreements/Beneficiary",
+    "source_file": "FND/Agreements/Contracts.rdf"
+  },
+  {
+    "iri": "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Contracts/hasContractDuration",
+    "kind": "object_property",
+    "label": "has contract duration",
+    "definition": "indicates the period of time during which a contract is intended to be in force once it has been executed",
+    "parents": [
+      "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Contracts/hasTerm"
+    ],
+    "domain": "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Contracts/Contract",
+    "range": "https://www.omg.org/spec/Commons/DatesAndTimes/Duration",
+    "source_file": "FND/Agreements/Contracts.rdf"
+  },
+  {
+    "iri": "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Contracts/hasContractParty",
+    "kind": "object_property",
+    "label": "has contract party",
+    "definition": "indicates a party that has entered into a binding agreement, accepting and conceding obligations, responsibilities, and benefits as specified",
+    "parents": [
+      "https://www.omg.org/spec/Commons/PartiesAndSituations/hasPartyRole"
+    ],
+    "domain": "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Contracts/Contract",
+    "range": "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Contracts/ContractParty",
+    "source_file": "FND/Agreements/Contracts.rdf"
+  },
+  {
+    "iri": "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Contracts/hasContractualElement",
+    "kind": "object_property",
+    "label": "has contractual element",
+    "definition": "indicates something that is a component of an agreement",
+    "parents": [
+      "https://www.omg.org/spec/Commons/Collections/comprises"
+    ],
+    "domain": "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Agreements/Agreement",
+    "range": "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Contracts/ContractualElement",
+    "source_file": "FND/Agreements/Contracts.rdf"
+  },
+  {
+    "iri": "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Contracts/hasCounterparty",
+    "kind": "object_property",
+    "label": "has counterparty",
+    "definition": "identifies a party to a contract, typically not the contract principal",
+    "parents": [
+      "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Contracts/hasContractParty",
+      "https://www.omg.org/spec/Commons/PartiesAndSituations/hasUndergoer"
+    ],
+    "domain": "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Contracts/Contract",
+    "range": "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Contracts/Counterparty",
+    "source_file": "FND/Agreements/Contracts.rdf"
+  },
+  {
+    "iri": "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Contracts/hasEarlyTerminationDate",
+    "kind": "object_property",
+    "label": "has early termination date",
+    "definition": "indicates a termination date that occurs prior to an explicit expiration date",
+    "parents": [
+      "https://spec.edmcouncil.org/fibo/ontology/FND/Arrangements/Documents/hasTerminationDate"
+    ],
+    "domain": null,
+    "range": "https://www.omg.org/spec/Commons/DatesAndTimes/ExplicitDate",
+    "source_file": "FND/Agreements/Contracts.rdf"
+  },
+  {
+    "iri": "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Contracts/hasEffectiveDate",
+    "kind": "object_property",
+    "label": "has effective date",
+    "definition": "indicates the date a contract, relationship, or policy comes into force",
+    "parents": [
+      "https://www.omg.org/spec/Commons/DatesAndTimes/hasDate"
+    ],
+    "domain": null,
+    "range": "https://www.omg.org/spec/Commons/DatesAndTimes/Date",
+    "source_file": "FND/Agreements/Contracts.rdf"
+  },
+  {
+    "iri": "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Contracts/hasEffectiveDateTimeStamp",
+    "kind": "object_property",
+    "label": "has effective date time stamp",
+    "definition": "indicates the date and time, including time zone, something comes into force",
+    "parents": [
+      "https://www.omg.org/spec/Commons/DatesAndTimes/hasDateTimeStamp"
+    ],
+    "domain": null,
+    "range": "https://www.omg.org/spec/Commons/DatesAndTimes/DateTimeStamp",
+    "source_file": "FND/Agreements/Contracts.rdf"
+  },
+  {
+    "iri": "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Contracts/hasExecutionDate",
+    "kind": "object_property",
+    "label": "has execution date",
+    "definition": "indicates the date a contract has been signed by all the necessary parties",
+    "parents": [
+      "https://www.omg.org/spec/Commons/DatesAndTimes/hasDate"
+    ],
+    "domain": null,
+    "range": "https://www.omg.org/spec/Commons/DatesAndTimes/Date",
+    "source_file": "FND/Agreements/Contracts.rdf"
+  },
+  {
+    "iri": "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Contracts/hasExecutionDateTimeStamp",
+    "kind": "object_property",
+    "label": "has execution date time stamp",
+    "definition": "indicates the date and time, including time zone, a contract has been signed by all the necessary parties",
+    "parents": [
+      "https://www.omg.org/spec/Commons/DatesAndTimes/hasDateTimeStamp"
+    ],
+    "domain": null,
+    "range": "https://www.omg.org/spec/Commons/DatesAndTimes/DateTimeStamp",
+    "source_file": "FND/Agreements/Contracts.rdf"
+  },
+  {
+    "iri": "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Contracts/hasExtendablePeriod",
+    "kind": "object_property",
+    "label": "has extendable period",
+    "definition": "indicates the window of time during which an extension is allowed under the terms of the contract",
+    "parents": [
+      "https://www.omg.org/spec/Commons/DatesAndTimes/hasDatePeriod"
+    ],
+    "domain": "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Contracts/ExtensionProvision",
+    "range": "https://www.omg.org/spec/Commons/DatesAndTimes/ExplicitDatePeriod",
+    "source_file": "FND/Agreements/Contracts.rdf"
+  },
+  {
+    "iri": "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Contracts/hasExtensionProvision",
+    "kind": "object_property",
+    "label": "has extension provision",
+    "definition": "specifies the details of a contract provision allowing extension of some aspect of the contract",
+    "parents": [
+      "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Contracts/hasContractualElement"
+    ],
+    "domain": "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Contracts/Contract",
+    "range": "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Contracts/ExtensionProvision",
+    "source_file": "FND/Agreements/Contracts.rdf"
+  },
+  {
+    "iri": "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Contracts/hasGoverningJurisdiction",
+    "kind": "object_property",
+    "label": "has governing jurisdiction",
+    "definition": "indicates the jurisdiction governing the contract, as agreed by all parties",
+    "parents": [
+      "https://www.omg.org/spec/Commons/RegulatoryAgencies/isGovernedBy"
+    ],
+    "domain": "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Contracts/Contract",
+    "range": "https://www.omg.org/spec/Commons/RegulatoryAgencies/Jurisdiction",
+    "source_file": "FND/Agreements/Contracts.rdf"
+  },
+  {
+    "iri": "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Contracts/hasLegalDescription",
+    "kind": "datatype_property",
+    "label": "has legal description",
+    "definition": "provides the text, or a summary thereof, expressed in legal terms, of the contract provision, clause, or other element",
+    "parents": [
+      "https://www.omg.org/spec/Commons/Designators/hasDescription"
+    ],
+    "domain": "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Contracts/ContractualElement",
+    "range": "http://www.w3.org/2001/XMLSchema#string",
+    "source_file": "FND/Agreements/Contracts.rdf"
+  },
+  {
+    "iri": "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Contracts/hasMilestoneProvision",
+    "kind": "object_property",
+    "label": "has milestone provision",
+    "definition": "refers to a requirement included in an agreement related to fulfillment as of some point in time in the lifetime of the contract",
+    "parents": [
+      "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Contracts/hasContractualElement"
+    ],
+    "domain": "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Agreements/Agreement",
+    "range": "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Contracts/ContractMilestone",
+    "source_file": "FND/Agreements/Contracts.rdf"
+  },
+  {
+    "iri": "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Contracts/hasNonBindingTerm",
+    "kind": "object_property",
+    "label": "has non-binding term",
+    "definition": "refers to a term that is included in an agreement that is not considered legally binding",
+    "parents": [
+      "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Contracts/hasContractualElement"
+    ],
+    "domain": "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Agreements/Agreement",
+    "range": "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Contracts/NonBindingTerm",
+    "source_file": "FND/Agreements/Contracts.rdf"
+  },
+  {
+    "iri": "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Contracts/hasPrincipalParty",
+    "kind": "object_property",
+    "label": "has principal party",
+    "definition": "identifies the main or principal party to a contract",
+    "parents": [
+      "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Contracts/hasContractParty",
+      "https://www.omg.org/spec/Commons/PartiesAndSituations/hasActor"
+    ],
+    "domain": "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Contracts/Contract",
+    "range": "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Contracts/ContractPrincipal",
+    "source_file": "FND/Agreements/Contracts.rdf"
+  },
+  {
+    "iri": "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Contracts/hasTerm",
+    "kind": "object_property",
+    "label": "has term",
+    "definition": "indicates a fixed or limited period for which something, e.g., a contract, an investment, or an offer, lasts or is intended to last",
+    "parents": [
+      "https://www.omg.org/spec/Commons/DatesAndTimes/hasDuration"
+    ],
+    "domain": null,
+    "range": "https://www.omg.org/spec/Commons/DatesAndTimes/Duration",
+    "source_file": "FND/Agreements/Contracts.rdf"
+  },
+  {
+    "iri": "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Contracts/hasThirdParty",
+    "kind": "object_property",
+    "label": "has third party",
+    "definition": "identifies a party which is not signatory to the party but has some role in the overall context defined by the contract.",
+    "parents": [
+      "https://www.omg.org/spec/Commons/PartiesAndSituations/hasPartyRole"
+    ],
+    "domain": "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Contracts/Contract",
+    "range": "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Contracts/ContractThirdParty",
+    "source_file": "FND/Agreements/Contracts.rdf"
+  },
+  {
+    "iri": "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Contracts/isAssignable",
+    "kind": "datatype_property",
+    "label": "is assignable",
+    "definition": "indicates whether the contract and the rights thereunder may be assigned by one of the signatories to some other party",
+    "parents": [],
+    "domain": "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Contracts/Contract",
+    "range": "http://www.w3.org/2001/XMLSchema#boolean",
+    "source_file": "FND/Agreements/Contracts.rdf"
+  },
+  {
+    "iri": "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Contracts/isBeneficiaryOf",
+    "kind": "object_property",
+    "label": "is beneficiary of",
+    "definition": "specifies the agreement that a beneficiary is named in",
+    "parents": [
+      "https://www.omg.org/spec/Commons/PartiesAndSituations/isAffectedBy"
+    ],
+    "domain": "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Agreements/Beneficiary",
+    "range": "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Agreements/Agreement",
+    "source_file": "FND/Agreements/Contracts.rdf"
+  },
+  {
+    "iri": "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Contracts/isEvidenceFor",
+    "kind": "object_property",
+    "label": "is evidence for",
+    "definition": "corroborates",
+    "parents": [],
+    "domain": null,
+    "range": null,
+    "source_file": "FND/Agreements/Contracts.rdf"
+  },
+  {
+    "iri": "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Contracts/isEvidencedBy",
+    "kind": "object_property",
+    "label": "is evidenced by",
+    "definition": "is attested by",
+    "parents": [],
+    "domain": null,
+    "range": null,
+    "source_file": "FND/Agreements/Contracts.rdf"
+  },
+  {
+    "iri": "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Contracts/isNettingAutomatic",
+    "kind": "datatype_property",
+    "label": "is netting automatic",
+    "definition": "indicates whether netting takes place automatically under the scope of the agreement",
+    "parents": [],
+    "domain": "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Contracts/NettingProvision",
+    "range": "http://www.w3.org/2001/XMLSchema#boolean",
+    "source_file": "FND/Agreements/Contracts.rdf"
+  },
+  {
+    "iri": "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Contracts/isPrimaryContractFor",
+    "kind": "object_property",
+    "label": "is primary contract for",
+    "definition": "indicates any subordinate agreement, such as a collateral agreement",
+    "parents": [
+      "https://www.omg.org/spec/Commons/Documents/isReferredToBy"
+    ],
+    "domain": "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Contracts/WrittenContract",
+    "range": "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Contracts/WrittenContract",
+    "source_file": "FND/Agreements/Contracts.rdf"
+  },
+  {
+    "iri": "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Contracts/isQualifiedBy",
+    "kind": "object_property",
+    "label": "is qualified by",
+    "definition": "indicates a constraint, limitation or refinement on something",
+    "parents": [
+      "https://www.omg.org/spec/Commons/Classifiers/isCharacterizedBy"
+    ],
+    "domain": null,
+    "range": null,
+    "source_file": "FND/Agreements/Contracts.rdf"
+  },
+  {
+    "iri": "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Contracts/isSubordinateTo",
+    "kind": "object_property",
+    "label": "is subordinate to",
+    "definition": "indicates the primary contract referenced by a subordinate agreement, such as a collateral agreement",
+    "parents": [
+      "https://www.omg.org/spec/Commons/Documents/refersTo"
+    ],
+    "domain": "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Contracts/WrittenContract",
+    "range": "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Contracts/WrittenContract",
+    "source_file": "FND/Agreements/Contracts.rdf"
+  },
+  {
+    "iri": "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Contracts/qualifies",
+    "kind": "object_property",
+    "label": "qualifies",
+    "definition": "limits, constrains or refines",
+    "parents": [
+      "https://www.omg.org/spec/Commons/Classifiers/characterizes"
+    ],
+    "domain": null,
+    "range": null,
+    "source_file": "FND/Agreements/Contracts.rdf"
+  },
+  {
+    "iri": "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Contracts/supersedes",
+    "kind": "object_property",
+    "label": "supersedes",
+    "definition": "indicates a contract that was executed prior to and is replaced by this contract",
+    "parents": [],
+    "domain": "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Contracts/Contract",
+    "range": "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Contracts/Contract",
+    "source_file": "FND/Agreements/Contracts.rdf"
+  }
+]

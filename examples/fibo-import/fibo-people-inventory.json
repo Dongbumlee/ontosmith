@@ -1,0 +1,639 @@
+[
+  {
+    "iri": "https://spec.edmcouncil.org/fibo/ontology/FND/AgentsAndPeople/People/Adult",
+    "kind": "class",
+    "label": "adult",
+    "definition": "person who has attained the age of majority as defined in some jurisdiction",
+    "parents": [
+      "https://spec.edmcouncil.org/fibo/ontology/FND/AgentsAndPeople/People/Person"
+    ],
+    "domain": null,
+    "range": null,
+    "source_file": "FND/AgentsAndPeople/People.rdf"
+  },
+  {
+    "iri": "https://spec.edmcouncil.org/fibo/ontology/FND/AgentsAndPeople/People/AgeOfMajority",
+    "kind": "class",
+    "label": "age of majority",
+    "definition": "age at which someone acquires the rights and responsibilities of an adult in some jurisdiction",
+    "parents": [
+      "https://spec.edmcouncil.org/fibo/ontology/FND/AgentsAndPeople/People/LegalAge"
+    ],
+    "domain": null,
+    "range": null,
+    "source_file": "FND/AgentsAndPeople/People.rdf"
+  },
+  {
+    "iri": "https://spec.edmcouncil.org/fibo/ontology/FND/AgentsAndPeople/People/BirthCertificate",
+    "kind": "class",
+    "label": "birth certificate",
+    "definition": "an original document certifying the circumstances of the birth, or a certified copy of or representation of the ensuing registration of that birth",
+    "parents": [
+      "https://spec.edmcouncil.org/fibo/ontology/FND/AgentsAndPeople/People/IdentityDocument",
+      "https://www.omg.org/spec/Commons/Documents/Certificate"
+    ],
+    "domain": null,
+    "range": null,
+    "source_file": "FND/AgentsAndPeople/People.rdf"
+  },
+  {
+    "iri": "https://spec.edmcouncil.org/fibo/ontology/FND/AgentsAndPeople/People/BirthCertificateIdentificationScheme",
+    "kind": "class",
+    "label": "birth certificate identification scheme",
+    "definition": "system for allocating identifiers to birth certificates",
+    "parents": [
+      "https://www.omg.org/spec/Commons/Identifiers/IdentificationScheme"
+    ],
+    "domain": null,
+    "range": null,
+    "source_file": "FND/AgentsAndPeople/People.rdf"
+  },
+  {
+    "iri": "https://spec.edmcouncil.org/fibo/ontology/FND/AgentsAndPeople/People/BirthCertificateIdentifier",
+    "kind": "class",
+    "label": "birth certificate identifier",
+    "definition": "identifier associated with a vital record documenting the birth of a child",
+    "parents": [
+      "https://www.omg.org/spec/Commons/Identifiers/Identifier"
+    ],
+    "domain": null,
+    "range": null,
+    "source_file": "FND/AgentsAndPeople/People.rdf"
+  },
+  {
+    "iri": "https://spec.edmcouncil.org/fibo/ontology/FND/AgentsAndPeople/People/Contact",
+    "kind": "class",
+    "label": "contact",
+    "definition": "role or associated with a party serving as a designated point of communication, typically within a system or process",
+    "parents": [
+      "https://www.omg.org/spec/Commons/PartiesAndSituations/PartyRole"
+    ],
+    "domain": null,
+    "range": null,
+    "source_file": "FND/AgentsAndPeople/People.rdf"
+  },
+  {
+    "iri": "https://spec.edmcouncil.org/fibo/ontology/FND/AgentsAndPeople/People/ContactRecord",
+    "kind": "class",
+    "label": "contact record",
+    "definition": "record about a party in a specific communicative or liaison role",
+    "parents": [
+      "https://www.omg.org/spec/Commons/Documents/Record"
+    ],
+    "domain": null,
+    "range": null,
+    "source_file": "FND/AgentsAndPeople/People.rdf"
+  },
+  {
+    "iri": "https://spec.edmcouncil.org/fibo/ontology/FND/AgentsAndPeople/People/DateOfBirth",
+    "kind": "class",
+    "label": "date of birth",
+    "definition": "explicit date, i.e., the day, month and year, on which an individual was born",
+    "parents": [
+      "https://www.omg.org/spec/Commons/DatesAndTimes/ExplicitDate"
+    ],
+    "domain": null,
+    "range": null,
+    "source_file": "FND/AgentsAndPeople/People.rdf"
+  },
+  {
+    "iri": "https://spec.edmcouncil.org/fibo/ontology/FND/AgentsAndPeople/People/DateOfDeath",
+    "kind": "class",
+    "label": "date of death",
+    "definition": "explicit date, i.e., the day, month and year, on which an individual died",
+    "parents": [
+      "https://www.omg.org/spec/Commons/DatesAndTimes/ExplicitDate"
+    ],
+    "domain": null,
+    "range": null,
+    "source_file": "FND/AgentsAndPeople/People.rdf"
+  },
+  {
+    "iri": "https://spec.edmcouncil.org/fibo/ontology/FND/AgentsAndPeople/People/DeathCertificate",
+    "kind": "class",
+    "label": "death certificate",
+    "definition": "original document certifying the circumstances of the death (such as how and when it occurred), or a certified copy of or representation of the ensuing registration of that death",
+    "parents": [
+      "https://spec.edmcouncil.org/fibo/ontology/FND/AgentsAndPeople/People/IdentityDocument",
+      "https://www.omg.org/spec/Commons/Documents/Certificate"
+    ],
+    "domain": null,
+    "range": null,
+    "source_file": "FND/AgentsAndPeople/People.rdf"
+  },
+  {
+    "iri": "https://spec.edmcouncil.org/fibo/ontology/FND/AgentsAndPeople/People/DeathCertificateIdentificationScheme",
+    "kind": "class",
+    "label": "death certificate identification scheme",
+    "definition": "system for allocating identifiers to death certificates",
+    "parents": [
+      "https://www.omg.org/spec/Commons/Identifiers/IdentificationScheme"
+    ],
+    "domain": null,
+    "range": null,
+    "source_file": "FND/AgentsAndPeople/People.rdf"
+  },
+  {
+    "iri": "https://spec.edmcouncil.org/fibo/ontology/FND/AgentsAndPeople/People/DeathCertificateIdentifier",
+    "kind": "class",
+    "label": "death certificate identifier",
+    "definition": "identifier associated with a vital record documenting the death of an individual",
+    "parents": [
+      "https://www.omg.org/spec/Commons/Identifiers/Identifier"
+    ],
+    "domain": null,
+    "range": null,
+    "source_file": "FND/AgentsAndPeople/People.rdf"
+  },
+  {
+    "iri": "https://spec.edmcouncil.org/fibo/ontology/FND/AgentsAndPeople/People/DriversLicense",
+    "kind": "class",
+    "label": "driver's license",
+    "definition": "an official document which states that a person may operate a motorized vehicle, such as a motorcycle, car, truck or a bus, on a public roadway or provides official identifying information for a non-driver",
+    "parents": [
+      "https://spec.edmcouncil.org/fibo/ontology/FND/AgentsAndPeople/People/IdentityDocument"
+    ],
+    "domain": null,
+    "range": null,
+    "source_file": "FND/AgentsAndPeople/People.rdf"
+  },
+  {
+    "iri": "https://spec.edmcouncil.org/fibo/ontology/FND/AgentsAndPeople/People/DriversLicenseIdentificationScheme",
+    "kind": "class",
+    "label": "driver's license identification scheme",
+    "definition": "system for allocating identifiers to driver's, operating, or non-driver identification documents",
+    "parents": [
+      "https://www.omg.org/spec/Commons/Identifiers/IdentificationScheme"
+    ],
+    "domain": null,
+    "range": null,
+    "source_file": "FND/AgentsAndPeople/People.rdf"
+  },
+  {
+    "iri": "https://spec.edmcouncil.org/fibo/ontology/FND/AgentsAndPeople/People/DriversLicenseIdentifier",
+    "kind": "class",
+    "label": "driver's license identifier",
+    "definition": "identifier associated with a drivers' or operating license for operating a motor vehicle or non-driver identification card",
+    "parents": [
+      "https://www.omg.org/spec/Commons/Identifiers/Identifier"
+    ],
+    "domain": null,
+    "range": null,
+    "source_file": "FND/AgentsAndPeople/People.rdf"
+  },
+  {
+    "iri": "https://spec.edmcouncil.org/fibo/ontology/FND/AgentsAndPeople/People/EmancipatedMinor",
+    "kind": "class",
+    "label": "emancipated minor",
+    "definition": "a minor who is allowed to conduct a business or any other occupation on his or her own behalf or for their own account outside the control of a parent or guardian",
+    "parents": [
+      "https://spec.edmcouncil.org/fibo/ontology/FND/AgentsAndPeople/People/Minor"
+    ],
+    "domain": null,
+    "range": null,
+    "source_file": "FND/AgentsAndPeople/People.rdf"
+  },
+  {
+    "iri": "https://spec.edmcouncil.org/fibo/ontology/FND/AgentsAndPeople/People/IdentityDocument",
+    "kind": "class",
+    "label": "identity document",
+    "definition": "any legal document which may be used to verify aspects of a person's identity",
+    "parents": [
+      "https://www.omg.org/spec/Commons/Documents/LegalDocument"
+    ],
+    "domain": null,
+    "range": null,
+    "source_file": "FND/AgentsAndPeople/People.rdf"
+  },
+  {
+    "iri": "https://spec.edmcouncil.org/fibo/ontology/FND/AgentsAndPeople/People/IncapacitatedAdult",
+    "kind": "class",
+    "label": "incapacitated adult",
+    "definition": "an adult who is legally identified as not having legal capacity, typically as a result of some inherent physical or mental incapacity or as a result of having contracted some illness which temporarily deprives them of such capacity",
+    "parents": [
+      "https://spec.edmcouncil.org/fibo/ontology/FND/AgentsAndPeople/People/Adult"
+    ],
+    "domain": null,
+    "range": null,
+    "source_file": "FND/AgentsAndPeople/People.rdf"
+  },
+  {
+    "iri": "https://spec.edmcouncil.org/fibo/ontology/FND/AgentsAndPeople/People/LegalAge",
+    "kind": "class",
+    "label": "legal age",
+    "definition": "age at which someone acquires the capacity to do something that they were prohibited from doing before under the law in some jurisdiction",
+    "parents": [
+      "https://spec.edmcouncil.org/fibo/ontology/FND/DatesAndTimes/FinancialDates/Age"
+    ],
+    "domain": null,
+    "range": null,
+    "source_file": "FND/AgentsAndPeople/People.rdf"
+  },
+  {
+    "iri": "https://spec.edmcouncil.org/fibo/ontology/FND/AgentsAndPeople/People/LegalWorkingAge",
+    "kind": "class",
+    "label": "legal working age",
+    "definition": "age at which someone acquires the capacity to work legally in some jurisdiction",
+    "parents": [
+      "https://spec.edmcouncil.org/fibo/ontology/FND/AgentsAndPeople/People/LegalAge"
+    ],
+    "domain": null,
+    "range": null,
+    "source_file": "FND/AgentsAndPeople/People.rdf"
+  },
+  {
+    "iri": "https://spec.edmcouncil.org/fibo/ontology/FND/AgentsAndPeople/People/LegalWorkingAgePerson",
+    "kind": "class",
+    "label": "legal working age person",
+    "definition": "person whose age is greater than the minimum legal working age specified in a jurisdiction in which they work",
+    "parents": [
+      "https://spec.edmcouncil.org/fibo/ontology/FND/AgentsAndPeople/People/Person"
+    ],
+    "domain": null,
+    "range": null,
+    "source_file": "FND/AgentsAndPeople/People.rdf"
+  },
+  {
+    "iri": "https://spec.edmcouncil.org/fibo/ontology/FND/AgentsAndPeople/People/LegallyCapableAdult",
+    "kind": "class",
+    "label": "legally capable adult",
+    "definition": "person who has attained the age of majority as defined in some jurisdiction and who is allowed to conduct a business or any other occupation on his or her own behalf or for their own account",
+    "parents": [
+      "https://spec.edmcouncil.org/fibo/ontology/FND/AgentsAndPeople/People/Adult"
+    ],
+    "domain": null,
+    "range": null,
+    "source_file": "FND/AgentsAndPeople/People.rdf"
+  },
+  {
+    "iri": "https://spec.edmcouncil.org/fibo/ontology/FND/AgentsAndPeople/People/Minor",
+    "kind": "class",
+    "label": "minor",
+    "definition": "a person under a certain age, usually the age of majority in a given jurisdiction, which legally demarcates childhood from adulthood",
+    "parents": [
+      "https://spec.edmcouncil.org/fibo/ontology/FND/AgentsAndPeople/People/Person"
+    ],
+    "domain": null,
+    "range": null,
+    "source_file": "FND/AgentsAndPeople/People.rdf"
+  },
+  {
+    "iri": "https://spec.edmcouncil.org/fibo/ontology/FND/AgentsAndPeople/People/NationalIdentificationNumber",
+    "kind": "class",
+    "label": "national identification number",
+    "definition": "number or text which appears on an identity document issued by a country or jurisdiction",
+    "parents": [
+      "https://www.omg.org/spec/Commons/Identifiers/Identifier"
+    ],
+    "domain": null,
+    "range": null,
+    "source_file": "FND/AgentsAndPeople/People.rdf"
+  },
+  {
+    "iri": "https://spec.edmcouncil.org/fibo/ontology/FND/AgentsAndPeople/People/NationalIdentificationNumberScheme",
+    "kind": "class",
+    "label": "national identification number scheme",
+    "definition": "system for allocating identifiers to national identification numbers",
+    "parents": [
+      "https://www.omg.org/spec/Commons/Identifiers/IdentificationScheme"
+    ],
+    "domain": null,
+    "range": null,
+    "source_file": "FND/AgentsAndPeople/People.rdf"
+  },
+  {
+    "iri": "https://spec.edmcouncil.org/fibo/ontology/FND/AgentsAndPeople/People/Passport",
+    "kind": "class",
+    "label": "passport",
+    "definition": "formal identity document, issued by a national government, which certifies the identity and nationality of its holder for the purpose of international travel",
+    "parents": [
+      "https://spec.edmcouncil.org/fibo/ontology/FND/AgentsAndPeople/People/IdentityDocument"
+    ],
+    "domain": null,
+    "range": null,
+    "source_file": "FND/AgentsAndPeople/People.rdf"
+  },
+  {
+    "iri": "https://spec.edmcouncil.org/fibo/ontology/FND/AgentsAndPeople/People/PassportNumber",
+    "kind": "class",
+    "label": "passport number",
+    "definition": "national identification number associated with a passport",
+    "parents": [
+      "https://spec.edmcouncil.org/fibo/ontology/FND/AgentsAndPeople/People/NationalIdentificationNumber"
+    ],
+    "domain": null,
+    "range": null,
+    "source_file": "FND/AgentsAndPeople/People.rdf"
+  },
+  {
+    "iri": "https://spec.edmcouncil.org/fibo/ontology/FND/AgentsAndPeople/People/PassportNumberIdentificationScheme",
+    "kind": "class",
+    "label": "passport number identification scheme",
+    "definition": "system for allocating identifiers to passports",
+    "parents": [
+      "https://www.omg.org/spec/Commons/Identifiers/IdentificationScheme"
+    ],
+    "domain": null,
+    "range": null,
+    "source_file": "FND/AgentsAndPeople/People.rdf"
+  },
+  {
+    "iri": "https://spec.edmcouncil.org/fibo/ontology/FND/AgentsAndPeople/People/Person",
+    "kind": "class",
+    "label": "person",
+    "definition": "individual human being, with consciousness of self",
+    "parents": [
+      "https://www.omg.org/spec/Commons/PartiesAndSituations/Party"
+    ],
+    "domain": null,
+    "range": null,
+    "source_file": "FND/AgentsAndPeople/People.rdf"
+  },
+  {
+    "iri": "https://spec.edmcouncil.org/fibo/ontology/FND/AgentsAndPeople/People/PersonName",
+    "kind": "class",
+    "label": "person name",
+    "definition": "designation by which someone is known in some context",
+    "parents": [
+      "https://www.omg.org/spec/Commons/ContextualDesignators/ContextualName"
+    ],
+    "domain": null,
+    "range": null,
+    "source_file": "FND/AgentsAndPeople/People.rdf"
+  },
+  {
+    "iri": "https://spec.edmcouncil.org/fibo/ontology/FND/AgentsAndPeople/People/PlaceOfBirth",
+    "kind": "class",
+    "label": "place of birth",
+    "definition": "physical location, including country, region, and municipality where an individual was born",
+    "parents": [
+      "https://www.omg.org/spec/Commons/Locations/PhysicalLocation"
+    ],
+    "domain": null,
+    "range": null,
+    "source_file": "FND/AgentsAndPeople/People.rdf"
+  },
+  {
+    "iri": "https://spec.edmcouncil.org/fibo/ontology/FND/AgentsAndPeople/People/hasAgeOfMajority",
+    "kind": "object_property",
+    "label": "has age of majority",
+    "definition": "relates someone to the age required to attain the capacity to engage in certain transactions or be treated legally as an adult in some jurisdiction",
+    "parents": [
+      "https://spec.edmcouncil.org/fibo/ontology/FND/DatesAndTimes/FinancialDates/hasAge"
+    ],
+    "domain": null,
+    "range": "https://spec.edmcouncil.org/fibo/ontology/FND/AgentsAndPeople/People/AgeOfMajority",
+    "source_file": "FND/AgentsAndPeople/People.rdf"
+  },
+  {
+    "iri": "https://spec.edmcouncil.org/fibo/ontology/FND/AgentsAndPeople/People/hasCitizenship",
+    "kind": "object_property",
+    "label": "has citizenship",
+    "definition": "links a person to their country of citizenship",
+    "parents": [
+      "https://www.omg.org/spec/Commons/Classifiers/isClassifiedBy"
+    ],
+    "domain": "https://spec.edmcouncil.org/fibo/ontology/FND/AgentsAndPeople/People/Person",
+    "range": "https://www.omg.org/spec/Commons/Locations/Country",
+    "source_file": "FND/AgentsAndPeople/People.rdf"
+  },
+  {
+    "iri": "https://spec.edmcouncil.org/fibo/ontology/FND/AgentsAndPeople/People/hasDateOfBirth",
+    "kind": "object_property",
+    "label": "has date of birth",
+    "definition": "identifies the date on which an individual was born",
+    "parents": [
+      "https://www.omg.org/spec/Commons/DatesAndTimes/hasExplicitDate"
+    ],
+    "domain": "https://spec.edmcouncil.org/fibo/ontology/FND/AgentsAndPeople/People/Person",
+    "range": "https://spec.edmcouncil.org/fibo/ontology/FND/AgentsAndPeople/People/DateOfBirth",
+    "source_file": "FND/AgentsAndPeople/People.rdf"
+  },
+  {
+    "iri": "https://spec.edmcouncil.org/fibo/ontology/FND/AgentsAndPeople/People/hasDateOfDeath",
+    "kind": "object_property",
+    "label": "has date of death",
+    "definition": "identifies the date on which an individual died",
+    "parents": [
+      "https://www.omg.org/spec/Commons/DatesAndTimes/hasExplicitDate"
+    ],
+    "domain": "https://spec.edmcouncil.org/fibo/ontology/FND/AgentsAndPeople/People/Person",
+    "range": "https://spec.edmcouncil.org/fibo/ontology/FND/AgentsAndPeople/People/DateOfDeath",
+    "source_file": "FND/AgentsAndPeople/People.rdf"
+  },
+  {
+    "iri": "https://spec.edmcouncil.org/fibo/ontology/FND/AgentsAndPeople/People/hasFamilyName",
+    "kind": "datatype_property",
+    "label": "has family name",
+    "definition": "indicates the name shared in common to identify the members of a family, as distinguished from each member's given name",
+    "parents": [
+      "https://spec.edmcouncil.org/fibo/ontology/FND/AgentsAndPeople/People/hasPersonName"
+    ],
+    "domain": null,
+    "range": null,
+    "source_file": "FND/AgentsAndPeople/People.rdf"
+  },
+  {
+    "iri": "https://spec.edmcouncil.org/fibo/ontology/FND/AgentsAndPeople/People/hasFirstName",
+    "kind": "datatype_property",
+    "label": "has first name",
+    "definition": "indicates the given name or first name of a person, that is, the name chosen for them at birth or changed by them subsequently from the name given at birth",
+    "parents": [
+      "https://spec.edmcouncil.org/fibo/ontology/FND/AgentsAndPeople/People/hasPersonName"
+    ],
+    "domain": null,
+    "range": null,
+    "source_file": "FND/AgentsAndPeople/People.rdf"
+  },
+  {
+    "iri": "https://spec.edmcouncil.org/fibo/ontology/FND/AgentsAndPeople/People/hasFullLegalName",
+    "kind": "datatype_property",
+    "label": "has full legal name",
+    "definition": "indicates the complete name of a person, typically used in formal situations including those of a legal or contractual nature",
+    "parents": [
+      "https://spec.edmcouncil.org/fibo/ontology/FND/AgentsAndPeople/People/hasPersonName",
+      "https://spec.edmcouncil.org/fibo/ontology/FND/Relations/Relations/hasLegalName"
+    ],
+    "domain": null,
+    "range": null,
+    "source_file": "FND/AgentsAndPeople/People.rdf"
+  },
+  {
+    "iri": "https://spec.edmcouncil.org/fibo/ontology/FND/AgentsAndPeople/People/hasGender",
+    "kind": "datatype_property",
+    "label": "has gender",
+    "definition": "links a particular gender value with a person",
+    "parents": [],
+    "domain": "https://spec.edmcouncil.org/fibo/ontology/FND/AgentsAndPeople/People/Person",
+    "range": "http://www.w3.org/2001/XMLSchema#string",
+    "source_file": "FND/AgentsAndPeople/People.rdf"
+  },
+  {
+    "iri": "https://spec.edmcouncil.org/fibo/ontology/FND/AgentsAndPeople/People/hasGivenName",
+    "kind": "datatype_property",
+    "label": "has given name",
+    "definition": "indicates the given name or first name of a person, that is, the name chosen for them at birth or changed by them subsequently from the name given at birth",
+    "parents": [
+      "https://spec.edmcouncil.org/fibo/ontology/FND/AgentsAndPeople/People/hasPersonName"
+    ],
+    "domain": null,
+    "range": null,
+    "source_file": "FND/AgentsAndPeople/People.rdf"
+  },
+  {
+    "iri": "https://spec.edmcouncil.org/fibo/ontology/FND/AgentsAndPeople/People/hasLastName",
+    "kind": "datatype_property",
+    "label": "has last name",
+    "definition": "indicates the name shared in common to identify the members of a family, as distinguished from each member's given name",
+    "parents": [
+      "https://spec.edmcouncil.org/fibo/ontology/FND/AgentsAndPeople/People/hasPersonName"
+    ],
+    "domain": null,
+    "range": null,
+    "source_file": "FND/AgentsAndPeople/People.rdf"
+  },
+  {
+    "iri": "https://spec.edmcouncil.org/fibo/ontology/FND/AgentsAndPeople/People/hasMaidenName",
+    "kind": "datatype_property",
+    "label": "has maiden name",
+    "definition": "indicates the name shared in common to identify the members of a family, that predates any changes of name due to marriage",
+    "parents": [
+      "https://spec.edmcouncil.org/fibo/ontology/FND/AgentsAndPeople/People/hasPersonName"
+    ],
+    "domain": null,
+    "range": null,
+    "source_file": "FND/AgentsAndPeople/People.rdf"
+  },
+  {
+    "iri": "https://spec.edmcouncil.org/fibo/ontology/FND/AgentsAndPeople/People/hasMiddleNameOrInitial",
+    "kind": "datatype_property",
+    "label": "has middle name or initial",
+    "definition": "one or more additional names or initial letters for names that occur between a person's first and last name",
+    "parents": [
+      "https://spec.edmcouncil.org/fibo/ontology/FND/AgentsAndPeople/People/hasPersonName"
+    ],
+    "domain": null,
+    "range": null,
+    "source_file": "FND/AgentsAndPeople/People.rdf"
+  },
+  {
+    "iri": "https://spec.edmcouncil.org/fibo/ontology/FND/AgentsAndPeople/People/hasMinimumLegalWorkingAge",
+    "kind": "object_property",
+    "label": "has minimum legal working age",
+    "definition": "relates someone to the minimum legal working age for the jurisdiction in which they reside",
+    "parents": [
+      "https://spec.edmcouncil.org/fibo/ontology/FND/DatesAndTimes/FinancialDates/hasAge"
+    ],
+    "domain": null,
+    "range": "https://spec.edmcouncil.org/fibo/ontology/FND/AgentsAndPeople/People/LegalWorkingAge",
+    "source_file": "FND/AgentsAndPeople/People.rdf"
+  },
+  {
+    "iri": "https://spec.edmcouncil.org/fibo/ontology/FND/AgentsAndPeople/People/hasNamePrefix",
+    "kind": "datatype_property",
+    "label": "has name prefix",
+    "definition": "indicates a character or sequence of characters, preceding a person's name, that provides additional information about the person, such as a form of address representing a title, honorific, or military rank",
+    "parents": [
+      "https://www.omg.org/spec/Commons/TextDatatype/hasTextValue"
+    ],
+    "domain": null,
+    "range": null,
+    "source_file": "FND/AgentsAndPeople/People.rdf"
+  },
+  {
+    "iri": "https://spec.edmcouncil.org/fibo/ontology/FND/AgentsAndPeople/People/hasNameSuffix",
+    "kind": "datatype_property",
+    "label": "has name suffix",
+    "definition": "indicates a character or sequence of characters, following a person's name, that provides additional information about the person, such as their position, educational degree, accreditation, office, or honor",
+    "parents": [
+      "https://www.omg.org/spec/Commons/TextDatatype/hasTextValue"
+    ],
+    "domain": null,
+    "range": null,
+    "source_file": "FND/AgentsAndPeople/People.rdf"
+  },
+  {
+    "iri": "https://spec.edmcouncil.org/fibo/ontology/FND/AgentsAndPeople/People/hasPersonName",
+    "kind": "datatype_property",
+    "label": "has person name",
+    "definition": "links a name to an individual",
+    "parents": [
+      "https://www.omg.org/spec/Commons/Designators/hasTextualName"
+    ],
+    "domain": null,
+    "range": null,
+    "source_file": "FND/AgentsAndPeople/People.rdf"
+  },
+  {
+    "iri": "https://spec.edmcouncil.org/fibo/ontology/FND/AgentsAndPeople/People/hasPlaceOfBirth",
+    "kind": "object_property",
+    "label": "has place of birth",
+    "definition": "identifies the location where an individual was born",
+    "parents": [
+      "https://www.omg.org/spec/Commons/Classifiers/isCharacterizedBy"
+    ],
+    "domain": "https://spec.edmcouncil.org/fibo/ontology/FND/AgentsAndPeople/People/Person",
+    "range": "https://spec.edmcouncil.org/fibo/ontology/FND/AgentsAndPeople/People/PlaceOfBirth",
+    "source_file": "FND/AgentsAndPeople/People.rdf"
+  },
+  {
+    "iri": "https://spec.edmcouncil.org/fibo/ontology/FND/AgentsAndPeople/People/hasPointOfContact",
+    "kind": "object_property",
+    "label": "has point of contact",
+    "definition": "identifies a party designated as the point of contact for",
+    "parents": [
+      "https://www.omg.org/spec/Commons/RolesAndCompositions/hasRole"
+    ],
+    "domain": null,
+    "range": "https://spec.edmcouncil.org/fibo/ontology/FND/AgentsAndPeople/People/Contact",
+    "source_file": "FND/AgentsAndPeople/People.rdf"
+  },
+  {
+    "iri": "https://spec.edmcouncil.org/fibo/ontology/FND/AgentsAndPeople/People/hasPrimaryResidence",
+    "kind": "object_property",
+    "label": "has primary residence",
+    "definition": "identifies a dwelling where an individual resides the majority of the year",
+    "parents": [
+      "https://spec.edmcouncil.org/fibo/ontology/FND/AgentsAndPeople/People/hasResidence"
+    ],
+    "domain": "https://spec.edmcouncil.org/fibo/ontology/FND/AgentsAndPeople/People/Person",
+    "range": "https://spec.edmcouncil.org/fibo/ontology/FND/Places/Addresses/ConventionalStreetAddress",
+    "source_file": "FND/AgentsAndPeople/People.rdf"
+  },
+  {
+    "iri": "https://spec.edmcouncil.org/fibo/ontology/FND/AgentsAndPeople/People/hasResidence",
+    "kind": "object_property",
+    "label": "has residence",
+    "definition": "identifies a dwelling where an individual lives",
+    "parents": [
+      "https://spec.edmcouncil.org/fibo/ontology/FND/Places/Addresses/hasAddress"
+    ],
+    "domain": "https://spec.edmcouncil.org/fibo/ontology/FND/AgentsAndPeople/People/Person",
+    "range": "https://spec.edmcouncil.org/fibo/ontology/FND/Places/Addresses/ConventionalStreetAddress",
+    "source_file": "FND/AgentsAndPeople/People.rdf"
+  },
+  {
+    "iri": "https://spec.edmcouncil.org/fibo/ontology/FND/AgentsAndPeople/People/hasSurname",
+    "kind": "datatype_property",
+    "label": "has surname",
+    "definition": "indicates the name shared in common to identify the members of a family, as distinguished from each member's given name",
+    "parents": [
+      "https://spec.edmcouncil.org/fibo/ontology/FND/AgentsAndPeople/People/hasPersonName"
+    ],
+    "domain": null,
+    "range": null,
+    "source_file": "FND/AgentsAndPeople/People.rdf"
+  },
+  {
+    "iri": "https://spec.edmcouncil.org/fibo/ontology/FND/AgentsAndPeople/People/isPointOfContactFor",
+    "kind": "object_property",
+    "label": "is point of contact for",
+    "definition": "is the entity or purpose for which the party is the point of contact",
+    "parents": [
+      "https://www.omg.org/spec/Commons/RolesAndCompositions/hasRole"
+    ],
+    "domain": "https://spec.edmcouncil.org/fibo/ontology/FND/AgentsAndPeople/People/Contact",
+    "range": null,
+    "source_file": "FND/AgentsAndPeople/People.rdf"
+  }
+]

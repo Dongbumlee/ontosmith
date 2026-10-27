@@ -346,13 +346,54 @@ build path — the file store exists to read recorded
 artifacts back (the keyless demo and replay path in
 [serving.md](serving.md)), not to build into.
 
-**Setup.** Install Neo4j 5.x (server, Desktop, or the
-official Docker image — the Community Edition is
-enough; see the licensing note below), start it, and
-set a password for the `neo4j` user (on a fresh server:
-`neo4j-admin dbms set-initial-password <password>`
-before first start, or change the default password at
-first login). The connection is environment-only, like
+**Setup — the golden path (Docker).** One route is
+recommended; the alternatives are notes below it.
+The official Docker image starts a store with its
+password set at first boot:
+
+```console
+$ docker run -d --name ontosmith-neo4j \
+    -p 7474:7474 -p 7687:7687 \
+    -e NEO4J_AUTH=neo4j/choose-a-password \
+    -v ontosmith-neo4j-data:/data \
+    neo4j:5
+```
+
+Community Edition is enough (see the licensing note
+below). Replace `choose-a-password` with a password
+of yours; the named volume keeps the graph across
+container restarts. Then export **the same
+password** (next section). **Verify before
+proceeding** — the store takes a few seconds to
+boot; when this prints `200`, it is serving:
+
+```console
+$ curl -s -o /dev/null -w "%{http_code}\n" http://localhost:7474
+200
+```
+
+`000` means not up yet — wait and retry. (The
+browser UI at the same address, logged in as
+`neo4j` with your password, is the same check.)
+
+*Other routes, as notes.* **Server tarball:** Neo4j
+5.x needs a **Java 17 or 21 runtime** installed
+first — the classic first-timer trap; without one
+the server will not start. Set the initial password
+*before* the first start
+(`neo4j-admin dbms set-initial-password <password>`),
+then start the server. **Desktop:** create the
+database with its password at project creation, and
+start it from the project view. **Aura (hosted):**
+create the instance and keep the password issued at
+creation — it is shown once; set `NEO4J_URL` to the
+instance's endpoint and `NEO4J_USER` as Aura
+presents it (Aura hosts are detected automatically
+and use the Query API; see the table). Every route
+ends at the same checkpoint: the store answers at
+`NEO4J_URL`, and `NEO4J_PASSWORD` matches it.
+
+The connection is environment-only, like
 everything else:
 
 | Variable | Used for | Default |
@@ -367,7 +408,13 @@ anything, `batch run` probes the configured store: if
 it is unreachable or rejects the credentials, the run
 refuses with a named error that says what is wrong and
 points here — it never runs the paid stages and then
-dies at WRITE. (The probe fires only when a graph
+dies at WRITE. The unreachable case reads:
+
+```text
+error: Neo4j at http://localhost:7474 is unreachable (…). A build requires a running Neo4j (the graph store) — start one and check NEO4J_URL / NEO4J_USER / NEO4J_PASSWORD; setup is documented in docs/connections.md (Neo4j — the graph store).
+```
+
+(The probe fires only when a graph
 stage — WRITE, INDEX, or VERIFY — is still pending.)
 
 **One graph per store.** Ontology building completes
