@@ -242,7 +242,9 @@ frozen configuration; the ledger enforces the stop-line
 — a unit that would cross the cap is never started, and
 the run resumes from its ledger instead of
 re-spending. Watch it with `ontosmith batch status
-demo-4docs`. A corpus this size — four documents —
+demo-4docs`.
+
+A corpus this size — four documents —
 prices in cents of model spend (the README's $1–2
 figure for the same build counts the fixed overhead
 around it);
@@ -270,7 +272,9 @@ is the form with the full view (resolved names, quoted
 evidence, provenance). Pointed at a bare records file
 (`written_triples.jsonl`) it degrades: `ent:` IDs,
 "(none recorded)" evidence, and a Gaps section, because
-a file alone carries no registry context. One Gaps line
+a file alone carries no registry context.
+
+One Gaps line
 can appear even in the directory form —
 `no batch/status provenance recorded`. Read it
 precisely: it says the *triple record itself* carries
@@ -328,7 +332,9 @@ it declares; undeclared keys keep the core defaults —
 the resolution order is the contract,
 [PACK_DESIGN.md](PACK_DESIGN.md) §1.3), and the resolved
 configuration was **frozen into the batch** as
-`setup_config.resolved.json`. What it bought in content
+`setup_config.resolved.json`.
+
+What it bought in content
 is the domain's schema: the type inventory,
 definitions, boundary examples, and fitted declarations
 the proposer and gates now run under — itemized in the
@@ -394,7 +400,9 @@ validation findings (20) — the decision-point list approval must settle:
 
 The brief's type names land as a skeleton — names
 filled in, definitions deliberately empty, and the 20
-findings are exactly the work of step 2. (Omit the
+findings are exactly the work of step 2.
+
+Omit the
 brief and the skeleton is empty instead: two
 `EMPTY_…_INVENTORY` findings and no types at all. With
 `--llm`, the drafting seat writes a fuller draft. The
@@ -402,7 +410,7 @@ drafting seat **ships unbound** — bind a model first
 with `ontosmith configure` (the declaration it writes
 is `ONTOSMITH_DRAFTING_MODEL`). Its output is still
 only a draft: drafting never judges, and nothing emits
-without the approval below.)
+without the approval below.
 
 ### 2. Validate — the findings are the work list
 
@@ -504,12 +512,19 @@ same finish line, now under an ontology that is yours.
 under a pack you authored.** Between proposal and
 judgment, every candidate triple passes deterministic
 guards, and a blocked candidate never reaches the
-judge. The guards are: `g1_quote` (the evidence quote
-must occur in the document), `l0_attest` (both
-endpoints must occur in the document), `l0_role_word`
-(an endpoint that is only a role noun — "the manager"
-— is not an entity), `theme_missing` (the relation is
-nothing but prepositions), and `theme_presence`. Blocks
+judge. The guards are:
+
+- `g1_quote` — the evidence quote must occur in the
+  document.
+- `l0_attest` — both endpoints must occur in the
+  document.
+- `l0_role_word` — an endpoint that is only a role
+  noun — "the manager" — is not an entity.
+- `theme_missing` — the relation is nothing but
+  prepositions.
+- `theme_presence`.
+
+Blocks
 are never silent: the CANDIDATES stage's completion
 line names the blocked count by reason, the batch
 metrics carry the same counts, and every blocked item
@@ -775,7 +790,9 @@ preset. Bind a different
 endpoint or model set — declared with `ontosmith
 configure` and loaded from the `ontosmith-bindings.env`
 it writes, as in Track 1 §3 — and the same step runs
-under your custom binding instead. The flagship's realized rate
+under your custom binding instead.
+
+The flagship's realized rate
 puts 40 documents at roughly $1.49, and the batch's $2
 cap is ledger-enforced — the run stops at the cap rather
 than crossing it, and resumes with `ontosmith batch run
