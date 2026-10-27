@@ -592,18 +592,21 @@ options:
                        card
 ```
 
-### `ontosmith ontology` — Ontology builder: draft/validate/approve/emit a pack; check validates a pack directory
+### `ontosmith ontology` — Ontology builder: draft/import/validate/approve/emit a pack; check validates a pack directory
 
 `ontosmith ontology --help`:
 
 ```text
-usage: ontosmith ontology [-h] {draft,validate,brief,approve,emit,check} ...
+usage: ontosmith ontology [-h]
+                          {draft,import,validate,brief,approve,emit,check} ...
 
 Ontology builder: draft -> validate -> approve -> emit a pack
 
 positional arguments:
-  {draft,validate,brief,approve,emit,check}
+  {draft,import,validate,brief,approve,emit,check}
     draft               Draft a schema from a corpus profile + brief
+    import              Import an external ontology as a draft (BYO schema):
+                        inventory + scoping spec -> draft + scoping record
     validate            Validate a schema draft
     brief               Render the approval brief
     approve             Record human approval of a draft
@@ -641,6 +644,40 @@ options:
                         drafting seat's bound model (ONTOSMITH_DRAFTING_MODEL)
                         — the seat ships unbound
 ```
+
+#### `ontosmith ontology import`
+
+`ontosmith ontology import --help`:
+
+```text
+usage: ontosmith ontology import [-h] --spec SPEC --inventory INVENTORY --out
+                                 OUT [--scoping-out SCOPING_OUT]
+
+options:
+  -h, --help            show this help message and exit
+  --spec SPEC           scoping spec JSON (the human judgment: per-type
+                        sources, actions, boundary material, drops with
+                        reasons)
+  --inventory INVENTORY
+                        source-ontology inventory JSON (repeatable: module
+                        file + reference files)
+  --out OUT             draft JSON path
+  --scoping-out SCOPING_OUT
+                        scoping record path (default: beside the draft,
+                        .scoping.json)
+```
+
+The BYO-schema door (hands-on Track 4): consumes a
+mechanically extracted inventory of an external
+OWL/RDF ontology plus a human-authored scoping spec,
+and emits an ordinary builder draft plus the scoping
+record — the complete per-concept account (kept /
+merged / flattened / role-converted / demoted /
+dropped with reasons). The draft then passes the
+same validate → approve → emit gates as a drafted
+schema; the import is fail-closed (every concept in
+the spec's scoped files must be accounted for exactly
+once).
 
 #### `ontosmith ontology validate`
 

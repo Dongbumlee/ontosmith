@@ -210,12 +210,12 @@ over HTTP and needs the server, not the extra.)
 |---|---|
 | Batch pipeline | The staged build: ingest → NER/roster → candidates → gates → route → write → index → verify, under a versioned pack, with a ledger-enforced spend cap |
 | Corpus profiler | `ontosmith profile` — a deterministic census of your corpus and the decision points a human should settle first |
-| Ontology builder | `ontosmith ontology` — drafts a domain schema from a profile; deterministic validation; emits a hash-pinned pack only after explicit human approval |
-| Three domain packs + Core baseline | Domain ontologies as data — schema, definitions, boundary examples, thresholds, measured conformance record (below) |
+| Ontology builder | `ontosmith ontology` — drafts a domain schema from a profile, or imports an external ontology under a recorded scoping; deterministic validation; emits a hash-pinned pack only after explicit human approval |
+| Four domain packs + Core baseline | Domain ontologies as data — schema, definitions, boundary examples, thresholds, measured conformance record (below) |
 | Verification cores | `ontosmith verify` — raw *and* audit-corrected scoring, ceiling-adjusted recall, failure anatomy, counted cost projections |
 | Evidence appendix | The flagship record's adjudication samples and verdicts, shipped for replay (`benchmarks/appendix/`) |
 | Serving | Hybrid retrieval (vector + lexical + graph) via `ontosmith search` and a sample API — over the build's Neo4j store; the shipped demo's recorded artifacts also serve from files (lexical + graph arms only — no vector arm) |
-| Demo + guide | A smoke corpus, a fetchable demo subset, and the hands-on guide that walks the whole loop twice |
+| Demo + guide | A smoke corpus, a fetchable demo subset, and the hands-on guide that walks the whole loop in four tracks |
 
 ## Where do I start?
 
@@ -228,6 +228,7 @@ over HTTP and needs the server, not the extra.)
 | Use my own model provider | [Connections](docs/connections.md) — seats, recommended models, custom bindings |
 | Read this project as an LLM | [llms.txt](llms.txt) — the machine-readable orientation |
 | Design an ontology for my domain | `ontosmith ontology` — the loop below; [hands-on](docs/hands-on.md) Track 3 |
+| Import an ontology my domain already has | `ontosmith ontology import` — BYO schema; [hands-on](docs/hands-on.md) Track 4 |
 | Audit my own benchmark gold | `ontosmith verify` — [hands-on](docs/hands-on.md) appendix track |
 | Serve and query a built graph | [docs/serving.md](docs/serving.md) — `ontosmith search` / `serve` + the demo app at `/` over the build's Neo4j store (the shipped demo serves from its recorded files, no store needed) |
 | Contribute | [CONTRIBUTING.md](CONTRIBUTING.md) |
@@ -324,11 +325,14 @@ conformance — is [docs/PACK_DESIGN.md](docs/PACK_DESIGN.md).
 |---|---|---|
 | **Bio Medical** (`bio-medical`) | Biomedical entity/relation schema, fitted qualifiers | BioRED (pilot record: [whitepaper](docs/whitepaper.md) §5.7) |
 | **Legal Contract** (`legal-contract`) | Contract schema: 41 label categories, role-word and defined-term rules | CUAD (promotion record: [whitepaper](docs/whitepaper.md) §5.8) |
+| **FIBO Contracts** (`fibo-contracts`) | Contract schema **imported from FIBO** (EDM Council, MIT): the FND Agreements module flattened under a recorded scoping — 15 entity + 13 relation types | CUAD, the same corpus as Legal Contract; emitted through the builder, so its record opens `emitted_unmeasured` — the measured account so far is the coverage record ([hands-on](docs/hands-on.md) Track 4; `examples/fibo-import/`) |
 | **Open Domain** (`open-domain`) | Schema for general documents, with fitted direction declarations | Re-DocRED (flagship record: [whitepaper](docs/whitepaper.md) §5) |
 | **Core** (`core`, baseline) | The domain-neutral baseline every new corpus starts from | The cross-domain core record |
 
 No pack fits your domain? The ontology builder (step 2)
-drafts one from your own corpus, for your approval.
+drafts one from your own corpus, for your approval —
+and if your domain already publishes an ontology, the
+builder imports it instead (hands-on Track 4).
 
 ![The ontology builder loop: draft, validate, approve, emit](docs/assets/ontology-loop.png)
 

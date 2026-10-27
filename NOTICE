@@ -19,7 +19,19 @@ time and is not bundled in this repository.
   is downloaded from its source and is not redistributed
   here.
   Source: https://github.com/TheAtticusProject/cuad
-  (The Atticus Project)
+  (The Atticus Project); the v1 archive is hosted on
+  Zenodo (record 4595826).
+- FIBO (Financial Industry Business Ontology) — MIT
+  License, © EDM Council. The fibo-contracts pack's
+  type definitions are FIBO's, carried verbatim from
+  the FND Agreements module (release master_2026Q3)
+  under this license; the repository also ships
+  FIBO-derived data under examples/fibo-import/ (the
+  extracted concept inventories and the import's
+  scoping record). "FIBO" is a trademark of the EDM
+  Council — the pack credits the source and does not
+  rebrand it.
+  Source: https://github.com/edmcouncil/fibo
 - BioRED — distributed by its source (NCBI) under its own
   terms. OntoSmith ships no BioRED text.
   Source: https://ftp.ncbi.nlm.nih.gov/pub/lu/BioRED/

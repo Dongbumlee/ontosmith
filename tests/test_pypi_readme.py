@@ -112,10 +112,14 @@ class TestVariant(unittest.TestCase):
         # step 3. The build-loop animation under the
         # intro followed — the sixth relative image
         # (an animated WebP, rewritten to the raw form
-        # like every other figure).
+        # like every other figure). Two more file
+        # targets: the hands-on links in the start
+        # table's ontology-import row and in the FIBO
+        # Contracts row of the corpus-packs table
+        # (Track 4).
         self.assertEqual(self.counts,
-                         {"blob": 26, "tree": 2, "raw": 6})
-        self.assertEqual(len(_relative(self.master)), 34)
+                         {"blob": 28, "tree": 2, "raw": 6})
+        self.assertEqual(len(_relative(self.master)), 36)
 
     def test_no_relative_target_survives(self):
         self.assertEqual(_relative(self.variant), [])

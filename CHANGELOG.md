@@ -7,6 +7,46 @@ and the project adheres to
 
 ## [Unreleased]
 
+### Added
+
+- **Ontology import — the BYO-schema door.**
+  `ontosmith ontology import` consumes a mechanically
+  extracted inventory of an external OWL/RDF ontology
+  plus a human-authored scoping spec (per-type kept /
+  merged / flattened, role classes converted to
+  relations, datatype properties demoted, drops only
+  with stated reasons) and emits an ordinary builder
+  draft plus a complete scoping record. Fail-closed:
+  every concept in the spec's scoped files must be
+  accounted for exactly once. The draft passes the
+  same validate → approve → emit gates as a drafted
+  schema.
+- **Pack: `fibo-contracts` 0.1.0** — FIBO's FND
+  Agreements module (EDM Council, MIT; release
+  `master_2026Q3`) imported through the builder: 88
+  scoped concepts → 15 entity + 13 relation types.
+  Working papers in `examples/fibo-import/` (extractor,
+  inventories, spec, scoping record, coverage account:
+  7 of CUAD's 41 clause categories covered by a
+  dedicated type, 34 partial, 0 invisible). Emitted
+  `emitted_unmeasured`, like every builder pack.
+- **Hands-on Track 4** — the import walked end to end
+  (fetch → inventory → scope → import → gates →
+  build) over a 100-contract CUAD subset.
+
+### Changed
+
+- **Hands-on instruction detail.** The candidate-path
+  choice (tracks' `llm` vs the product default
+  `pipeline`) is now stated before any install
+  command, with what each path installs; Neo4j setup
+  is a concrete golden path (official Docker image,
+  password export, HTTP-200 verify checkpoint, the
+  named store refusal) in the guide and in
+  connections.md, with the server/Desktop/Aura routes
+  as notes; checkpoints and the predictable refusals
+  are quoted at the steps where they occur.
+
 ## [0.1.0] - 2026-10-24
 
 Release notes: [v0.1.0 on GitHub](https://github.com/Dongbumlee/ontosmith/releases/tag/v0.1.0).
