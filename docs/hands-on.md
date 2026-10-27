@@ -982,21 +982,32 @@ $0.8545 provider-counted for the 100 documents
 (batch counted ledger $0.7611), against the $10
 cap frozen at creation.
 
-One serving note the finish exposed: against a
-fresh store, `search --store neo4j` needs the
-build's chunks projected into the store first
-(`python -m pipeline.graph_store project-chunks
-<batch>`) — no step of the run does it for you.
-With the projection done, the concept queries the
-pre-INDEX check missed now answer: 'termination
-for convenience' returns the convenience-
-termination clauses, 'cap on liability' the
-limitation-of-liability passages, and 'governing
-law and jurisdiction' its triples as before. A
-precision audit and a pinned-QA recall for this
-build have not been run; what follows is
-therefore still a coverage account, not a quality
-claim.
+One serving note the finish exposed, and the fix
+it produced. As first recorded, a build's chunks
+reached the store only through a module-CLI
+projection no run performed — against a fresh
+store, the first `search --store neo4j` refused
+by name (no such full-text index: chunk_text_ft),
+and the searches above were run after that manual
+step. The run owns it now: the INDEX stage ensures
+the serving schema and projects the batch's chunks
+as part of the stage, and `search` / `serve` heal
+a store a pre-fix build left behind — schema
+ensured, chunks projected from the batch's
+recorded index — when they open it. Re-verified
+zero-base on a clean VM (fresh store, this batch
+resumed through the product path): INDEX
+projected the 1,749 chunks itself, VERIFY passed
+all 7 checks, and the concept queries the
+pre-INDEX check missed answered with no step in
+between — 'termination for convenience' returns
+the convenience-termination clauses, 'cap on
+liability' the limitation-of-liability passages,
+and 'governing law and jurisdiction' its triples
+as before. A precision audit and a pinned-QA
+recall for this build have not been run; what
+follows is therefore still a coverage account,
+not a quality claim.
 
 ### What the imported schema gives you — and where its ceiling is
 

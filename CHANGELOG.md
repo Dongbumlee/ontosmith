@@ -50,6 +50,26 @@ and the project adheres to
   checkpoints and the predictable refusals are
   quoted at the steps where they occur.
 
+### Fixed
+
+- **First-run serving gap (issue #48).** A build's
+  first `search` against a fresh store refused by
+  name — no full-text index `chunk_text_ft` —
+  because nothing in the run created the serving
+  schema or projected the build's chunks into the
+  store; both existed only behind the
+  `pipeline.graph_store` module CLI, which a store
+  carried only if someone had run it by hand. The
+  INDEX stage now ensures the serving schema
+  (constraints + the vector index + both full-text
+  indexes) and projects the batch's chunks as part
+  of the stage, and `search` / `serve` heal a
+  pre-fix store at open: schema ensured, the
+  stamped batch's chunks projected from its
+  recorded index, no provider spend. Idempotent
+  throughout; a store that is down still refuses
+  by name.
+
 ## [0.1.0] - 2026-10-24
 
 Release notes: [v0.1.0 on GitHub](https://github.com/Dongbumlee/ontosmith/releases/tag/v0.1.0).
