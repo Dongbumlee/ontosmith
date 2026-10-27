@@ -7,6 +7,10 @@ and the project adheres to
 
 ## [Unreleased]
 
+## [0.1.1] - 2026-10-27
+
+Release notes: [v0.1.1 on GitHub](https://github.com/Dongbumlee/ontosmith/releases/tag/v0.1.1).
+
 ### Added
 
 - **Ontology import — the BYO-schema door.**
@@ -49,6 +53,13 @@ and the project adheres to
   ours, in the guide and in connections.md;
   checkpoints and the predictable refusals are
   quoted at the steps where they occur.
+- **Whitepaper corrections.** Reference citations
+  corrected to the canonical records (Re-DocRED,
+  BioRED); cover status line updated to the shipped
+  release line; §5.7 names the populations of its two
+  corrected precisions and declares its Tier-1-wide
+  figure record data; §3.3–§3.4 describe the fourth
+  pack and the import door.
 
 ### Fixed
 

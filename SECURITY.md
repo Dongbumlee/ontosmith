@@ -3,7 +3,7 @@
 ## Supported versions
 
 OntoSmith is pre-1.0. Security fixes land on the latest
-release line only; once 0.1.0 is published, that line is
+release line only; once 0.1.1 is published, that line is
 the supported one until a successor ships.
 
 ## Reporting a vulnerability
