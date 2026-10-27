@@ -924,8 +924,15 @@ hard cap, frozen at creation. For scale, the fitted
 Legal build's recorded governing total is 3.8¢ per
 document — at that rate 100 documents price near
 $3.80, inside the $10 cap with room. Treat that as a
-planning expectation, not a quote: the imported
-pack's own rate is its first build's to measure.
+planning expectation, not a quote. The imported
+pack's own rate is now measured (the completed
+build is §7's record): **$0.85 for the 100
+documents provider-counted — 0.85¢ per document**,
+roughly a fifth of the planning figure. The cost is
+proposer-dominated; the decision model's judging of
+1,326 candidates cost three cents. One build, one
+subset: a measured rate for this pack and profile,
+not a universal one.
 
 ### 7. Build — LIVE, and the finish line
 
