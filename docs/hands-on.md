@@ -950,20 +950,53 @@ one `search`, one fact opened with `inspect`.
 
 Stated plainly, because this guide does not
 fabricate transcripts: **the recorded run of this
-walkthrough stopped at the run's first line.** The
-environment it was recorded in held no provider key,
-and the run refused — by name, before any stage,
-with $0 spent — exactly as Track 1 §3 shows:
+walkthrough completed, in two legs.** In the
+environment it was recorded in, the run first
+refused — by name, before any stage, with $0
+spent — because no provider key was set, exactly
+as Track 1 §3 shows:
 
 ```text
 error: proposer seat: API key environment variable OPENROUTER_API_KEY is not set (binding host openrouter.ai, model anthropic/claude-haiku-5.5); set OPENROUTER_API_KEY or rebind the proposer seat
 ```
 
-The batch stands created and priced; the build is
-one export away whenever a key is. What follows is
-therefore a coverage account, not a quality claim —
-no graph under this pack has been measured yet, and
-this guide reports none.
+With a key supplied, the same batch then ran
+INGEST → WRITE in that environment: 1,201 Tier-1
+triples projected — 1,155 edges over 958 entity
+nodes. There INDEX failed three times (the
+recording sandbox's egress proxy cut the
+embeddings responses mid-stream, at 0.72–0.88 MB),
+and VERIFY, which follows INDEX, did not run. 69
+of the 1,326 candidates (5.2%) were also lost
+unjudged to transport errors in that environment
+and excluded fail-closed.
+
+The finish was a resume, not a rebuild. The batch
+state moved to a clean VM, WRITE re-projected
+onto a fresh store from the recorded judgments —
+the edge count held at exactly 1,155; entity
+resolution settled a few more merges (955 entity
+nodes) — INDEX completed (1,749 Tier-2 chunks),
+and **VERIFY passed all 7 checks**. Final spend:
+$0.8545 provider-counted for the 100 documents
+(batch counted ledger $0.7611), against the $10
+cap frozen at creation.
+
+One serving note the finish exposed: against a
+fresh store, `search --store neo4j` needs the
+build's chunks projected into the store first
+(`python -m pipeline.graph_store project-chunks
+<batch>`) — no step of the run does it for you.
+With the projection done, the concept queries the
+pre-INDEX check missed now answer: 'termination
+for convenience' returns the convenience-
+termination clauses, 'cap on liability' the
+limitation-of-liability passages, and 'governing
+law and jurisdiction' its triples as before. A
+precision audit and a pinned-QA recall for this
+build have not been run; what follows is
+therefore still a coverage account, not a quality
+claim.
 
 ### What the imported schema gives you — and where its ceiling is
 
