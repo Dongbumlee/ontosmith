@@ -107,7 +107,9 @@ build's, stamped at WRITE with the identity of the
 ontology that produced it ([connections.md](connections.md)).
 Serving resolves that graph from the stamp: there is
 no scope to specify, and no question of which build
-you are searching — the store can only hold one. A
+you are searching — the store can only hold one.
+
+A
 `--batch` or `--source` beside `--store neo4j` names
 the build you *expect*; if the store's current graph
 is a different build's, serving refuses by name
@@ -115,13 +117,16 @@ is a different build's, serving refuses by name
 or drop the name and serve what is there). A store
 with no stamped graph — empty, or holding content no
 build stamped — refuses the same way, saying which.
+
 Chunk retrieval is pinned to that one graph's build,
 so no arm can range over a replaced graph's documents.
 
 The file store reads a batch's routed attestations,
 source texts and chunk index, or a records directory
 (`triples.jsonl` + `corpus/*.txt`, the example's
-shape — chunked deterministically at load). Entity
+shape — chunked deterministically at load).
+
+Entity
 identity comes from the build's registry when one is
 present next to the source. A store that cannot
 answer — a missing source, an unreachable Neo4j —
@@ -239,7 +244,9 @@ the overview panel links to **Neo4j Browser** on the
 same host as the Bolt endpoint (port 7474 next to
 7687) with a starter Cypher query; no credentials
 ever reach the page (the password is a separate
-binding the API never exposes). An embedded rendered
+binding the API never exposes).
+
+An embedded rendered
 explorer belongs to the fuller app (v1.1); on the
 file store, the walker above is the exploration
 path. The app is read-only, like the API under it.
