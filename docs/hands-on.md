@@ -53,13 +53,16 @@ appears.
   key at all; connect when you are ready to build.
 - **Neo4j** (5.x) running — for the **LIVE** builds
   only: it is the graph store the build writes into.
-  Setup is one Docker command, given in full at the
-  point of first need (Track 1 §3, "the store") and in
+  Any running instance works — Docker is not
+  required; installation follows Neo4j's own guide,
+  linked at the point of first need (Track 1 §3,
+  "the store") and in
   [connections.md](connections.md) (Neo4j — the graph
-  store); with that setup, exporting `NEO4J_PASSWORD`
-  is the whole configuration. A run checks the store
-  before it spends and refuses by name if it is not
-  serving; the keyless steps never touch it.
+  store). With a local install, exporting
+  `NEO4J_PASSWORD` is the whole configuration. A run
+  checks the store before it spends and refuses by
+  name if it is not serving; the keyless steps never
+  touch it.
 
 **First, choose your candidate path — it decides what
 you install.** A build gets its candidate triples from
@@ -282,33 +285,46 @@ contract without the file — the file is what
 `configure` writes, and you can write it by hand. The
 full contract is in [connections.md](connections.md).
 
-Second, the store. A build writes into **Neo4j**,
-and this is the point of first need — set it up now.
-The recommended route is the official Docker image;
-one command starts a store with its password set:
+Second, the store. A build writes into **Neo4j**
+(5.x), and this is the point of first need — set it
+up now. Any running instance reachable from here
+will do; **Docker is not required**. Install and
+start one by [Neo4j's installation
+guide](https://neo4j.com/docs/operations-manual/current/installation/)
+— the authoritative procedure, kept current per
+version and OS by Neo4j (its Linux instructions
+are the WSL2 instructions too). The shape of it,
+as examples:
 
 ```console
-$ docker run -d --name ontosmith-neo4j \
-    -p 7474:7474 -p 7687:7687 \
-    -e NEO4J_AUTH=neo4j/choose-a-password \
-    -v ontosmith-neo4j-data:/data \
-    neo4j:5
+# standalone server (the guide's Linux tarball) —
+# install a Java 17/21 runtime first, then:
+$ neo4j-admin dbms set-initial-password <password>   # before the first start
+$ neo4j start
+
+# …or, if you already run Docker, the one-line alternative:
+$ docker run -d --name ontosmith-neo4j -p 7474:7474 -p 7687:7687 \
+    -e NEO4J_AUTH=neo4j/<password> neo4j:5
 ```
 
-Replace `choose-a-password` with a password of
-yours, and export **the same password** — with a
-local store at the default address, this variable
-is the whole configuration (the full variable set,
-`NEO4J_URL` / `NEO4J_USER` / `NEO4J_PASSWORD`, is in
+(A hosted **Aura** instance skips the install
+entirely — its connection variables differ; see
+[connections.md](connections.md#neo4j--the-graph-store-required-for-builds).)
+
+Two contract lines are ours. Export **the password
+you set** for the `neo4j` user — with a local store
+at the default address, this variable is the whole
+configuration (the full variable set, `NEO4J_URL` /
+`NEO4J_USER` / `NEO4J_PASSWORD`, is in
 [connections.md](connections.md#neo4j--the-graph-store-required-for-builds)):
 
 ```console
-$ export NEO4J_PASSWORD=choose-a-password   # the same password as NEO4J_AUTH above
+$ export NEO4J_PASSWORD=<the password you set>
 ```
 
-**Verify before you proceed** — the store takes a
-few seconds to boot; when this prints `200`, it is
-serving:
+And **verify before you proceed** — the store
+takes a few seconds to boot; when this prints
+`200`, it is serving:
 
 ```console
 $ curl -s -o /dev/null -w "%{http_code}\n" http://localhost:7474
@@ -317,8 +333,8 @@ $ curl -s -o /dev/null -w "%{http_code}\n" http://localhost:7474
 
 (`000` means not up yet — wait a few seconds and
 retry. Opening http://localhost:7474 in a browser
-and logging in as `neo4j` with your password is the
-same check, with a face.)
+and logging in as `neo4j` with your password is
+the same check, with a face.)
 
 Skip the store and the run tells you, before the
 first stage and with nothing spent — it never runs
@@ -327,15 +343,6 @@ the paid stages and dies at WRITE:
 ```text
 error: Neo4j at http://localhost:7474 is unreachable (…). A build requires a running Neo4j (the graph store) — start one and check NEO4J_URL / NEO4J_USER / NEO4J_PASSWORD; setup is documented in docs/connections.md (Neo4j — the graph store).
 ```
-
-Other routes — a server install (which needs a Java
-17/21 runtime and the initial-password step),
-Neo4j Desktop, or a hosted Aura instance — are
-covered as notes beside the same golden path in
-[connections.md](connections.md#neo4j--the-graph-store-required-for-builds).
-Whichever route you take, the checkpoint is the
-same: the store answers, and `NEO4J_PASSWORD`
-matches it.
 
 The run
 executes the staged pipeline (ingest → NER/roster →

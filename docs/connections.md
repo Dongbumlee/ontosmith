@@ -346,26 +346,33 @@ build path — the file store exists to read recorded
 artifacts back (the keyless demo and replay path in
 [serving.md](serving.md)), not to build into.
 
-**Setup — the golden path (Docker).** One route is
-recommended; the alternatives are notes below it.
-The official Docker image starts a store with its
-password set at first boot:
+**Setup.** OntoSmith needs a **running Neo4j 5.x**,
+reachable at `NEO4J_URL` (below), with a password
+set for the `neo4j` user. How it was installed is
+not OntoSmith's concern, and **Docker is not
+required**. Follow [Neo4j's installation
+guide](https://neo4j.com/docs/operations-manual/current/installation/)
+— the authoritative procedure, maintained per
+version and OS (its Linux instructions are the
+WSL2 route as well). The shape of it, as examples:
 
 ```console
-$ docker run -d --name ontosmith-neo4j \
-    -p 7474:7474 -p 7687:7687 \
-    -e NEO4J_AUTH=neo4j/choose-a-password \
-    -v ontosmith-neo4j-data:/data \
-    neo4j:5
+# standalone server (the guide's Linux tarball) —
+# install a Java 17/21 runtime first, then:
+$ neo4j-admin dbms set-initial-password <password>   # before the first start
+$ neo4j start
+
+# …or, if you already run Docker, the one-line alternative:
+$ docker run -d --name ontosmith-neo4j -p 7474:7474 -p 7687:7687 \
+    -e NEO4J_AUTH=neo4j/<password> neo4j:5
 ```
 
-Community Edition is enough (see the licensing note
-below). Replace `choose-a-password` with a password
-of yours; the named volume keeps the graph across
-container restarts. Then export **the same
-password** (next section). **Verify before
-proceeding** — the store takes a few seconds to
-boot; when this prints `200`, it is serving:
+Community Edition is enough (see the licensing
+note below). What is ours is the contract around
+that link: export the password you set (below),
+and **verify the store answers** before a build —
+it takes a few seconds to boot; `200` means
+serving:
 
 ```console
 $ curl -s -o /dev/null -w "%{http_code}\n" http://localhost:7474
@@ -376,22 +383,13 @@ $ curl -s -o /dev/null -w "%{http_code}\n" http://localhost:7474
 browser UI at the same address, logged in as
 `neo4j` with your password, is the same check.)
 
-*Other routes, as notes.* **Server tarball:** Neo4j
-5.x needs a **Java 17 or 21 runtime** installed
-first — the classic first-timer trap; without one
-the server will not start. Set the initial password
-*before* the first start
-(`neo4j-admin dbms set-initial-password <password>`),
-then start the server. **Desktop:** create the
-database with its password at project creation, and
-start it from the project view. **Aura (hosted):**
-create the instance and keep the password issued at
-creation — it is shown once; set `NEO4J_URL` to the
-instance's endpoint and `NEO4J_USER` as Aura
-presents it (Aura hosts are detected automatically
-and use the Query API; see the table). Every route
-ends at the same checkpoint: the store answers at
-`NEO4J_URL`, and `NEO4J_PASSWORD` matches it.
+**Aura (hosted)** skips the install entirely:
+create the instance, keep the password issued at
+creation (it is shown once), and set `NEO4J_URL`
+to the instance's endpoint and `NEO4J_USER` as
+Aura presents it — Aura hosts are detected
+automatically and use the Query API (see the
+table).
 
 The connection is environment-only, like
 everything else:
