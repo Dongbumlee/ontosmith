@@ -40,12 +40,15 @@ and the project adheres to
   choice (tracks' `llm` vs the product default
   `pipeline`) is now stated before any install
   command, with what each path installs; Neo4j setup
-  is a concrete golden path (official Docker image,
-  password export, HTTP-200 verify checkpoint, the
-  named store refusal) in the guide and in
-  connections.md, with the server/Desktop/Aura routes
-  as notes; checkpoints and the predictable refusals
-  are quoted at the steps where they occur.
+  no longer implies Docker — a compact example block
+  (standalone-tarball key commands plus a one-line
+  Docker alternative) with a link to Neo4j's
+  official installation guide, and the OntoSmith
+  contract (password export, HTTP-200 verify
+  checkpoint, the named store refusal) stated as
+  ours, in the guide and in connections.md;
+  checkpoints and the predictable refusals are
+  quoted at the steps where they occur.
 
 ## [0.1.0] - 2026-10-24
 
