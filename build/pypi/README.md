@@ -32,6 +32,16 @@ Every written triple
 carries its evidence span and provenance, and every build
 prices itself before it spends.
 
+![OntoSmith build loop: models propose, Jev judges, only judged facts are written](https://github.com/Dongbumlee/ontosmith/raw/main/docs/assets/build-loop.webp)
+
+*The method in one loop, on a real build's neighborhood:
+cheap models propose candidate facts, the Jev decision
+model judges each against its evidence, and only judged
+facts are written — every one traceable back to its
+span. (Illustration: proposed and rejected candidates
+are shown schematically; the written graph is the
+flagship build's.)*
+
 ## What the schema is — and is not
 
 The ontology here is a **flat extraction contract**: a

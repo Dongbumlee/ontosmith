@@ -109,10 +109,13 @@ class TestVariant(unittest.TestCase):
         # more file targets: the
         # Connections links carrying the Neo4j
         # prerequisite, in the Requirements list and in
-        # step 3.
+        # step 3. The build-loop animation under the
+        # intro followed — the sixth relative image
+        # (an animated WebP, rewritten to the raw form
+        # like every other figure).
         self.assertEqual(self.counts,
-                         {"blob": 26, "tree": 2, "raw": 5})
-        self.assertEqual(len(_relative(self.master)), 33)
+                         {"blob": 26, "tree": 2, "raw": 6})
+        self.assertEqual(len(_relative(self.master)), 34)
 
     def test_no_relative_target_survives(self):
         self.assertEqual(_relative(self.variant), [])
@@ -135,7 +138,8 @@ class TestVariant(unittest.TestCase):
 
     def test_images_use_the_raw_form(self):
         for name in ("pipeline-flow.png", "method.png",
-                     "ontology-loop.png", "built-graph.png"):
+                     "ontology-loop.png", "built-graph.png",
+                     "build-loop.webp"):
             self.assertIn(
                 f"{gen.DEFAULT_BASE}/raw/main/docs/assets/{name}",
                 self.variant)
