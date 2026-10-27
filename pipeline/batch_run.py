@@ -1957,8 +1957,37 @@ def _index_embedder(model_name: str):
         f"openai/text-embedding-3-large")
 
 
-def stage_index(b: Batch, root: Path, stages: list[str]) -> None:
-    """INDEX: Tier 2 chunks → embeddings → vector index (UNVERIFIED)."""
+def _index_serving(b: Batch, root: Path, graph) -> dict | None:
+    """INDEX's serving half: ensure the store's serving
+    schema and project this batch's chunks into it (§4
+    GraphStore.ensure_serving), over the same Neo4j client
+    the run writes through — so a completed build answers
+    `search` / `serve` with no manual step. Returns the
+    ensure report, or None when this run carries no
+    production store: stub graph objects (tests, replay
+    doubles) expose no Neo4j client, the _preflight_store
+    precedent, and are untouched."""
+    client = getattr(graph, "c", None)
+    if client is None:
+        return None
+    from .neo4j_store import Neo4jClient
+    if not isinstance(client, Neo4jClient):
+        return None
+    from .graph_store import GraphStore
+    from .registry_store import RegistryStore
+    gs = GraphStore(client=client,
+                    registry_store=RegistryStore(root))
+    return gs.ensure_serving(b.batch_id)
+
+
+def stage_index(b: Batch, root: Path, stages: list[str],
+                graph=None) -> None:
+    """INDEX: Tier 2 chunks → embeddings → vector index
+    (UNVERIFIED) — and the serving projection: the stage
+    ensures the store's serving schema and projects the
+    chunks it just embedded into the store, so the build's
+    finish line (search / serve) works on a fresh store
+    with no step in between."""
     import pickle
     _log(b.batch_id, "INDEX: building Tier 2 vector index")
     d = batch_dir(root, b.batch_id)
@@ -1992,6 +2021,14 @@ def stage_index(b: Batch, root: Path, stages: list[str]) -> None:
     if not chunks:
         _log(b.batch_id, "INDEX: no Tier 2 chunks, skipping")
         b.metrics["index"] = {"chunks": 0}
+        # The schema is still this stage's to ensure: chunk
+        # search against a store with no full-text index
+        # refuses by name, chunks or no chunks.
+        serving = _index_serving(b, root, graph)
+        if serving is not None:
+            b.metrics["index"]["store_chunks"] = serving["chunks"]
+            _log(b.batch_id, "INDEX: serving schema ensured "
+                             "(no chunks to project)")
         _record_cost(b, "INDEX", 0.0)
         save_batch(b, root)
         advance(b, root, [*stages, "INDEX"])
@@ -2007,6 +2044,20 @@ def stage_index(b: Batch, root: Path, stages: list[str]) -> None:
                          "dims": int(embs.shape[1]),
                          "model": b.config.embed_model,
                          "input_tokens": emb_usage["input_tokens"]}
+    # Serving projection: schema + this batch's chunks into
+    # the store, over the run's own client. A projection
+    # failure fails the stage here — a build that cannot be
+    # served must not sail into VERIFY silent.
+    serving = _index_serving(b, root, graph)
+    if serving is not None:
+        b.metrics["index"]["store_chunks"] = serving["chunks"]
+        if serving["projected"] is not None:
+            b.metrics["index"]["store_chunks_projected"] = \
+                serving["projected"]["chunks"]
+        _log(b.batch_id,
+             f"INDEX: serving schema ensured; "
+             f"{serving['chunks']} chunks in store for this "
+             f"batch")
     # Ledger: the embedder's actual spend (SeatEmbedder
     # accumulates usage from each response; token count is recorded
     # in metrics above either way). Cost may be None (unmetered
@@ -2566,7 +2617,7 @@ def run_batch(b: Batch, root: Path, doc_texts: dict[str, str] | None,
         if b.status == BatchStatus.WRITTEN:
             _check_cost_cap(b)
             _beat(b, root, "INDEX")
-            stage_index(b, root, stages)
+            stage_index(b, root, stages, graph=graph)
             stages.append("INDEX")
         if b.status == BatchStatus.INDEXED:
             _check_cost_cap(b)

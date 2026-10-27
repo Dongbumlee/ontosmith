@@ -17,6 +17,14 @@ plus the §6 (E5) serving-index projection:
   project_chunks(batch_id)         tier2_index.pkl → (:Chunk) nodes
                                    with embeddings, (:Document) nodes,
                                    HAS_CHUNK and MENTIONS edges
+  ensure_serving(batch_id)         the serving contract in one
+                                   call: ensure_schema + the
+                                   batch's chunk projection when
+                                   the store holds none for it —
+                                   what the INDEX stage runs and
+                                   what serving heals through, so
+                                   a built graph answers search
+                                   with no manual step
 
 Schema (idempotent, ensure_schema): unique constraints on
 Entity.entity_id / Chunk.chunk_id / Document.doc_id; a vector index
@@ -108,6 +116,38 @@ class GraphStore:
         return [{"name": r["row"][0], "type": r["row"][1],
                  "state": r["row"][2], "labels": r["row"][3],
                  "properties": r["row"][4]} for r in rows]
+
+    def chunk_count(self, batch_id: str) -> int:
+        """(:Chunk) nodes the store currently holds for one
+        batch — the serving projection's presence check."""
+        return int(self.c.one(
+            "MATCH (c:Chunk {batch_id: $b}) RETURN count(c)",
+            {"b": batch_id}) or 0)
+
+    def ensure_serving(self, batch_id: str) -> dict:
+        """The serving contract for one batch, in one call:
+        the §4 schema exists (constraints + the vector index
+        + both full-text indexes — ensure_schema, IF NOT
+        EXISTS throughout) and the batch's chunk projection
+        is in the store, projected from its recorded
+        tier2_index.pkl when the store holds no chunks for
+        it. Idempotent end to end: the schema statements are
+        no-ops when present and the projection is MERGE-based
+        with a presence check in front, so a second call over
+        a served store writes nothing. No provider spend —
+        the projection replays embeddings the INDEX stage
+        already recorded. Returns {schema, chunks_before,
+        projected (the project_chunks report, or None when
+        the store already held the batch's chunks / the batch
+        recorded no index), chunks}."""
+        schema = self.ensure_schema()
+        before = self.chunk_count(batch_id)
+        projected = None
+        if before == 0 and self.rs.tier2_index(batch_id) is not None:
+            projected = self.project_chunks(batch_id)
+        return {"schema": schema, "chunks_before": before,
+                "projected": projected,
+                "chunks": self.chunk_count(batch_id)}
 
     # ------------------------------------------------------------------
     # writes

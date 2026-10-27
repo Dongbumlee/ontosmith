@@ -632,9 +632,11 @@ class Neo4jServingStore(_ArtifactRecords):
         self._batch_id = ""
         self._corpus = ""
         self._stamp: dict | None = None
+        self._serving: dict | None = None
         from .neo4j_store import Neo4jClient
         if isinstance(getattr(self.gs, "c", None), Neo4jClient):
             records = self._resolve_store_graph(root)
+            self._heal_serving(root)
         elif self.source is not None and self.source.is_dir():
             self._batch_id = self.source.name
             found = _records_from_dir(self.source)
@@ -717,6 +719,33 @@ class Neo4jServingStore(_ArtifactRecords):
         found = _records_from_dir(bdir)
         return found[0] if found else []
 
+    def _heal_serving(self, root: Path | None) -> None:
+        """Stores built before the serving projection
+        became the INDEX stage's job answer too: at open,
+        ensure the serving schema and project the stamped
+        batch's chunks when the store holds none for it
+        (GraphStore.ensure_serving — idempotent, and no
+        provider spend: the projection replays the batch's
+        recorded embeddings). The projection reads this
+        workspace's artifacts, so it runs through a store
+        bound to the same state root the stamp resolution
+        just used. A store that cannot be healed refuses
+        by name here (StoreError), not at first search."""
+        from .graph_store import GraphStore
+        gs = GraphStore(client=self.gs.c,
+                        registry_store=RegistryStore(
+                            root or _state_root()))
+        self._serving = self._guard(
+            "ensure the serving schema and chunk projection",
+            lambda: gs.ensure_serving(self._batch_id))
+        if self._serving["projected"] is not None:
+            print(f"serving: the store held no chunks for "
+                  f"batch '{self._batch_id}' — projected "
+                  f"{self._serving['projected']['chunks']} "
+                  f"chunks from its recorded index (schema "
+                  f"ensured; no provider spend)",
+                  file=sys.stderr)
+
     def describe(self) -> dict:
         url = getattr(self.gs.c, "url", "") or \
             os.environ.get("NEO4J_URL", "")
@@ -731,6 +760,7 @@ class Neo4jServingStore(_ArtifactRecords):
             "documents": self._documents_count,
             "chunks": None,
             "embeddings": None,
+            "serving": self._serving,
         }
 
     def batch_filter(self) -> dict:

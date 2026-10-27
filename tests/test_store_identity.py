@@ -24,6 +24,7 @@ import tempfile
 import unittest
 from contextlib import redirect_stdout
 from pathlib import Path
+from unittest import mock
 
 import numpy as np
 
@@ -222,6 +223,10 @@ class _InMemoryNeo4jClient(Neo4jClient):
                 n = len(self.entities)
             return [{"row": [n]}]
         if "RETURN count(c)" in s or "RETURN count(*)" in s:
+            if "Chunk" in s and "{batch_id: $b}" in s:
+                n = sum(1 for c in self.chunks.values()
+                        if c["batch_id"] == p["b"])
+                return [{"row": [n]}]
             if "coalesce(c.batch_id" in s:
                 n = sum(1 for c in self.chunks.values()
                         if (c["batch_id"] or "") != p["keep"])
@@ -384,7 +389,7 @@ class _StoreCase(unittest.TestCase):
                                   Neo4jGraphStore(self.client))
         return b, out.getvalue()
 
-    def _project_chunks(self, batch_id, text):
+    def _write_index_pkl(self, batch_id, text):
         d = batch_dir(self.root, batch_id)
         meta = [{"doc_id": batch_id.replace("batch-", "doc-"),
                  "chunk_idx": 0, "tag": "UNVERIFIED", "tier": 2,
@@ -393,6 +398,9 @@ class _StoreCase(unittest.TestCase):
             pickle.dump({"embeddings": np.array([[1.0, 0.0]]),
                          "meta": meta, "chunks": [text],
                          "model": "openai/text-embedding-3-large"}, f)
+
+    def _project_chunks(self, batch_id, text):
+        self._write_index_pkl(batch_id, text)
         gs = Section4GraphStore(
             client=self.client,
             registry_store=RegistryStore(self.root))
@@ -597,6 +605,96 @@ class TestTwoBuildsOneStore(_StoreCase):
         self.assertEqual(out["p_true_unset"], 2)
         stamp = read_graph_stamp(self.client)
         self.assertEqual(stamp["batch_id"], "batch-a")
+
+
+class _StubEmbedder:
+    """INDEX's embedder seat, stubbed: zero vectors, no
+    provider call, no spend."""
+
+    def __init__(self):
+        self.usage = {"input_tokens": 0, "cost": 0.0}
+
+    def embed(self, chunks):
+        return np.zeros((len(chunks), 3))
+
+
+class TestServingProjectionOwnership(_StoreCase):
+    """Issue #48 — the first-run serving gap. A build's
+    INDEX stage owns the serving projection (schema +
+    chunks), and opening serving over a store a pre-fix
+    build left behind heals it in place. Before the fix,
+    both paths below ended at a named refusal on first
+    search (no chunk_text_ft index, no chunks), because
+    nothing outside the module CLI ever projected."""
+
+    def _route_tier2(self, batch_id, doc_id):
+        d = batch_dir(self.root, batch_id)
+        with open(d / "routed.jsonl", "a") as f:
+            f.write(json.dumps({"doc_id": doc_id,
+                                "tier": 2}) + "\n")
+
+    def _run_index(self, b):
+        with mock.patch.object(batch_run, "_index_embedder",
+                               lambda model: _StubEmbedder()):
+            batch_run.stage_index(
+                b, self.root,
+                ["INGEST", "NER", "CANDIDATES", "GATES",
+                 "ROUTE", "WRITE"],
+                graph=Neo4jGraphStore(self.client))
+
+    def test_index_stage_projects_chunks_and_search_answers(self):
+        b, _ = self._build("batch-a", PACK_A, ROWS_A, TEXT_A)
+        self._route_tier2("batch-a", "doc-a")
+        self._run_index(b)
+        # The stage itself projected — this test never
+        # calls project_chunks or ensure_schema.
+        self.assertEqual(len(self.client.chunks), 1)
+        chunk = next(iter(self.client.chunks.values()))
+        self.assertEqual(chunk["batch_id"], "batch-a")
+        self.assertEqual(b.metrics["index"]["store_chunks"], 1)
+        self.assertEqual(
+            b.metrics["index"]["store_chunks_projected"], 1)
+        store = self._serving()
+        hits = hybrid_search(store, "ceramics Lisbon")
+        self.assertTrue(any(
+            d["doc_id"] == "doc-a" for d in hits["documents"]))
+
+    def test_index_serving_path_is_idempotent(self):
+        b, _ = self._build("batch-a", PACK_A, ROWS_A, TEXT_A)
+        self._route_tier2("batch-a", "doc-a")
+        self._run_index(b)
+        self._run_index(b)
+        gs = Section4GraphStore(
+            client=self.client,
+            registry_store=RegistryStore(self.root))
+        report = gs.ensure_serving("batch-a")
+        self.assertIsNone(report["projected"])
+        self.assertEqual(report["chunks_before"], 1)
+        report = gs.ensure_serving("batch-a")
+        self.assertIsNone(report["projected"])
+        self.assertEqual(report["chunks"], 1)
+        # MERGE identity held throughout: still one chunk.
+        self.assertEqual(len(self.client.chunks), 1)
+
+    def test_serving_open_heals_a_prefix_store(self):
+        self._build("batch-a", PACK_A, ROWS_A, TEXT_A)
+        # A pre-fix build's store: the chunks exist only as
+        # the batch's recorded index artifact.
+        self._write_index_pkl("batch-a", TEXT_A)
+        self.assertEqual(self.client.chunks, {})
+        store = self._serving()
+        self.assertEqual(len(self.client.chunks), 1)
+        self.assertIsNotNone(
+            store.describe()["serving"]["projected"])
+        rows = store.search_chunks(
+            text="ceramics", filters=store.batch_filter())
+        self.assertTrue(any(r["doc_id"] == "doc-a"
+                            for r in rows))
+        # A second open writes nothing new.
+        store2 = self._serving()
+        self.assertIsNone(
+            store2.describe()["serving"]["projected"])
+        self.assertEqual(len(self.client.chunks), 1)
 
 
 class TestServingRefusals(_StoreCase):
