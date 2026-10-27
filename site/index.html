@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>OntoSmith — decision-model-based ontology &amp; knowledge-graph builder</title>
 <meta name="description" content="OntoSmith builds ontology-based knowledge graphs from documents, with a decision model as the judge. Powered by Jev.">
+<link rel="icon" type="image/svg+xml" href="assets/logo-mark.svg">
 <style>
   :root{
     --navy:#0f1e2b; --navy2:#16303f; --navy3:#1e4258;
@@ -23,7 +24,8 @@
 
   header{position:sticky; top:0; z-index:10; background:rgba(15,30,43,.94); backdrop-filter:blur(8px); color:var(--cream)}
   header .wrap{display:flex; justify-content:space-between; align-items:center; padding-top:14px; padding-bottom:14px}
-  .wordmark{font-size:21px; letter-spacing:.05em}
+  .wordmark{font-size:21px; letter-spacing:.05em; display:flex; align-items:center; gap:9px}
+  .wordmark img{height:26px; width:26px; display:block}
   .wordmark b{color:var(--amber); font-weight:600}
   header nav a{color:#cfd8dc; margin-left:24px; font-size:14.5px; letter-spacing:.02em}
   header nav a.cta{border:1px solid var(--amber); color:var(--amber); padding:5px 14px; border-radius:999px}
@@ -110,7 +112,7 @@
 
 <header>
   <div class="wrap">
-    <div class="wordmark serif">Onto<b>Smith</b></div>
+    <div class="wordmark serif"><img src="assets/logo-mark.svg" alt="" width="26" height="26">Onto<b>Smith</b></div>
     <nav>
       <a href="#how">How it works</a>
       <a href="#watch">Watch</a>
