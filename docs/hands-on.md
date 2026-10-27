@@ -702,14 +702,6 @@ extractor, inventories, scoping spec, scoping record,
 and the coverage account this track ends with — are
 in [`examples/fibo-import/`](../examples/fibo-import/).
 
-> **Version note.** The `ontology import` command
-> and the `fibo-contracts` pack ship in release
-> **0.1.1**. Until it lands on PyPI, install from the
-> repository clone instead of the index — from the
-> clone's root, `pip install .` — and every command
-> below is unchanged. A plain `pip install ontosmith`
-> today still serves Tracks 1–3 exactly as written.
-
 ### 1. Fetch the ontology (pinned)
 
 ```console

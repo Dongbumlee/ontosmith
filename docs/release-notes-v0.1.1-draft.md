@@ -1,10 +1,11 @@
 **Release notes for v0.1.1**
 
-> **Status: draft** — prepared for the v0.1.1 GitHub
-> release; marked published once the release exists.
-> Wording follows the project's placement rule:
-> scores live in the whitepaper, front surfaces carry
-> the pointer, not the numbers.
+> **Status: published 2026-10-27** as the
+> [v0.1.1 GitHub release](https://github.com/Dongbumlee/ontosmith/releases/tag/v0.1.1).
+> The body below is the posted text. Wording follows
+> the project's placement rule: scores live in the
+> whitepaper, front surfaces carry the pointer, not
+> the numbers.
 
 ---
 
