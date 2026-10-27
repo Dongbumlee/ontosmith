@@ -23,7 +23,7 @@ whitepaper) rather than restating the figures.
 | Flagship build — Re-DocRED (Open Domain pack) | Re-DocRED dev, all 500 documents; pinned reference profile; run 2026-10-21 | corrected precision **0.9110** [0.8919–0.9275]; ceiling-adjusted recall **0.2028**; one pre-registered criterion (C-2) **FAIL**, recorded as failed | [whitepaper](../docs/whitepaper.md) §5.1–§5.6; in-tree pointer + anatomy data: [`redocred.md`](redocred.md) |
 | BioRED pilot (Bio Medical pack) | BioRED dev, 100 documents; schema-first profile; test split sealed | recall 0.5120 PASS; audit-corrected precision **0.9510**; frozen grounded precision 0.6625 **FAIL** beside it | [whitepaper](../docs/whitepaper.md) §5.7; in-tree pointer: [`biored-cuad.md`](biored-cuad.md) |
 | CUAD certification (Legal Contract pack) | CUAD v1, full corpus (510 documents); production retrieval path | promotion verdict **PROMOTABLE**; certification audit precision 0.7185; pinned-QA recall@20 graph+hybrid **0.7115** (long documents) | [whitepaper](../docs/whitepaper.md) §5.8; in-tree pointer: [`biored-cuad.md`](biored-cuad.md) |
-| Pack conformance (all four packs) | per-entry: gate, instrument, population, delta | 21 registered entries — adoptions, measured rejections, and closures, negatives included | `packs/*/conformance.json`; indexed below |
+| Pack conformance (all five packs) | per-entry: gate, instrument, population, delta | 22 registered entries — adoptions, measured rejections, and closures, negatives included | `packs/*/conformance.json`; indexed below |
 
 ## Datasets
 
@@ -90,6 +90,7 @@ checks it, and the readout where it lives.
 | Association recall | 0.4768 — PASS (bar ≥ 0.30) | Dev-100 census | same | whitepaper §5.7 |
 | Grounded precision, frozen reading | 0.6625 — **FAIL** (bar ≥ 0.70) | Dev-100 census | same | whitepaper §5.7 |
 | Audit-corrected grounded precision | **0.9510** [0.9398–0.9623] — PASS | Stage D audit, P2 pattern | verification audit + scoring cores | whitepaper §5.7 |
+| Audit-corrected Tier-1-wide precision | **0.9321** | Stage D audit — all 2,058 Tier-1 rows, grounded and ungrounded together | verification audit + scoring cores | whitepaper §5.7; record data — see [`reproduce/README.md`](../reproduce/README.md) |
 | Conversion | η_dev 0.7475 (595 of 796 reachable) | Dev-100 census | verification report core | whitepaper §5.7 |
 | Schema-first effect (CR-1) | grounding 14.8% → 74.6%; recall 0.0620 → 0.2091 | round-2 Dev measurement | setup service / profile channel | whitepaper §5.7; pack `bio-medical` conformance CR-1 |
 | J3 judge (CR-2) | η 0.5412 → 0.7412; NONE losses 25 → 4 | frozen slice census | verification cell runner | whitepaper §5.7; pack conformance CR-2 |
@@ -133,6 +134,7 @@ population, delta) lives in each pack's `conformance.json`.
 | Open Domain | DC-3 | measured, adopted | JF-F1 cell: η 0.1124 → 0.2596; candidate P 0.3464 → 0.8381 |
 | Open Domain | DC-4 | measured, not adopted | J5s0 subset cell: η 0.2526 vs F1 0.2596; NONE-loss 409 vs 258 |
 | Open Domain | DC-5 | measured, adopted | roster-first enumeration (RS-01): endpoint-never-proposed losses 809 → 426 |
+| FIBO Contracts | OB-1 | emitted (unmeasured) | ontology import: FIBO FND Agreements → 15 entity + 13 relation types; explicitly not a measured claim |
 | Core | GC-1 | adopted | core gate/ER defaults carried as baseline payload data |
 | Core | GC-2 | adopted | neutral core framing as payload data (PK-01) |
 | Core | GC-3 | adopted | JF-F1 direction slot as core mechanism (η 0.1124 → 0.2596) |

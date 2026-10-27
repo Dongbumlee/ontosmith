@@ -5,7 +5,7 @@
 | | |
 |---|---|
 | **Author** | Dongbum Lee |
-| **Status** | Pre-release draft for v1 — 2026 |
+| **Status** | v1, as shipped in product releases 0.1.x — 2026 |
 | **Product** | OntoSmith — *Powered by Jev, the decision (judge) model inside OntoSmith* |
 | **License of the product** | MIT (Copyright © 2026 Dongbum Lee) |
 
@@ -29,13 +29,10 @@ A human designs the schema first — entity and relation types,
 definitions, boundary examples — approves it explicitly, and a
 pipeline then builds the graph *under* that schema, separating
 proposing from judging at every step: a low-cost proposer
-extracts candidates, a fitted pair call (fitted: a
-configuration adopted through a pre-registered
-measurement gate) converts enumerated pairs into
-candidate triples, and deterministic gates and the Jev
-decision model decide what is true enough to write, and
-every written
-triple carries its evidence span and provenance.
+extracts candidates; a fitted pair call converts enumerated
+pairs into candidate triples; and deterministic gates and the
+Jev decision model decide what is true enough to write. Every
+written triple carries its evidence span and provenance.
 
 Operating
 points are adopted only through pre-registered measurement
@@ -106,8 +103,10 @@ examples, thresholds, and the pack's measured conformance
 record — versioned, hash-pinned, and fail-closed on load.
 Domain content lives only in packs, never in code branches.
 A pack is drafted from a corpus profile by the ontology
-builder, validated deterministically, and emitted only
-after explicit human approval; an emitted pack is marked
+builder — or imported from an external ontology through
+the same builder (§3.4) — validated deterministically, and
+emitted only after explicit human approval; an emitted
+pack is marked
 `emitted_unmeasured` until a registered measurement adopts
 it.
 
@@ -272,6 +271,17 @@ What the artifact governs is admission: which types a
 claim may use, and what each type means, stated once and
 judged against consistently.
 
+The landscape also has a formal pole: Open Ontologies,
+for example, brings plan-and-apply change management
+and machine-checked proofs — a Lean-checked certificate
+an auditor can re-verify — to production OWL ontologies.
+OntoSmith sits at a different layer. It does not manage
+a formal ontology; it builds a judged knowledge graph
+from documents under a flat extraction contract, and its
+checkable artifact is not a proof but an audit trail:
+every written triple traceable to the evidence span it
+was judged on.
+
 A pack carries: the schema (entity/relation inventories),
 definitions living in exactly one place, boundary examples,
 fitted qualifiers and normalization tables, thresholds, and
@@ -281,12 +291,19 @@ failed fitting is not proposed twice. Content changes bump
 the pack version; the loader verifies the hash pin and
 refuses a silently altered pack.
 
-Three packs ship with v1, named for their domains, with
-their validation corpora stated as provenance: **Bio
-Medical** (validated on BioRED), **Legal Contract**
-(validated on CUAD), and **Open Domain** (validated
-on Re-DocRED), over a domain-neutral **Core** baseline.
-§5.7 summarizes their records.
+Four domain packs ship with v1, over a domain-neutral
+**Core** baseline. Three are measured packs, named for
+their domains, with their validation corpora stated as
+provenance: **Bio Medical** (validated on BioRED), **Legal
+Contract** (validated on CUAD), and **Open Domain**
+(validated on Re-DocRED); §5.7–§5.9 summarize their
+records. The fourth, **FIBO Contracts**, entered by
+import (§3.4) — FIBO's FND Agreements module scoped and
+flattened under a recorded scoping — and is emitted
+`emitted_unmeasured`: its record so far is a coverage
+account over CUAD (7 of its 41 clause categories covered
+by a dedicated type, 34 partial, 0 invisible), not a
+quality measurement, and it carries no §5 record.
 
 ### 3.4 The ontology builder
 
@@ -307,6 +324,21 @@ emission.
 > `pipeline/ontology_builder.py`.
 >
 > ![Figure 3 — the ontology builder loop: draft, validate, approve, emit](assets/ontology-loop.png)
+
+A schema can also enter from outside. The import door
+consumes a mechanically extracted inventory of an
+external OWL/RDF ontology — every declared class and
+property with its IRI, label, definition, and parents —
+plus a human-authored scoping spec that accounts for
+every scoped concept exactly once: kept, merged, or
+flattened; role classes converted to relations; datatype
+properties demoted; drops only with stated reasons. It
+emits an ordinary builder draft and a complete scoping
+record. From there nothing differs: the draft validates,
+is approved, and emits through the same gates as a
+drafted schema. Import changes where the schema's
+content comes from — never what it must pass. The FIBO
+Contracts pack (§3.3) entered this way.
 
 ## 4. Bindings, cost, and serving
 
@@ -355,13 +387,17 @@ stamp. Each seat additionally declares a provider
 provider-only request fields; a custom binding
 defaults to the portable OpenAI-compatible subset, so
 those fields are never sent to a route that did not
-declare them. Cost accounting is stamped with its
+declare them.
+
+Cost accounting is stamped with its
 basis — provider-reported, estimated from
 user-declared rates, or not-provided — and an unknown
 cost is recorded as unknown (no rate is ever invented
 in code); a USD stop-line set over a seat that cannot
 meter cost refuses by name instead of silently never
-tripping. Model-name pattern matching for request
+tripping.
+
+Model-name pattern matching for request
 shape is replaced by declared capabilities, with
 model-id derivation retained only as the undeclared
 default.
@@ -763,7 +799,7 @@ level, with the assumptions needed to recompute it.
 | Ledger total | $18.6802 |
 | Key-observed total (governing figure) | **$18.7980** |
 | Stop-line the run was executed under | $21.00 |
-| Realized unit costs | pair judging $0.0006683/pair · $0.03736/doc |
+| Realized unit costs | pair judging $0.0006683/pair (candidate-judging spend) · $0.03736/doc on the ledger total; $0.0376/doc on the governing key-observed total |
 
 Calculation method: a counted projection (pairs counted
 from the real rosters before spend; projected totals
@@ -851,7 +887,10 @@ overall × 2.45).
   the record and cuts conservative). Finals: stratum A
   171/200 correct (Ĉ_A = 326.6 of 382); controls 40/40
   after escalation; Tier-1-wide corrected precision
-  0.9321.
+  0.9321 — the same audit priced over all 2,058 Tier-1
+  rows, grounded and ungrounded together, where the
+  criteria table's 0.9510 is priced over the 1,132
+  grounded rows only.
 - *Earlier cross-checks.* The round-2 output's P2 audit
   measured Tier-1 precision **0.9858**
   (machine-adjudicated); the gate-band recalibration
@@ -1094,12 +1133,14 @@ snapshot per batch, and says so.
 
 ## 8. References
 
-1. Yao, Y. et al. *Re-DocRED: A More Faithful Document-Level
-   Relation Extraction Dataset* (2022) — corpus of the
-   flagship build (§5).
-2. Li, J. et al. *BioRED: A Comprehensive Biomedical
-   Relation Extraction Dataset* (2022) — corpus of the Bio
-   Medical pack's pilot (§5.7).
+1. Tan, Xu, Bing, Ng & Aljunied. *Revisiting DocRED –
+   Addressing the False Negative Problem in Relation
+   Extraction* (EMNLP 2022) — corpus of the flagship
+   build (§5).
+2. Luo, Lai, Wei, Arighi & Lu. *BioRED: a rich
+   biomedical relation extraction dataset* (Briefings
+   in Bioinformatics, 2022; doi:10.1093/bib/bbac282)
+   — corpus of the Bio Medical pack's pilot (§5.7).
 3. Hendrycks, D. et al. *CUAD: An Expert-Annotated NLP
    Dataset for Legal Contract Review* (2021) — corpus of
    the Legal Contract pack's record (§5.8).
@@ -1111,3 +1152,7 @@ quality records (`benchmarks/redocred.md`,
 (`benchmarks/appendix/`), including the replay script
 that recomputes §5's headlines from the appendix files
 alone — ship in the OntoSmith product repository.
+
+Open Ontologies (MIT) —
+https://github.com/fabio-rovai/open-ontologies — the
+formal-pole tooling named in §3.3.
