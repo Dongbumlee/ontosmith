@@ -691,6 +691,14 @@ extractor, inventories, scoping spec, scoping record,
 and the coverage account this track ends with — are
 in [`examples/fibo-import/`](../examples/fibo-import/).
 
+> **Version note.** The `ontology import` command
+> and the `fibo-contracts` pack ship in release
+> **0.1.1**. Until it lands on PyPI, install from the
+> repository clone instead of the index — from the
+> clone's root, `pip install .` — and every command
+> below is unchanged. A plain `pip install ontosmith`
+> today still serves Tracks 1–3 exactly as written.
+
 ### 1. Fetch the ontology (pinned)
 
 ```console
@@ -827,13 +835,22 @@ approval recorded: drafts/approval_2026-10-26.json
   schema hash sha256:72db0ede0a392262e8a04170f5d77c7405a90258f2643f9ccaef38ea2a5372d1
 
 $ ontosmith ontology emit drafts/fibo-contracts.json \
-    --approval drafts/approval_2026-10-26.json --out-root .
-pack emitted: ./packs/fibo-contracts
+    --approval drafts/approval_2026-10-26.json --out-root my-packs
+pack emitted: my-packs/packs/fibo-contracts
   payload pin sha256:0d77115fb79acf07…
 
 $ ontosmith ontology check packs/fibo-contracts
 pack check: clean — fibo-contracts 0.1.0 (manifest + conformance record satisfy the pack schemas; payload pin verifies)
 ```
+
+The emit lands in a fresh root (`my-packs/`) on
+purpose: emission never overwrites, and the clone
+already holds the shipped `packs/fibo-contracts` —
+emitting into `.` refuses by name, exactly as Track
+3 describes. The `check` above runs against the
+shipped pack; run it against
+`my-packs/packs/fibo-contracts` and it verifies
+yours, pin for pin identical.
 
 The approval brief is where the scoping decisions
 are settled: the draft's decision points restate the
