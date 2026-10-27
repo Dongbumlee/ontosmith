@@ -63,10 +63,17 @@ def _local(iri: str) -> str:
 
 
 def merge_inventories(inventories: list[dict]) -> dict:
-    """Flatten inventory documents to {iri: entry}. A concept
-    declared twice across the inputs is an error — which
-    declaration an import would carry must never be a coin
-    flip."""
+    """Flatten inventory documents to {iri: entry}.
+
+    Real ontologies restate concepts: FIBO's Contracts file,
+    for instance, re-declares three People classes to attach
+    restrictions — the same IRI, declared in two files. Which
+    declaration the import carries must never be a coin flip,
+    so input order is the rule: the first declaration wins,
+    verbatim, and the rest are named on the kept entry as
+    ``also_declared_in``. The spec author controls the order
+    (module files first, reference files after), and the
+    scoping record shows every declaration site."""
     by_iri: dict[str, dict] = {}
     for doc in inventories:
         entries = doc if isinstance(doc, list) else doc.get("entries")
@@ -80,10 +87,13 @@ def merge_inventories(inventories: list[dict]) -> dict:
                 raise ValueError(f"inventory entry has no iri: "
                                  f"{entry!r}")
             if iri in by_iri:
-                raise ValueError(
-                    f"concept {iri} is declared in more than "
-                    f"one inventory input")
-            by_iri[iri] = entry
+                kept = by_iri[iri]
+                also = kept.setdefault("also_declared_in", [])
+                site = entry.get("source_file")
+                if site and site not in also:
+                    also.append(site)
+                continue
+            by_iri[iri] = dict(entry)
     return by_iri
 
 
@@ -355,6 +365,8 @@ def build_import(spec: dict, inventories: list[dict]) -> tuple[dict, dict]:
             "label": entry.get("label"),
             "kind": entry.get("kind"),
             "source_file": entry.get("source_file"),
+            "also_declared_in": entry.get("also_declared_in")
+            or [],
             "action": disposition,
             "target": target_name,
             "reason": note,

@@ -1,0 +1,434 @@
+{
+ "family": "fibo-cuad",
+ "profile_version": 1,
+ "pack_id": "fibo-contracts",
+ "pack_version": "0.1.0",
+ "schema_front": {
+  "purpose": "Imported from FIBO (EDM Council, MIT), FND Agreements module, release master_2026Q3: a flat extraction contract for contracts — their parties, provisions, dates, and governing jurisdictions — scoped for the CUAD corpus of commercial contracts. FIBO definitions are carried verbatim where FIBO states them; boundary examples, and the definitions of the types FIBO grounds in OMG Commons (Organization, Jurisdiction, Date), are authored for this pack and recorded as authored in the import's scoping record (examples/fibo-import/fibo-contracts.scoping.json).",
+  "entity_inventory": [
+   {
+    "type": "Contract",
+    "role": "entity",
+    "definition": "voluntary, deliberate agreement between competent parties to which the parties agree to be legally bound, and for which the parties provide valuable consideration",
+    "form_examples": [
+     "Master Services Agreement",
+     "a signed consulting agreement",
+     "the Non-Disclosure Agreement dated March 1, 2024"
+    ],
+    "not_entities": {
+     "provisions": [
+      "the termination clause (a provision of the contract, not the contract)"
+     ],
+     "references": [
+      "a prior agreement named only as superseded background in a recital, where the text does not present it as a contract in the corpus"
+     ]
+    }
+   },
+   {
+    "type": "Person",
+    "role": "entity",
+    "definition": "individual human being, with consciousness of self",
+    "form_examples": [
+     "an individual's full name",
+     "Jane A. Smith"
+    ],
+    "not_entities": {
+     "titles": [
+      "the General Counsel (a role or title, not a named person)"
+     ],
+     "collectives": [
+      "the Supplier's employees (a group, not an individual)"
+     ]
+    }
+   },
+   {
+    "type": "ContractProvision",
+    "role": "entity",
+    "definition": "element, such as an arrangement, provision, requirement, rule, specification, and standard that forms an integral part of an agreement",
+    "form_examples": [
+     "a numbered section or clause of the contract",
+     "Section 8.2 (indemnification)"
+    ],
+    "not_entities": {
+     "specific provisions": [
+      "a clause whose whole content is a termination right (a TerminationProvision)",
+      "a clause that only defines a term (a ContractualDefinition)"
+     ]
+    }
+   },
+   {
+    "type": "ContractualCommitment",
+    "role": "entity",
+    "definition": "provision specifying something that the contracting parties agree to, i.e., a promise or pledge made by one of the parties to perform some action or fulfill some duty",
+    "form_examples": [
+     "a covenant or undertaking",
+     "'Supplier shall maintain insurance …'"
+    ],
+    "not_entities": {
+     "facts": [
+      "a statement that something is the case (a Representation), not a promise that something will be done"
+     ]
+    }
+   },
+   {
+    "type": "ContractualDefinition",
+    "role": "entity",
+    "definition": "contractual element that specifies the meaning of a term in a legal document, whose definition is substitutable for the term whenever it occurs in the body of that document",
+    "form_examples": [
+     "'“Confidential Information” means …'",
+     "a definition in the definitions section"
+    ],
+    "not_entities": {
+     "mere uses": [
+      "a later use of the defined term in an operative clause, without its definition"
+     ]
+    }
+   },
+   {
+    "type": "TerminationProvision",
+    "role": "entity",
+    "definition": "contractual element that specifies the circumstances under which the parties can dissolve their legal relationship and discontinue the fulfillment of their obligations under the contract",
+    "form_examples": [
+     "a termination for convenience clause",
+     "Section 12 (Termination)"
+    ],
+    "not_entities": {
+     "dates": [
+      "the termination date itself (a Date)"
+     ],
+     "expiry": [
+      "the contract simply reaching the end of its stated term, with no termination right exercised or granted"
+     ]
+    }
+   },
+   {
+    "type": "ExtensionProvision",
+    "role": "entity",
+    "definition": "contract terms that specify the conditions under which a contract can be extended",
+    "form_examples": [
+     "a renewal option clause",
+     "'…may extend the Term for two additional one-year periods…'"
+    ],
+    "not_entities": {
+     "the period": [
+      "the additional period itself (a duration, not the provision granting it)"
+     ]
+    }
+   },
+   {
+    "type": "DisclosureProvision",
+    "role": "entity",
+    "definition": "contractual provision that outlines the requirements and responsibilities of one or both parties to reveal certain information to each other",
+    "form_examples": [
+     "a confidentiality clause in a services agreement",
+     "a non-disclosure obligation"
+    ],
+    "not_entities": {
+     "definitions": [
+      "the definition of Confidential Information itself (a ContractualDefinition)"
+     ]
+    }
+   },
+   {
+    "type": "NotificationProvision",
+    "role": "entity",
+    "definition": "provision indicating that notification is required prior to the occurrence of a relevant event",
+    "form_examples": [
+     "'All notices under this Agreement must be in writing to …'",
+     "a notice-period requirement"
+    ],
+    "not_entities": {
+     "sent notices": [
+      "a termination notice actually sent under the provision (an act, not the provision requiring it)"
+     ]
+    }
+   },
+   {
+    "type": "NettingProvision",
+    "role": "entity",
+    "definition": "contractual element that specifies the method of reducing credit, settlement and other risks by aggregating (combining) two or more obligations to achieve a reduced net obligation",
+    "form_examples": [
+     "a close-out netting clause in a master agreement",
+     "a payment netting provision"
+    ],
+    "not_entities": {
+     "payment terms": [
+      "net-30 payment terms (a payment schedule, not the netting of obligations)"
+     ]
+    }
+   },
+   {
+    "type": "Warranty",
+    "role": "entity",
+    "definition": "contractual element that is a statement of fact",
+    "form_examples": [
+     "'Supplier warrants that the Services will conform …'",
+     "a warranty clause with a stated warranty period"
+    ],
+    "not_entities": {
+     "inducing statements": [
+      "a statement of fact made to induce the contract, with no assurance or remedy attached (a Representation)"
+     ]
+    }
+   },
+   {
+    "type": "Representation",
+    "role": "entity",
+    "definition": "contractual element that is a statement made by a party to the contract, before or at the time of making the contract, in regard to some fact, circumstance, or state of affairs pertinent to the contract, which the counterparty(ies) rely on, or is influential in bringing about the contract",
+    "form_examples": [
+     "'Each party represents that it is duly organized …'",
+     "a representations clause"
+    ],
+    "not_entities": {
+     "promises": [
+      "a promise of future performance (a ContractualCommitment)"
+     ]
+    }
+   },
+   {
+    "type": "Organization",
+    "role": "entity",
+    "definition": "A named company, partnership, government agency, or other organized body that can enter into a contract as a party.",
+    "form_examples": [
+     "Acme Corporation",
+     "a named LLC, partnership, or agency"
+    ],
+    "not_entities": {
+     "units": [
+      "the Legal Department of Acme (a unit of the party, not the contracting party itself)"
+     ],
+     "defined terms": [
+      "'the Company' used as a defined term (extract the named organization it refers to)"
+     ]
+    }
+   },
+   {
+    "type": "Jurisdiction",
+    "role": "entity",
+    "definition": "A named state, country, or legal system whose law is stated to govern a contract or to host the resolution of its disputes.",
+    "form_examples": [
+     "the State of Delaware",
+     "the laws of the State of New York"
+    ],
+    "not_entities": {
+     "institutions": [
+      "a named court (an institution seated in a jurisdiction, not the jurisdiction itself)"
+     ]
+    }
+   },
+   {
+    "type": "Date",
+    "role": "entity",
+    "definition": "A specific calendar date stated in a contract — the day the contract or an obligation under it begins, is signed, renews, expires, or ends.",
+    "form_examples": [
+     "March 1, 2024",
+     "2024-03-01",
+     "the 1st day of March, 2024"
+    ],
+    "not_entities": {
+     "durations": [
+      "thirty (30) days (a period, not a calendar date)"
+     ],
+     "references": [
+      "'the date hereof' (a reference to a date, not a stated date)"
+     ]
+    }
+   }
+  ],
+  "relation_inventory": [
+   {
+    "type": "HasContractParty",
+    "definition": "indicates a party that has entered into a binding agreement, accepting and conceding obligations, responsibilities, and benefits as specified",
+    "endpoint_signature": [
+     "Contract~Organization",
+     "Contract~Person"
+    ],
+    "boundary_examples": [
+     "'This Agreement is entered into by Acme Corp. and Beta LLC' states the relation for both; a company named only as a reference customer is not a contract party"
+    ]
+   },
+   {
+    "type": "HasCounterparty",
+    "definition": "identifies a party to a contract, typically not the contract principal",
+    "endpoint_signature": [
+     "Contract~Organization",
+     "Contract~Person"
+    ],
+    "boundary_examples": [
+     "the counterparty is the party on the other side of the principal; not every contract party is framed as a counterparty — a third-party beneficiary is not"
+    ]
+   },
+   {
+    "type": "HasPrincipalParty",
+    "definition": "identifies the main or principal party to a contract",
+    "endpoint_signature": [
+     "Contract~Organization",
+     "Contract~Person"
+    ],
+    "boundary_examples": [
+     "the principal is the main party the contract serves; an agent or signatory acting on the principal's behalf is not the principal party"
+    ]
+   },
+   {
+    "type": "HasThirdParty",
+    "definition": "identifies a party which is not signatory to the party but has some role in the overall context defined by the contract.",
+    "endpoint_signature": [
+     "Contract~Organization",
+     "Contract~Person"
+    ],
+    "boundary_examples": [
+     "a non-signatory named as having a role under the contract (e.g. an escrow agent); a signatory affiliate is a contract party, not a third party"
+    ]
+   },
+   {
+    "type": "HasBeneficiary",
+    "definition": "party that receives some benefit or advantage or profits from something as specified in the agreement",
+    "endpoint_signature": [
+     "Contract~Organization",
+     "Contract~Person"
+    ],
+    "boundary_examples": [
+     "'The Client's customers are third-party beneficiaries of this Section' states it; the party conferring the benefit is not its own beneficiary"
+    ]
+   },
+   {
+    "type": "HasContractualElement",
+    "definition": "indicates something that is a component of an agreement",
+    "endpoint_signature": [
+     "Contract~ContractProvision",
+     "Contract~ContractualCommitment",
+     "Contract~ContractualDefinition",
+     "Contract~TerminationProvision",
+     "Contract~ExtensionProvision",
+     "Contract~DisclosureProvision",
+     "Contract~NotificationProvision",
+     "Contract~NettingProvision",
+     "Contract~Warranty",
+     "Contract~Representation"
+    ],
+    "boundary_examples": [
+     "the provision is a component of this contract; a clause quoted from another contract for comparison is not an element of this one"
+    ]
+   },
+   {
+    "type": "HasEffectiveDate",
+    "definition": "indicates the date a contract, relationship, or policy comes into force",
+    "endpoint_signature": [
+     "Contract~Date"
+    ],
+    "boundary_examples": [
+     "the date the contract comes into force; the signing date is HasExecutionDate, and a date inside a provision is not the contract's effective date"
+    ]
+   },
+   {
+    "type": "HasExecutionDate",
+    "definition": "indicates the date a contract has been signed by all the necessary parties",
+    "endpoint_signature": [
+     "Contract~Date"
+    ],
+    "boundary_examples": [
+     "the date the contract was signed by all necessary parties; one party's earlier signature date, where others signed later, is not the execution date"
+    ]
+   },
+   {
+    "type": "HasEarlyTerminationDate",
+    "definition": "indicates a termination date that occurs prior to an explicit expiration date",
+    "endpoint_signature": [
+     "Contract~Date",
+     "TerminationProvision~Date"
+    ],
+    "boundary_examples": [
+     "a termination date earlier than the stated expiration; the ordinary expiration date at the end of the term is not an early termination date"
+    ]
+   },
+   {
+    "type": "HasGoverningJurisdiction",
+    "definition": "indicates the jurisdiction governing the contract, as agreed by all parties",
+    "endpoint_signature": [
+     "Contract~Jurisdiction"
+    ],
+    "boundary_examples": [
+     "'governed by the laws of the State of Delaware' states it; the place of signing or a party's home state does not, unless stated as governing"
+    ]
+   },
+   {
+    "type": "Supersedes",
+    "definition": "indicates a contract that was executed prior to and is replaced by this contract",
+    "endpoint_signature": [
+     "Contract~Contract"
+    ],
+    "boundary_examples": [
+     "the prior contract is replaced and ceases to govern; an amendment that keeps the prior contract in force is not supersession"
+    ]
+   },
+   {
+    "type": "IsSubordinateTo",
+    "definition": "indicates the primary contract referenced by a subordinate agreement, such as a collateral agreement",
+    "endpoint_signature": [
+     "Contract~Contract"
+    ],
+    "boundary_examples": [
+     "a collateral or subordinate agreement points at its primary contract; a schedule or exhibit is part of its own contract, not subordinate to it"
+    ]
+   },
+   {
+    "type": "IsPrimaryContractFor",
+    "definition": "indicates any subordinate agreement, such as a collateral agreement",
+    "endpoint_signature": [
+     "Contract~Contract"
+    ],
+    "boundary_examples": [
+     "the same link as IsSubordinateTo, stated from the primary contract's side"
+    ],
+    "inverse_of": "IsSubordinateTo"
+   }
+  ]
+ },
+ "entity_types": [
+  "Contract",
+  "Person",
+  "ContractProvision",
+  "ContractualCommitment",
+  "ContractualDefinition",
+  "TerminationProvision",
+  "ExtensionProvision",
+  "DisclosureProvision",
+  "NotificationProvision",
+  "NettingProvision",
+  "Warranty",
+  "Representation",
+  "Organization",
+  "Jurisdiction",
+  "Date"
+ ],
+ "relation_types": [
+  "HasContractParty",
+  "HasCounterparty",
+  "HasPrincipalParty",
+  "HasThirdParty",
+  "HasBeneficiary",
+  "HasContractualElement",
+  "HasEffectiveDate",
+  "HasExecutionDate",
+  "HasEarlyTerminationDate",
+  "HasGoverningJurisdiction",
+  "Supersedes",
+  "IsSubordinateTo",
+  "IsPrimaryContractFor"
+ ],
+ "consumption_note": "Emitted by pipeline.ontology_builder (ontology-builder/1.0) from an approved schema draft; see the pack's conformance.json for the emission record. Definitions live in the schema_front only.",
+ "merge_prohibited_type_pairs": [
+  [
+   "Warranty",
+   "Representation"
+  ],
+  [
+   "TerminationProvision",
+   "ExtensionProvision"
+  ],
+  [
+   "Contract",
+   "ContractProvision"
+  ]
+ ]
+}

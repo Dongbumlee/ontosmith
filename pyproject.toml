@@ -166,3 +166,10 @@ pipeline = ["bindings-template.env"]
     "packs/legal-contract/profile/profile.md",
     "packs/legal-contract/profile/setup_config.json",
 ]
+"share/ontosmith/packs/fibo-contracts" = [
+    "packs/fibo-contracts/conformance.json",
+    "packs/fibo-contracts/pack.json",
+]
+"share/ontosmith/packs/fibo-contracts/profile" = [
+    "packs/fibo-contracts/profile/setup_config.json",
+]

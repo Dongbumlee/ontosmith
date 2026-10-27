@@ -268,6 +268,28 @@ class TestBuildImport(unittest.TestCase):
             oi.build_import(spec, [_inventory(),
                                    _reference_inventory()])
 
+    def test_restated_declaration_accounted_once(self):
+        # FIBO restates concepts across files (Contracts.rdf
+        # re-declares People classes to attach restrictions):
+        # the first input's declaration is the one carried,
+        # the other site is named on the record — never a
+        # silent field merge.
+        scoped = _entry(f"{P}/PersonName", "class", None,
+                        source=CONTRACTS)
+        spec = _spec()
+        spec["dropped"].append(
+            {"iri": f"{P}/PersonName",
+             "reason": "restated augmentation, no definition "
+                       "in the scoped file"})
+        _, record = oi.build_import(
+            spec, [[*_inventory(), scoped],
+                   _reference_inventory()])
+        entry = next(c for c in record["concepts"]
+                     if c["iri"] == f"{P}/PersonName")
+        self.assertEqual(entry["action"], "dropped")
+        self.assertEqual(entry["source_file"], CONTRACTS)
+        self.assertEqual(entry["also_declared_in"], [PEOPLE])
+
     def test_imported_draft_approves_and_emits(self):
         import tempfile
         from pathlib import Path

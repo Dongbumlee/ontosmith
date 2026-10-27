@@ -1,0 +1,715 @@
+{
+ "kind": "ontology_import_spec",
+ "source": {
+  "name": "Financial Industry Business Ontology (FIBO)",
+  "publisher": "EDM Council",
+  "version": "master_2026Q3 (commit 2d73435a4419b66b7c9f44cb9763e35fe8ac7890)",
+  "license": "MIT",
+  "url": "https://github.com/edmcouncil/fibo",
+  "files": [
+   "FND/Agreements/Agreements.rdf",
+   "FND/Agreements/Contracts.rdf",
+   "FND/AgentsAndPeople/People.rdf"
+  ],
+  "scoped_files": [
+   "FND/Agreements/Agreements.rdf",
+   "FND/Agreements/Contracts.rdf"
+  ]
+ },
+ "family": "fibo-cuad",
+ "pack_id": "fibo-contracts",
+ "display_name": "FIBO Contracts (imported)",
+ "purpose": "Imported from FIBO (EDM Council, MIT), FND Agreements module, release master_2026Q3: a flat extraction contract for contracts — their parties, provisions, dates, and governing jurisdictions — scoped for the CUAD corpus of commercial contracts. FIBO definitions are carried verbatim where FIBO states them; boundary examples, and the definitions of the types FIBO grounds in OMG Commons (Organization, Jurisdiction, Date), are authored for this pack and recorded as authored in the import's scoping record (examples/fibo-import/fibo-contracts.scoping.json).",
+ "brief": "BYO schema import: the FIBO FND Agreements (Contracts) ontology, flattened under the scoping spec in examples/fibo-import/. Judgment calls are the draft's decision points; the scoping record accounts for every concept in the two scoped files.",
+ "entities": [
+  {
+   "type": "Contract",
+   "action": "merged",
+   "sources": [
+    "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Contracts/Contract",
+    "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Agreements/Agreement",
+    "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Contracts/WrittenContract",
+    "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Contracts/VerbalContract",
+    "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Contracts/BilateralContract",
+    "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Contracts/MultilateralContract",
+    "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Contracts/UnilateralContract",
+    "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Contracts/MasterAgreement",
+    "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Contracts/TransferableContract",
+    "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Contracts/NonTransferableContract",
+    "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Contracts/AssignableContract",
+    "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Contracts/NovateableContract",
+    "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Contracts/CollateralAgreement",
+    "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Agreements/BilateralAgreement",
+    "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Agreements/MultilateralAgreement"
+   ],
+   "definition_from": "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Contracts/Contract",
+   "note": "FIBO's agreement/contract kind taxonomy (written/verbal, uni/bi/multilateral, master, transferable and its negations, collateral) collapses to one type: the kind distinctions are classification, not extraction signal in contract text.",
+   "form_examples": [
+    "Master Services Agreement",
+    "a signed consulting agreement",
+    "the Non-Disclosure Agreement dated March 1, 2024"
+   ],
+   "not_entities": {
+    "provisions": [
+     "the termination clause (a provision of the contract, not the contract)"
+    ],
+    "references": [
+     "a prior agreement named only as superseded background in a recital, where the text does not present it as a contract in the corpus"
+    ]
+   }
+  },
+  {
+   "type": "Person",
+   "action": "kept",
+   "sources": [
+    "https://spec.edmcouncil.org/fibo/ontology/FND/AgentsAndPeople/People/Person"
+   ],
+   "definition_from": "https://spec.edmcouncil.org/fibo/ontology/FND/AgentsAndPeople/People/Person",
+   "note": "Sourced from FND/AgentsAndPeople/People.rdf, the one file Contracts.rdf imports for party concepts; FIBO's own class, FIBO's own definition.",
+   "form_examples": [
+    "an individual's full name",
+    "Jane A. Smith"
+   ],
+   "not_entities": {
+    "titles": [
+     "the General Counsel (a role or title, not a named person)"
+    ],
+    "collectives": [
+     "the Supplier's employees (a group, not an individual)"
+    ]
+   }
+  },
+  {
+   "type": "ContractProvision",
+   "action": "flattened",
+   "sources": [
+    "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Contracts/ContractualElement",
+    "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Contracts/ConditionPrecedent",
+    "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Contracts/NonBindingTerm",
+    "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Contracts/UseOfProceedsProvision",
+    "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Contracts/ContractMilestone"
+   ],
+   "definition_from": "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Contracts/ContractualElement",
+   "note": "The residual provision bucket: ContractualElement itself plus the subclasses with no more specific type in this pack (conditions precedent, non-binding terms, use-of-proceeds and milestone provisions). Specific provision types below win over this bucket wherever they apply.",
+   "form_examples": [
+    "a numbered section or clause of the contract",
+    "Section 8.2 (indemnification)"
+   ],
+   "not_entities": {
+    "specific provisions": [
+     "a clause whose whole content is a termination right (a TerminationProvision)",
+     "a clause that only defines a term (a ContractualDefinition)"
+    ]
+   }
+  },
+  {
+   "type": "ContractualCommitment",
+   "action": "kept",
+   "sources": [
+    "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Contracts/ContractualCommitment"
+   ],
+   "definition_from": "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Contracts/ContractualCommitment",
+   "note": "Obligations and covenants: what a party promises to do or refrain from doing.",
+   "form_examples": [
+    "a covenant or undertaking",
+    "'Supplier shall maintain insurance …'"
+   ],
+   "not_entities": {
+    "facts": [
+     "a statement that something is the case (a Representation), not a promise that something will be done"
+    ]
+   }
+  },
+  {
+   "type": "ContractualDefinition",
+   "action": "kept",
+   "sources": [
+    "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Contracts/ContractualDefinition"
+   ],
+   "definition_from": "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Contracts/ContractualDefinition",
+   "note": "Defined terms: the clause that fixes what a capitalized term means in this contract.",
+   "form_examples": [
+    "'“Confidential Information” means …'",
+    "a definition in the definitions section"
+   ],
+   "not_entities": {
+    "mere uses": [
+     "a later use of the defined term in an operative clause, without its definition"
+    ]
+   }
+  },
+  {
+   "type": "TerminationProvision",
+   "action": "flattened",
+   "sources": [
+    "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Contracts/TerminationProvision",
+    "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Contracts/EarlyTerminationProvision"
+   ],
+   "definition_from": "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Contracts/TerminationProvision",
+   "note": "EarlyTerminationProvision flattens in: an early-termination right is a termination provision whose date relation (HasEarlyTerminationDate) keeps the distinction that matters.",
+   "form_examples": [
+    "a termination for convenience clause",
+    "Section 12 (Termination)"
+   ],
+   "not_entities": {
+    "dates": [
+     "the termination date itself (a Date)"
+    ],
+    "expiry": [
+     "the contract simply reaching the end of its stated term, with no termination right exercised or granted"
+    ]
+   }
+  },
+  {
+   "type": "ExtensionProvision",
+   "action": "kept",
+   "sources": [
+    "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Contracts/ExtensionProvision"
+   ],
+   "definition_from": "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Contracts/ExtensionProvision",
+   "note": "Extension and renewal options: the terms under which the contract's term can be lengthened.",
+   "form_examples": [
+    "a renewal option clause",
+    "'…may extend the Term for two additional one-year periods…'"
+   ],
+   "not_entities": {
+    "the period": [
+     "the additional period itself (a duration, not the provision granting it)"
+    ]
+   }
+  },
+  {
+   "type": "DisclosureProvision",
+   "action": "kept",
+   "sources": [
+    "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Contracts/DisclosureProvision"
+   ],
+   "definition_from": "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Contracts/DisclosureProvision",
+   "note": "Confidentiality and disclosure duties: what a party must reveal, or must not reveal.",
+   "form_examples": [
+    "a confidentiality clause in a services agreement",
+    "a non-disclosure obligation"
+   ],
+   "not_entities": {
+    "definitions": [
+     "the definition of Confidential Information itself (a ContractualDefinition)"
+    ]
+   }
+  },
+  {
+   "type": "NotificationProvision",
+   "action": "kept",
+   "sources": [
+    "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Contracts/NotificationProvision"
+   ],
+   "definition_from": "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Contracts/NotificationProvision",
+   "note": "Notice mechanics: that notice is required, how, where, and with what lead time.",
+   "form_examples": [
+    "'All notices under this Agreement must be in writing to …'",
+    "a notice-period requirement"
+   ],
+   "not_entities": {
+    "sent notices": [
+     "a termination notice actually sent under the provision (an act, not the provision requiring it)"
+    ]
+   }
+  },
+  {
+   "type": "NettingProvision",
+   "action": "flattened",
+   "sources": [
+    "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Contracts/NettingProvision",
+    "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Contracts/BilateralNettingProvision",
+    "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Contracts/MultilateralNettingProvision",
+    "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Contracts/CloseOutNettingProvision",
+    "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Contracts/NovationNettingProvision",
+    "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Contracts/PaymentNettingProvision",
+    "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Contracts/SettlementNettingProvision"
+   ],
+   "definition_from": "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Contracts/NettingProvision",
+   "note": "FIBO's seven-class netting subtree — derivatives-documentation vocabulary (bilateral/multilateral, close-out, novation, payment, settlement) — collapses to the one distinction a flat contract can carry.",
+   "form_examples": [
+    "a close-out netting clause in a master agreement",
+    "a payment netting provision"
+   ],
+   "not_entities": {
+    "payment terms": [
+     "net-30 payment terms (a payment schedule, not the netting of obligations)"
+    ]
+   }
+  },
+  {
+   "type": "Warranty",
+   "action": "kept",
+   "sources": [
+    "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Contracts/Warranty"
+   ],
+   "definition_from": "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Contracts/Warranty",
+   "note": "FIBO's definition is carried verbatim; in contract text the type is the warranty clause — a party's assurance about the goods, services, or itself, typically with a duration or remedy.",
+   "form_examples": [
+    "'Supplier warrants that the Services will conform …'",
+    "a warranty clause with a stated warranty period"
+   ],
+   "not_entities": {
+    "inducing statements": [
+     "a statement of fact made to induce the contract, with no assurance or remedy attached (a Representation)"
+    ]
+   }
+  },
+  {
+   "type": "Representation",
+   "action": "kept",
+   "sources": [
+    "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Contracts/Representation"
+   ],
+   "definition_from": "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Contracts/Representation",
+   "note": "Representations: statements of fact a party makes in or for the contract, on which the counterparty relies.",
+   "form_examples": [
+    "'Each party represents that it is duly organized …'",
+    "a representations clause"
+   ],
+   "not_entities": {
+    "promises": [
+     "a promise of future performance (a ContractualCommitment)"
+    ]
+   }
+  }
+ ],
+ "external_entities": [
+  {
+   "type": "Organization",
+   "external_source": "https://www.omg.org/spec/Commons/Organizations/Organization",
+   "definition": "A named company, partnership, government agency, or other organized body that can enter into a contract as a party.",
+   "note": "FIBO references the OMG Commons Organization class but defines no organization class in the imported files; this definition is authored for the flat contract and recorded as authored.",
+   "form_examples": [
+    "Acme Corporation",
+    "a named LLC, partnership, or agency"
+   ],
+   "not_entities": {
+    "units": [
+     "the Legal Department of Acme (a unit of the party, not the contracting party itself)"
+    ],
+    "defined terms": [
+     "'the Company' used as a defined term (extract the named organization it refers to)"
+    ]
+   }
+  },
+  {
+   "type": "Jurisdiction",
+   "external_source": "https://www.omg.org/spec/Commons/RegulatoryAgencies/Jurisdiction",
+   "definition": "A named state, country, or legal system whose law is stated to govern a contract or to host the resolution of its disputes.",
+   "note": "Range class of FIBO's hasGoverningJurisdiction, grounded in OMG Commons RegulatoryAgencies; FIBO states no definition in the imported files, so this one is authored and recorded as authored.",
+   "form_examples": [
+    "the State of Delaware",
+    "the laws of the State of New York"
+   ],
+   "not_entities": {
+    "institutions": [
+     "a named court (an institution seated in a jurisdiction, not the jurisdiction itself)"
+    ]
+   }
+  },
+  {
+   "type": "Date",
+   "external_source": "https://www.omg.org/spec/Commons/DatesAndTimes/Date",
+   "definition": "A specific calendar date stated in a contract — the day the contract or an obligation under it begins, is signed, renews, expires, or ends.",
+   "note": "Range class of FIBO's date properties, grounded in OMG Commons DatesAndTimes; FIBO states no definition in the imported files, so this one is authored and recorded as authored.",
+   "form_examples": [
+    "March 1, 2024",
+    "2024-03-01",
+    "the 1st day of March, 2024"
+   ],
+   "not_entities": {
+    "durations": [
+     "thirty (30) days (a period, not a calendar date)"
+    ],
+    "references": [
+     "'the date hereof' (a reference to a date, not a stated date)"
+    ]
+   }
+  }
+ ],
+ "relations": [
+  {
+   "type": "HasContractParty",
+   "action": "kept",
+   "sources": [
+    "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Contracts/hasContractParty"
+   ],
+   "definition_from": "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Contracts/hasContractParty",
+   "endpoint_signature": [
+    "Contract~Organization",
+    "Contract~Person"
+   ],
+   "boundary_examples": [
+    "'This Agreement is entered into by Acme Corp. and Beta LLC' states the relation for both; a company named only as a reference customer is not a contract party"
+   ]
+  },
+  {
+   "type": "HasCounterparty",
+   "action": "kept",
+   "sources": [
+    "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Contracts/hasCounterparty"
+   ],
+   "definition_from": "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Contracts/hasCounterparty",
+   "endpoint_signature": [
+    "Contract~Organization",
+    "Contract~Person"
+   ],
+   "boundary_examples": [
+    "the counterparty is the party on the other side of the principal; not every contract party is framed as a counterparty — a third-party beneficiary is not"
+   ]
+  },
+  {
+   "type": "HasPrincipalParty",
+   "action": "kept",
+   "sources": [
+    "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Contracts/hasPrincipalParty"
+   ],
+   "definition_from": "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Contracts/hasPrincipalParty",
+   "endpoint_signature": [
+    "Contract~Organization",
+    "Contract~Person"
+   ],
+   "boundary_examples": [
+    "the principal is the main party the contract serves; an agent or signatory acting on the principal's behalf is not the principal party"
+   ]
+  },
+  {
+   "type": "HasThirdParty",
+   "action": "kept",
+   "sources": [
+    "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Contracts/hasThirdParty"
+   ],
+   "definition_from": "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Contracts/hasThirdParty",
+   "endpoint_signature": [
+    "Contract~Organization",
+    "Contract~Person"
+   ],
+   "boundary_examples": [
+    "a non-signatory named as having a role under the contract (e.g. an escrow agent); a signatory affiliate is a contract party, not a third party"
+   ]
+  },
+  {
+   "type": "HasBeneficiary",
+   "action": "merged",
+   "sources": [
+    "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Contracts/hasBeneficiary",
+    "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Contracts/isBeneficiaryOf"
+   ],
+   "definition_from": "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Contracts/hasBeneficiary",
+   "note": "isBeneficiaryOf states the same link from the beneficiary's side; the two fold into one directed relation.",
+   "endpoint_signature": [
+    "Contract~Organization",
+    "Contract~Person"
+   ],
+   "boundary_examples": [
+    "'The Client's customers are third-party beneficiaries of this Section' states it; the party conferring the benefit is not its own beneficiary"
+   ]
+  },
+  {
+   "type": "HasContractualElement",
+   "action": "merged",
+   "sources": [
+    "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Contracts/hasContractualElement",
+    "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Contracts/hasExtensionProvision",
+    "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Contracts/hasMilestoneProvision",
+    "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Contracts/hasNonBindingTerm"
+   ],
+   "definition_from": "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Contracts/hasContractualElement",
+   "note": "FIBO's three declared subproperties for specific element kinds fold into the parent relation; the element's type carries the distinction.",
+   "endpoint_signature": [
+    "Contract~ContractProvision",
+    "Contract~ContractualCommitment",
+    "Contract~ContractualDefinition",
+    "Contract~TerminationProvision",
+    "Contract~ExtensionProvision",
+    "Contract~DisclosureProvision",
+    "Contract~NotificationProvision",
+    "Contract~NettingProvision",
+    "Contract~Warranty",
+    "Contract~Representation"
+   ],
+   "boundary_examples": [
+    "the provision is a component of this contract; a clause quoted from another contract for comparison is not an element of this one"
+   ]
+  },
+  {
+   "type": "HasEffectiveDate",
+   "action": "kept",
+   "sources": [
+    "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Contracts/hasEffectiveDate"
+   ],
+   "definition_from": "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Contracts/hasEffectiveDate",
+   "endpoint_signature": [
+    "Contract~Date"
+   ],
+   "boundary_examples": [
+    "the date the contract comes into force; the signing date is HasExecutionDate, and a date inside a provision is not the contract's effective date"
+   ]
+  },
+  {
+   "type": "HasExecutionDate",
+   "action": "kept",
+   "sources": [
+    "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Contracts/hasExecutionDate"
+   ],
+   "definition_from": "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Contracts/hasExecutionDate",
+   "endpoint_signature": [
+    "Contract~Date"
+   ],
+   "boundary_examples": [
+    "the date the contract was signed by all necessary parties; one party's earlier signature date, where others signed later, is not the execution date"
+   ]
+  },
+  {
+   "type": "HasEarlyTerminationDate",
+   "action": "kept",
+   "sources": [
+    "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Contracts/hasEarlyTerminationDate"
+   ],
+   "definition_from": "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Contracts/hasEarlyTerminationDate",
+   "endpoint_signature": [
+    "Contract~Date",
+    "TerminationProvision~Date"
+   ],
+   "boundary_examples": [
+    "a termination date earlier than the stated expiration; the ordinary expiration date at the end of the term is not an early termination date"
+   ]
+  },
+  {
+   "type": "HasGoverningJurisdiction",
+   "action": "kept",
+   "sources": [
+    "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Contracts/hasGoverningJurisdiction"
+   ],
+   "definition_from": "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Contracts/hasGoverningJurisdiction",
+   "endpoint_signature": [
+    "Contract~Jurisdiction"
+   ],
+   "boundary_examples": [
+    "'governed by the laws of the State of Delaware' states it; the place of signing or a party's home state does not, unless stated as governing"
+   ]
+  },
+  {
+   "type": "Supersedes",
+   "action": "kept",
+   "sources": [
+    "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Contracts/supersedes"
+   ],
+   "definition_from": "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Contracts/supersedes",
+   "endpoint_signature": [
+    "Contract~Contract"
+   ],
+   "boundary_examples": [
+    "the prior contract is replaced and ceases to govern; an amendment that keeps the prior contract in force is not supersession"
+   ]
+  },
+  {
+   "type": "IsSubordinateTo",
+   "action": "kept",
+   "sources": [
+    "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Contracts/isSubordinateTo"
+   ],
+   "definition_from": "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Contracts/isSubordinateTo",
+   "endpoint_signature": [
+    "Contract~Contract"
+   ],
+   "boundary_examples": [
+    "a collateral or subordinate agreement points at its primary contract; a schedule or exhibit is part of its own contract, not subordinate to it"
+   ]
+  },
+  {
+   "type": "IsPrimaryContractFor",
+   "action": "kept",
+   "sources": [
+    "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Contracts/isPrimaryContractFor"
+   ],
+   "definition_from": "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Contracts/isPrimaryContractFor",
+   "endpoint_signature": [
+    "Contract~Contract"
+   ],
+   "inverse_of": "IsSubordinateTo",
+   "boundary_examples": [
+    "the same link as IsSubordinateTo, stated from the primary contract's side"
+   ]
+  }
+ ],
+ "role_conversions": [
+  {
+   "iri": "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Contracts/ContractParty",
+   "into_relation": "HasContractParty",
+   "note": "FIBO models the party's role as a class; the flat contract extracts the party itself (Organization/Person) and carries the role in the linking relation."
+  },
+  {
+   "iri": "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Contracts/Counterparty",
+   "into_relation": "HasCounterparty",
+   "note": "Role class converted to the relation, as for ContractParty."
+  },
+  {
+   "iri": "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Contracts/ContractPrincipal",
+   "into_relation": "HasPrincipalParty",
+   "note": "Role class converted to the relation, as for ContractParty."
+  },
+  {
+   "iri": "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Contracts/ContractThirdParty",
+   "into_relation": "HasThirdParty",
+   "note": "Role class converted to the relation, as for ContractParty."
+  },
+  {
+   "iri": "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Agreements/Beneficiary",
+   "into_relation": "HasBeneficiary",
+   "note": "Role class (Agreements module) converted to the relation, as for ContractParty."
+  }
+ ],
+ "demoted": [
+  {
+   "iri": "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Contracts/hasContractDuration",
+   "into": "Contract",
+   "note": "datatype property (a Duration value): a flat extraction contract has no datatype channel; durations stay in the text, and the demotion is recorded here."
+  },
+  {
+   "iri": "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Contracts/hasTerm",
+   "into": "Contract",
+   "note": "Generic duration property; demoted with hasContractDuration."
+  },
+  {
+   "iri": "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Contracts/hasExtendablePeriod",
+   "into": "ExtensionProvision",
+   "note": "Links an extension provision to a date period value; demoted with the other datatype-shaped properties."
+  },
+  {
+   "iri": "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Contracts/hasEffectiveDateTimeStamp",
+   "into": "HasEffectiveDate",
+   "note": "Timestamp-precision variant of hasEffectiveDate; the date relation carries the link, the time of day stays in the text."
+  },
+  {
+   "iri": "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Contracts/hasExecutionDateTimeStamp",
+   "into": "HasExecutionDate",
+   "note": "Timestamp-precision variant of hasExecutionDate; demoted as for hasEffectiveDateTimeStamp."
+  },
+  {
+   "iri": "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Contracts/hasLegalDescription",
+   "into": "ContractProvision",
+   "note": "Datatype property (a string description of a contractual element); no datatype channel in a flat contract."
+  },
+  {
+   "iri": "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Contracts/isAssignable",
+   "into": "Contract",
+   "note": "Boolean datatype property; assignability is stated in the contract's provisions and stays in the text."
+  },
+  {
+   "iri": "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Contracts/isNettingAutomatic",
+   "into": "NettingProvision",
+   "note": "Boolean datatype property; demoted as for isAssignable."
+  }
+ ],
+ "dropped": [
+  {
+   "iri": "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Contracts/TermSheet",
+   "reason": "a pre-contractual summary of proposed terms, not an executed contract; the CUAD corpus holds executed contracts"
+  },
+  {
+   "iri": "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Contracts/ContractDocument",
+   "reason": "in a corpus of contract texts the document and the contract coincide; FIBO's LegalDocument distinction carries no extraction signal here"
+  },
+  {
+   "iri": "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Contracts/BreachOfContract",
+   "reason": "an occurrence kind — an event that may later happen, not something the contract text states as an entity; breach consequences live in the provisions"
+  },
+  {
+   "iri": "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Contracts/BreachOfCovenant",
+   "reason": "occurrence kind; dropped with BreachOfContract"
+  },
+  {
+   "iri": "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Contracts/MilestoneEvent",
+   "reason": "an occurrence/scheduling artifact of performance tracking, not a contract entity"
+  },
+  {
+   "iri": "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Contracts/MilestoneSchedule",
+   "reason": "a schedule artifact; dropped with MilestoneEvent (the milestone provision itself flattens into ContractProvision)"
+  },
+  {
+   "iri": "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Agreements/Commitment",
+   "reason": "the Agreements module's abstract situation-level commitment; the contract-specific ContractualCommitment carries the extraction content"
+  },
+  {
+   "iri": "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Agreements/UnilateralCommitment",
+   "reason": "abstract commitment subclass; dropped with Commitment"
+  },
+  {
+   "iri": "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Agreements/CommitmentAtLarge",
+   "reason": "abstract commitment subclass; dropped with Commitment"
+  },
+  {
+   "iri": "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Agreements/Obligor",
+   "reason": "party-role class: obligor/obligee color is below this pack's extraction floor — the obligation is extracted as a ContractualCommitment and its parties through the party relations"
+  },
+  {
+   "iri": "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Agreements/Obligee",
+   "reason": "party-role class; dropped with Obligor"
+  },
+  {
+   "iri": "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Agreements/hasObligation",
+   "reason": "links an obligor role to its obligation; the role is not extracted (see Obligor), so the link has no endpoints in the flat contract"
+  },
+  {
+   "iri": "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Agreements/isObligationOf",
+   "reason": "the same link from the obligation side; dropped with hasObligation"
+  },
+  {
+   "iri": "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Contracts/definesTermsFor",
+   "reason": "FIBO declares its domain as the contract and no range; the definitional content is carried by the ContractualDefinition type itself, and the link's direction cannot be stated honestly from the source"
+  },
+  {
+   "iri": "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Contracts/isEvidenceFor",
+   "reason": "declares neither domain nor range in FIBO; a characterization link with no endpoints to extract between"
+  },
+  {
+   "iri": "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Contracts/isEvidencedBy",
+   "reason": "declares neither domain nor range; dropped with isEvidenceFor"
+  },
+  {
+   "iri": "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Contracts/isQualifiedBy",
+   "reason": "declares neither domain nor range; dropped with isEvidenceFor"
+  },
+  {
+   "iri": "https://spec.edmcouncil.org/fibo/ontology/FND/Agreements/Contracts/qualifies",
+   "reason": "declares neither domain nor range; dropped with isEvidenceFor"
+  },
+  {
+   "iri": "https://spec.edmcouncil.org/fibo/ontology/FND/AgentsAndPeople/People/BirthCertificate",
+   "reason": "not a Contracts concept: a People-module augmentation restated in Contracts.rdf with no label and no definition; identity documents are outside the contracts scoping"
+  },
+  {
+   "iri": "https://spec.edmcouncil.org/fibo/ontology/FND/AgentsAndPeople/People/DeathCertificate",
+   "reason": "People-module augmentation with no label or definition; dropped with BirthCertificate"
+  },
+  {
+   "iri": "https://spec.edmcouncil.org/fibo/ontology/FND/AgentsAndPeople/People/IdentityDocument",
+   "reason": "People-module augmentation with no label or definition; dropped with BirthCertificate"
+  }
+ ],
+ "merge_prohibited_type_pairs": [
+  [
+   "Warranty",
+   "Representation"
+  ],
+  [
+   "TerminationProvision",
+   "ExtensionProvision"
+  ],
+  [
+   "Contract",
+   "ContractProvision"
+  ]
+ ],
+ "decision_points": [
+  "Agreement/Contract merge: FIBO's 15-class agreement/contract kind taxonomy (Agreement, WrittenContract, VerbalContract, the uni/bi/multilateral kinds, MasterAgreement, the transferability kinds, CollateralAgreement) collapses to one Contract type — the kinds are classification, not extraction signal.",
+  "Party roles become relations: FIBO's role classes (ContractParty, Counterparty, ContractPrincipal, ContractThirdParty, Beneficiary) are not entity types; the party is an Organization or Person and the role is the linking relation.",
+  "Organization, Jurisdiction, and Date are grounded in OMG Commons classes FIBO references but does not define in the imported files; their definitions in this pack are authored, and the scoping record says so per type.",
+  "Datatype properties demote to recorded notes (durations, timestamps, booleans, legal descriptions): a flat extraction contract has no datatype-property channel.",
+  "The netting subtree flattens: seven FIBO classes from derivatives documentation collapse to one NettingProvision type.",
+  "Drops carry reasons in the scoping record: pre-contractual and document-form classes, occurrence classes, the abstract Commitment family, obligor/obligee roles, the unlabeled People augmentations, and four properties FIBO declares with neither domain nor range."
+ ]
+}

@@ -1,0 +1,23 @@
+{
+ "assembled": "2026-10-27",
+ "conformance_record": "conformance.json",
+ "contents_index": {
+  "approval": "Approval record bound to schema hash sha256:72db0ede0a392262e8a04170f5d77c7405a90258f2643f9ccaef38ea2a5372d1 (outcome: approved (Track 4 program (BYO schema import) under Dongbum's FIBO x CUAD decision of 2026-10-26, 2026-10-27)).",
+  "schema_front": "Closed entity inventory (15 types) and relation inventory (13 types) with definitions + boundary examples, drafted and approved through the ontology builder; rendered into proposer guidance by the profile channel (derive_guidance)."
+ },
+ "design": "docs/PACK_DESIGN.md",
+ "display_name": "FIBO Contracts (imported)",
+ "emitted_by": "ontology-builder/1.0",
+ "pack_format": 1,
+ "pack_id": "fibo-contracts",
+ "pack_version": "0.1.0",
+ "payload": {
+  "kind": "setup_config",
+  "note": "Emitted by the ontology builder from an approved schema draft (approval bound to the schema hash in contents_index). The pack binds the payload by pin; it never forks its content — a changed schema is a new pack version.",
+  "path": "packs/fibo-contracts/profile/setup_config.json",
+  "profile_version": 1,
+  "sha256": "0d77115fb79acf070eb2b376ecd404802b64a6870dd176c3df16706c89e869ba"
+ },
+ "profile_family": "fibo-cuad",
+ "status": "in_force"
+}

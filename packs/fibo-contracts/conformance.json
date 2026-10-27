@@ -1,0 +1,21 @@
+{
+ "entries": [
+  {
+   "baseline": "No pack: the domain had no schema of its own (core baseline defaults only).",
+   "content": "Ontology-builder emission: schema_front with 15 entity types and 13 relation types (definitions + boundary examples), approved under schema hash sha256:72db0ede0a392262e8a04170f5d77c7405a90258f2643f9ccaef38ea2a5372d1.",
+   "date": "2026-10-27",
+   "delta": "The artifact exists; no measurement has priced it.",
+   "gate": "Emission gate = builder validation (every finding clear) + a human approval record bound to the schema hash. Adoption as a measured pack requires a registered conformance measurement (docs/PACK_DESIGN.md §2).",
+   "id": "OB-1",
+   "instrument": "pipeline/ontology_builder.py (draft -> validate -> approve -> emit)",
+   "population": "Unmeasured — no corpus run under this pack yet.",
+   "status": "emitted_unmeasured",
+   "treatment": "Pack 0.1.0 skeleton in force as data. It declares no thresholds or operating points; the core baseline supplies them at resolution.",
+   "verdict": "EMITTED — builder-assembled and approval-bound; explicitly NOT a measured conformance claim."
+  }
+ ],
+ "pack_id": "fibo-contracts",
+ "pack_version": "0.1.0",
+ "record_format": 1,
+ "spec": "docs/PACK_DESIGN.md §2"
+}
