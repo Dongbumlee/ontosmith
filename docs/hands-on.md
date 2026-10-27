@@ -520,7 +520,7 @@ $ cat brief.json
 $ ontosmith ontology draft --profile profiles/demo/profile.json \
     --brief brief.json --pack-id demo-ceramics \
     --display-name "Demo Ceramics" --out drafts/demo-ceramics.json
-draft written: drafts/demo-ceramics.json (status DRAFT_NOT_APPROVED, 4 entity types, 4 relation types, schema hash sha256:62ea9e9067a5…)
+draft written: drafts/demo-ceramics.json (status DRAFT_NOT_APPROVED, 4 entity types, 4 relation types, schema hash sha256:98eb8b92a3b41be1…)
 validation findings (20) — the decision-point list approval must settle:
   [MISSING_DEFINITION] entity_inventory[0].definition: entity type 'Organization' has no definition
   …
@@ -545,9 +545,9 @@ without the approval below.
 ```console
 $ ontosmith ontology validate drafts/demo-ceramics.json
 validation findings (20):
-  [MISSING_DEFINITION] entity type 'Organization' has no definition
-  [MISSING_BOUNDARY_EXAMPLES] entity type 'Organization' has no boundary examples (form_examples / not_entities) — boundary material is what separates it from its neighbours
-  [BAD_ENDPOINT_SIGNATURE] relation type 'founded by' has no endpoint signature
+  [MISSING_DEFINITION] entity_inventory[0].definition: entity type 'Organization' has no definition
+  [MISSING_BOUNDARY_EXAMPLES] entity_inventory.Organization: entity type 'Organization' has no boundary examples (form_examples / not_entities) — boundary material is what separates it from its neighbours
+  [BAD_ENDPOINT_SIGNATURE] relation_inventory.founded by.endpoint_signature: relation type 'founded by' has no endpoint signature
   …
 ```
 
@@ -583,13 +583,19 @@ Approval binds to the schema hash: edit the schema
 afterwards and the approval stale-dates and emission
 refuses. Approving a draft that fails validation is
 refused outright — the findings from step 2 are the
-decision points the approver is settling.
+decision points the approver is settling. Two details
+in the capture above are yours, not the tool's: the
+approval file's name carries the date *you* approve
+on, and the hash is the hash of the draft *you*
+authored in step 2 — expect both to differ from the
+values shown, and pass step 4 the file your run
+actually wrote.
 
 ### 4. Emit — the pack exists
 
 ```console
 $ ontosmith ontology emit drafts/demo-ceramics.json \
-    --approval drafts/approval_2026-10-22.json --out-root .
+    --approval drafts/approval_<date>.json --out-root .
 pack emitted: ./packs/demo-ceramics
   payload pin sha256:0e521c59d46b0db6…
 ```

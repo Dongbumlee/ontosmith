@@ -21,6 +21,19 @@ and the project adheres to
   promise on chunks being present. Found by the
   retroactive vanilla-VM verification of Tracks 1–3.
 
+- **Hands-on Track 3 could not be followed verbatim.**
+  §1 printed a stale skeleton schema hash (the draft
+  tool's deterministic output has moved since the
+  capture); §2's validate block dropped the field-path
+  prefixes the tool prints; §4's emit command named an
+  approval file dated from the capture, which a reader
+  running the track today does not have. The hash is
+  refreshed, §2's block matches the tool's output, §3
+  now states that the approval file's name and the
+  schema hash are the reader's own, and §4 takes the
+  approval file by placeholder. Found by the same
+  retroactive verification.
+
 ## [0.1.1] - 2026-10-27
 
 Release notes: [v0.1.1 on GitHub](https://github.com/Dongbumlee/ontosmith/releases/tag/v0.1.1).
