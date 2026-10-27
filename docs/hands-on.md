@@ -88,7 +88,11 @@ no `[nlp]` extra, no spaCy model. The block further
 below is only for readers who later run the product
 default.
 
-Install the package from PyPI:
+Install the package from PyPI — in a virtual
+environment, so the install is yours to discard
+(`python3 -m venv venv`, then activate it; on
+Debian/Ubuntu the venv may first need the
+`python3-venv` system package):
 
 ```console
 $ pip install ontosmith
@@ -164,7 +168,7 @@ repository bundles no dataset text):
 | Order | Set | Pack | Source | License / terms |
 |---|---|---|---|---|
 | 1 | **Open Domain** — Re-DocRED dev subset (general documents) | `open-domain` (family `redocred`) | [Re-DocRED dataset repository](https://raw.githubusercontent.com/tonytan48/Re-DocRED/main/data/dev_revised.json) — fetched by `examples/demo/fetch_demo.py`, which writes a `SOURCE.md` beside the documents | Dataset: MIT. Document text derives from Wikipedia and remains under upstream **CC BY-SA** — fetched for use, never bundled here |
-| 2 | **Legal Contract** — CUAD v1 (510 commercial contracts, 41 clause categories) | `legal-contract` (family `cuad`) | [The Atticus Project — CUAD](https://github.com/TheAtticusProject/cuad) | **CC BY 4.0** (source contracts are SEC EDGAR filings, public domain). Download the v1 archive from the project and unpack it beside your work |
+| 2 | **Legal Contract** — CUAD v1 (510 commercial contracts, 41 clause categories) | `legal-contract` (family `cuad`) | [The Atticus Project — CUAD](https://github.com/TheAtticusProject/cuad); the v1 archive itself is on [Zenodo (record 4595826)](https://zenodo.org/records/4595826) | **CC BY 4.0** (source contracts are SEC EDGAR filings, public domain). Download `CUAD_v1.zip` from the Zenodo record and unpack it beside your work — it unpacks to `CUAD_v1/`, the contract texts in `CUAD_v1/full_contract_txt/` |
 | 3 | **Bio Medical** — BioRED (600 PubMed abstracts, document-level relations) | `bio-medical` (family `biored`) | [NLM — BioRED download](https://ftp.ncbi.nlm.nih.gov/pub/lu/BioRED/) | Freely available from NLM for research use; the abstracts are PubMed records. Fetch from NLM under its terms — do not re-host |
 | 4 | **Legal Contract, imported ontology** — the same CUAD contracts as row 2, under a schema imported from a public ontology instead of a fitted pack | `fibo-contracts` (family `fibo-cuad`) | Documents: CUAD as row 2. Schema: [FIBO](https://github.com/edmcouncil/fibo) (EDM Council), pinned release `master_2026Q3`, fetched in Track 4 | Documents **CC BY 4.0** as row 2. FIBO is **MIT**-licensed; "FIBO" is an EDM Council trademark — the ontology is credited, never rebranded |
 
@@ -865,11 +869,12 @@ conformance record opens, honestly, at
 The documents are Track 2's CUAD set (example sets,
 row 4). For a first build, take a priced subset —
 the first 100 contracts in sorted filename order
-from the unpacked archive:
+from the unpacked archive (which unpacks to
+`CUAD_v1/`, texts in `full_contract_txt/`):
 
 ```console
 $ mkdir cuad-subset-100
-$ ls <the unpacked CUAD folder>/*.txt | sort | head -100 | \
+$ ls CUAD_v1/full_contract_txt/*.txt | sort | head -100 | \
     while read f; do cp "$f" cuad-subset-100/; done
 
 $ ontosmith profile cuad-subset-100 --family fibo-cuad
