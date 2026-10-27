@@ -973,8 +973,9 @@ def _print_findings(findings: list[dict]) -> None:
 
 
 def main(argv=None) -> int:
-    """``python -m pipeline ontology <draft|validate|brief|
-    approve|emit|check> ...`` — the builder's command surface."""
+    """``python -m pipeline ontology <draft|import|validate|
+    brief|approve|emit|check> ...`` — the builder's command
+    surface."""
     ap = argparse.ArgumentParser(
         prog="ontosmith ontology",
         description="Ontology builder: draft -> validate -> "
@@ -1004,6 +1005,24 @@ def main(argv=None) -> int:
                         "layer); default: the drafting seat's "
                         "bound model (ONTOSMITH_DRAFTING_MODEL) "
                         "— the seat ships unbound")
+
+    p = sub.add_parser("import", help="Import an external "
+                                      "ontology as a draft "
+                                      "(BYO schema): inventory "
+                                      "+ scoping spec -> draft "
+                                      "+ scoping record")
+    p.add_argument("--spec", required=True,
+                   help="scoping spec JSON (the human judgment: "
+                        "per-type sources, actions, boundary "
+                        "material, drops with reasons)")
+    p.add_argument("--inventory", required=True, action="append",
+                   help="source-ontology inventory JSON "
+                        "(repeatable: module file + reference "
+                        "files)")
+    p.add_argument("--out", required=True, help="draft JSON path")
+    p.add_argument("--scoping-out", default=None,
+                   help="scoping record path (default: beside "
+                        "the draft, .scoping.json)")
 
     p = sub.add_parser("validate", help="Validate a schema draft")
     p.add_argument("draft")
@@ -1089,6 +1108,50 @@ def main(argv=None) -> int:
               f"{len(draft['entity_types'])} entity types, "
               f"{len(draft['relation_types'])} relation types, "
               f"schema hash {schema_hash(draft)})")
+        if findings:
+            print(f"validation findings ({len(findings)}) — the "
+                  f"decision-point list approval must settle:")
+            _print_findings(findings)
+        else:
+            print("validation: clean")
+        return 0
+
+    if args.cmd == "import":
+        from . import ontology_import
+        try:
+            spec = ontology_import.load_json_file(args.spec)
+            inventories = [ontology_import.load_json_file(p)
+                           for p in args.inventory]
+            draft, record = ontology_import.build_import(
+                spec, inventories)
+        except ValueError as e:
+            print(str(e), file=sys.stderr)
+            return 1
+        _write_json(args.out, draft)
+        scoping_out = args.scoping_out
+        if scoping_out is None:
+            stem = Path(args.out)
+            if stem.suffix == ".json":
+                stem = stem.with_suffix("")
+                if stem.suffix == ".draft":
+                    stem = stem.with_suffix("")
+            scoping_out = str(stem) + ".scoping.json"
+        _write_json(scoping_out, record)
+        counts = record["counts"]
+        print(f"draft written: {args.out} "
+              f"(status {draft['status']}, "
+              f"{len(draft['entity_types'])} entity types, "
+              f"{len(draft['relation_types'])} relation types, "
+              f"schema hash {schema_hash(draft)})")
+        print(f"scoping record: {scoping_out} "
+              f"({counts['scoped_concepts']} scoped concepts: "
+              f"{counts['kept']} kept, {counts['merged']} merged, "
+              f"{counts['flattened']} flattened, "
+              f"{counts['role_converted']} role-converted, "
+              f"{counts['demoted']} demoted, "
+              f"{counts['dropped']} dropped; "
+              f"{counts['external_entities']} external entities)")
+        findings = validate_schema_draft(draft)
         if findings:
             print(f"validation findings ({len(findings)}) — the "
                   f"decision-point list approval must settle:")
