@@ -150,49 +150,53 @@ headline figure maps to the command that recomputes it
 in [reproduce/](reproduce/).
 
 **Step 3 · Build with your own connection.** The
-prerequisites, gathered in one place: declare the
-binding with `ontosmith configure` — it walks the
-seats from the preset's values, probes the result
-with zero spend, and writes the bindings file. For
-the reference preset, accept the defaults and set
-`OPENROUTER_API_KEY` — the same key reaches every
-seat, the judge included
-([Connections](docs/connections.md) explains the route
-and how to bind your own provider instead);
-install the NLP extra and its model for the full local
-pipeline (`pip install "ontosmith[nlp]"`, then
-`python -m spacy download en_core_web_sm`). The extra
-is a heavy install — it pulls the CUDA torch stack,
-several gigabytes — and it serves the default
-candidate path; a build run with
-`--candidate-source llm` (the hands-on Track 1 route)
-never loads GLiNER, so try that path first if the
-download is a problem. One LLM
-connection is the only *model* connection a build
-needs; [Connections](docs/connections.md) covers the
-seats it plugs into and the recommended models. The
-build also needs **Neo4j running** — it is the graph
-store WRITE, INDEX, and VERIFY work in. Install it,
-set its password, and export `NEO4J_PASSWORD` (a local
-default install needs nothing else; the connection
-variables and setup are in
-[Connections](docs/connections.md)). The run probes
-the store before the first stage and refuses by name
-if it is not serving, so a missing store costs no
-spend. Cost, with its
-scope: the four-document demo subset prices at roughly
-$1–2 end to end, fixed overhead included. A full
-corpus prices from the counted projection before it
-runs (Cost guardrails, below). The flagship run's
-governing total prices at 3.8¢ per document over 500
-documents — key-observed; the run's counted ledger
-reads 3.7¢ (whitepaper §5.6). Then the
-[hands-on guide](docs/hands-on.md) (Track 1) walks a
-live build on your own documents end to end — profile,
-create, capped run, and the serve / search / inspect
-finish line. A run whose key is missing refuses before
-any stage starts, with the error naming the seat and
-the variable to set.
+prerequisites, gathered in one place:
+
+1. **Declare the binding** — `ontosmith configure`
+   walks the seats from the preset's values, probes
+   the result with zero spend, and writes the bindings
+   file. For the reference preset, accept the defaults
+   and set `OPENROUTER_API_KEY` — the same key reaches
+   every seat, the judge included
+   ([Connections](docs/connections.md) explains the
+   route and how to bind your own provider instead).
+   One LLM connection is the only *model* connection
+   a build needs; [Connections](docs/connections.md)
+   covers the seats it plugs into and the recommended
+   models.
+2. **Install the NLP extra and its model** — for the
+   full local pipeline: `pip install "ontosmith[nlp]"`,
+   then `python -m spacy download en_core_web_sm`. The
+   extra is a heavy install — it pulls the CUDA torch
+   stack, several gigabytes — and it serves the
+   default candidate path; a build run with
+   `--candidate-source llm` (the hands-on Track 1
+   route) never loads GLiNER, so try that path first
+   if the download is a problem.
+3. **Neo4j running** — the build needs it: it is the
+   graph store WRITE, INDEX, and VERIFY work in.
+   Install it, set its password, and export
+   `NEO4J_PASSWORD` (a local default install needs
+   nothing else; the connection variables and setup
+   are in [Connections](docs/connections.md)). The run
+   probes the store before the first stage and refuses
+   by name if it is not serving, so a missing store
+   costs no spend.
+
+Cost, with its scope: the four-document demo subset
+prices at roughly $1–2 end to end, fixed overhead
+included. A full corpus prices from the counted
+projection before it runs (Cost guardrails, below).
+The flagship run's governing total prices at 3.8¢ per
+document over 500 documents — key-observed; the run's
+counted ledger reads 3.7¢ (whitepaper §5.6).
+
+Then the [hands-on guide](docs/hands-on.md) (Track 1)
+walks a live build on your own documents end to end —
+profile, create, capped run, and the serve / search /
+inspect finish line. A run whose key is missing
+refuses before any stage starts, with the error naming
+the seat and the variable to set.
 
 Optional surfaces install as extras: `pip install .[nlp]`
 (the pipeline candidate path's local NER), `.[viz]`.
@@ -276,7 +280,9 @@ One separation runs through everything: nothing is
 written on the proposing seat's say-so alone. A fitted
 pair call converts enumerated pairs into candidate
 triples; deterministic gates check them; the Jev
-decision model **decides** what is written. Operating
+decision model **decides** what is written.
+
+Operating
 points — thresholds, the enumeration window, the judge
 configuration — are chosen by pre-registered measurement
 gates, not by feel, and configurations that miss their
@@ -290,7 +296,9 @@ GraphRAG-style pipelines typically centre the build on
 a single frontier-class model, and evaluate the result
 by its answers (or by extraction scores on someone
 else's benchmark), rather than by adjudicating the
-graph they actually built. OntoSmith divides the job:
+graph they actually built.
+
+OntoSmith divides the job:
 a low-cost proposer proposes, a fitted pair call
 converts enumerated pairs into candidates,
 deterministic gates check form, and the pinned Jev
@@ -351,7 +359,9 @@ gate — and drafting is an authoring seat outside the
 build loop.
 
 Four models, one key: the preset reaches all four named
-models through a single connection key. The names differ
+models through a single connection key.
+
+The names differ
 per seat because each measured seat's default won its
 job in measurement; the judge seat is the exception —
 a pinned component, not a bake-off winner — and you can
@@ -368,6 +378,7 @@ so a default install runs the bindings the published
 numbers were measured under (the numbers themselves
 reproduce keyless from the appendix — step 2) —
 but OntoSmith needs *a* connection, not *this* one.
+
 Domain packs declare only *capability tiers* (proposer /
 judge / escalation), never model names, so you can bind
 other models and endpoints in your own connection config;
@@ -385,8 +396,9 @@ Spend is guarded by default. The tooling prints a
 **counted projection** before a run (`ontosmith verify
 project` — candidate pairs counted from your data, priced
 at rates you supply (`--unit-cost`); the tool takes
-prices from the caller and never hardcodes a rate card)
-and every batch enforces a
+prices from the caller and never hardcodes a rate card).
+
+Every batch enforces a
 **stop-line**: a run that would cross its cap refuses to
 start the unit that crosses it, and resumes from its
 ledger instead of re-spending.
@@ -417,7 +429,9 @@ that recomputes it ship in [`benchmarks/`](benchmarks/).
 OntoSmith is the wrong tool if you want a graph without
 an ontology: the schema-first step, the human approval
 points, and the measurement tooling are the product, not
-ceremony around it. If you need a quick demo graph from a
+ceremony around it.
+
+If you need a quick demo graph from a
 pile of text with no quality questions asked, lighter
 extraction tools will get you there faster — and if your
 domain's schema is still changing daily, settle it a
@@ -457,7 +471,9 @@ identity of the ontology that produced it: a build
 under a different ontology replaces the previous graph
 (named in the run's output before it happens), never
 accumulates beside it, so search never needs a scope —
-it answers from the one graph that is there. Asking questions
+it answers from the one graph that is there.
+
+Asking questions
 of *recorded* artifacts needs no store: the search
 command and sample API also run over a file-backed
 store that reads a finished batch's records (or the
