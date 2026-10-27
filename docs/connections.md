@@ -8,7 +8,9 @@ product's two named pillars, one per kind of work:
 to write; **Neo4j** stores it — native graph traversal,
 a vector index, and full-text search in one store,
 which is why it was chosen (alternatives were reviewed
-and declined on exactly this point). Neither is optional
+and declined on exactly this point).
+
+Neither is optional
 for a build. Everything else is local. This page says
 which seats the LLM connection plugs into, how a
 binding is declared, which models we recommend for each
@@ -72,14 +74,18 @@ escalation seats), and writes
 `ontosmith-bindings.env`: the full per-seat
 declaration, stamped with the binding's name
 (`reference` when every answer equals the preset,
-`custom` otherwise). Prefer files to prompts?
+`custom` otherwise).
+
+Prefer files to prompts?
 `ontosmith configure --emit-template` prints the
 shipped template
 ([bindings-template.env](bindings-template.env));
 fill a copy in and validate it with
 `ontosmith configure --from-file <file>` — both doors
 write the identical file, and the worked examples in
-the template are the canonical examples. Load the
+the template are the canonical examples.
+
+Load the
 file into your environment
 (`set -a; . ./ontosmith-bindings.env; set +a`) and
 the declarations below take effect; setting the
@@ -126,7 +132,9 @@ Refusals are loud, never silent: if a seat's binding is
 declared but its key variable is unset, the run stops
 with a named error (`BindingKeyError`) identifying the
 seat and the missing variable. Nothing quietly falls
-back to the preset provider. The drafting seat adds the
+back to the preset provider.
+
+The drafting seat adds the
 mirror-image refusal: used with no model bound — no
 `ONTOSMITH_DRAFTING_MODEL`, no `--model` — it stops
 with a named error (`BindingModelError`) identifying
@@ -232,11 +240,15 @@ incumbents on the same corpora, adopted only where the
 measured outcomes supported the change — and the
 [white paper](whitepaper.md) is the record of those
 measurements (the extraction bake-off and the
-judge-configuration gates). The judge seat is the
+judge-configuration gates).
+
+The judge seat is the
 exception to that sentence: Jev is a pinned product
 component, not a bake-off winner, and no
 Jev-versus-frontier judgment comparison is in the
-published record. And what a different binding does
+published record.
+
+And what a different binding does
 not inherit is the calibration: figures measured under
 one configuration are statements about that
 configuration, and a custom binding's numbers are its
@@ -303,7 +315,9 @@ embedding seats routed over OpenRouter, and in the
 strict sense an operating point includes its route:
 the same models reached over a different route are a
 different configuration, whose figures are that
-configuration's to measure. The judge seat is the
+configuration's to measure.
+
+The judge seat is the
 exception to the *chat* route only: it does not use the
 chat route or any provider routing — its calls go to
 the pinned decisions/systemone routes on the preset
@@ -367,7 +381,9 @@ store's graph rather than accumulating a second one
 beside it: the run names the graph it is replacing —
 in the preflight output, before anything is spent,
 and again at WRITE — and per-version stores are not a
-thing to manage. If the store holds content no stamp
+thing to manage.
+
+If the store holds content no stamp
 identifies (written before stamping, or by another
 tool), the build stops by name instead of overwriting
 it. The registry keeps every replaced graph's full
@@ -394,7 +410,9 @@ unset stops with the named `BindingKeyError` refusal
 with a weaker local model: a local model was measured
 against the hosted embedder and missed candidates it
 catches, and the record was measured with the hosted
-one. Surfaces that need no embedder — lexical + graph
+one.
+
+Surfaces that need no embedder — lexical + graph
 search without `--embed`, and everything under "What
 needs no key at all" below — run keyless exactly as
 before.
