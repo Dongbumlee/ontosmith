@@ -439,23 +439,27 @@ little before pinning it into a pack.
 
 ## Commands
 
-```text
-Label      review          interactive review-band labeling
-Evaluate   evaluate · recalibrate · calibration
-           inspect         triple + evidence + provenance
-           verify          score / audit-sets / project / report
-Models     llm · ollama    candidate judges
-Gates      triple · er · conflict · onto · cascade   (Jev gates)
-Connect    configure       declare the seat bindings
-                           (wizard / --from-file)
-Pipeline   batch           create / run / status / rollback
-           profile         corpus profiler (deterministic, no LLM)
-           ontology        draft / validate / approve / emit a pack
-Serve      search          hybrid search over a built graph
-           serve           sample HTTP API (search / entity /
-                           neighborhood / triple-with-evidence)
-                           + the demo app at /
-```
+| Command | What it does |
+|---|---|
+| **Label** | |
+| `review` | interactive review-band labeling |
+| **Evaluate** | |
+| `evaluate` · `recalibrate` · `calibration` | |
+| `inspect` | triple + evidence + provenance |
+| `verify` | score / audit-sets / project / report |
+| **Models** | |
+| `llm` · `ollama` | candidate judges |
+| **Gates** | |
+| `triple` · `er` · `conflict` · `onto` · `cascade` | (Jev gates) |
+| **Connect** | |
+| `configure` | declare the seat bindings (wizard / --from-file) |
+| **Pipeline** | |
+| `batch` | create / run / status / rollback |
+| `profile` | corpus profiler (deterministic, no LLM) |
+| `ontology` | draft / validate / approve / emit a pack |
+| **Serve** | |
+| `search` | hybrid search over a built graph |
+| `serve` | sample HTTP API (search / entity / neighborhood / triple-with-evidence) + the demo app at / |
 
 ## The store — Neo4j
 
