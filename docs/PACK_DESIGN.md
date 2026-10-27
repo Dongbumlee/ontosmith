@@ -9,25 +9,30 @@ a pack end to end is the hands-on guide's Track 3
 ([hands-on.md](hands-on.md)); this page is the contract
 that walkthrough operates under.
 
-**Terms.** *Core* = the domain-invariant implementation:
-stage machinery, prompt-construction mechanisms, the gate,
-the registry, the measurement instruments. The core
-carries meta-structure and schema-behavior rules only; it
-never says what exists in a domain. *Pack* = one domain's
-content as data: type sets, definitions, boundary
-contrasts, convention notes, fitted artefacts, evaluation
-hooks — plus its identity, version, pin, and conformance
-record (what "conformance" means here is defined in §2.4).
-Do not confuse *Core* with the **core pack**: the core
-pack (`packs/core`) is baseline *content* — the
-domain-neutral type inventory and gates every domain
-pack composes over — that runs on Core, the
-implementation. *Payload* = the `setup_config` document a pack
-binds and the profile channel consumes. *Candidate* = pack
-content that exists and is pinned but is **not in force**:
-measured (or awaiting measurement) under §2, adoptable
-only as a new pack version after a passing registered
-gate.
+**Terms.**
+
+- *Core* = the domain-invariant implementation:
+  stage machinery, prompt-construction mechanisms, the gate,
+  the registry, the measurement instruments. The core
+  carries meta-structure and schema-behavior rules only; it
+  never says what exists in a domain.
+- *Pack* = one domain's
+  content as data: type sets, definitions, boundary
+  contrasts, convention notes, fitted artefacts, evaluation
+  hooks — plus its identity, version, pin, and conformance
+  record (what "conformance" means here is defined in §2.4).
+  Do not confuse *Core* with the **core pack**: the core
+  pack (`packs/core`) is baseline *content* — the
+  domain-neutral type inventory and gates every domain
+  pack composes over — that runs on Core, the
+  implementation.
+- *Payload* = the `setup_config` document a pack
+  binds and the profile channel consumes.
+- *Candidate* = pack
+  content that exists and is pinned but is **not in force**:
+  measured (or awaiting measurement) under §2, adoptable
+  only as a new pack version after a passing registered
+  gate.
 
 ## 1. The contract
 
@@ -122,14 +127,20 @@ Per surface, concretely:
 
 ### 1.4 Fail-closed semantics
 
-Loading a pack refuses, naming the defect, when: the
-manifest is missing or malformed; a required field is
-absent; a field is present that the pack schema does
-not define (§1.6); the pack_format is unsupported; the payload file
-is missing; **the payload's bytes do not match the pin**;
-or the payload fails setup_config validation (an
-unconsumed key is a silent no-op, and a pack may not
-smuggle one in). There is no degraded mode: a run that
+Loading a pack refuses, naming the defect, when:
+
+- the manifest is missing or malformed;
+- a required field is absent;
+- a field is present that the pack schema does not
+  define (§1.6);
+- the pack_format is unsupported;
+- the payload file is missing;
+- **the payload's bytes do not match the pin**; or
+- the payload fails setup_config validation (an
+  unconsumed key is a silent no-op, and a pack may not
+  smuggle one in).
+
+There is no degraded mode: a run that
 cannot load its named pack does not fall back to
 core-only under the pack's name — that would be a
 provenance break, not a quality nit. The same refusal
@@ -276,7 +287,9 @@ fitting/evaluation split relationship), `instrument`,
 instrument shows both), `gate`, and `verdict` + `status`
 ∈ {`adopted`, `measured_adopted`, `measured_baseline`,
 `measured_pilot`, `measured_not_adopted`, `closed`,
-`emitted_unmeasured`} (the schema's enum, §1.6). A
+`emitted_unmeasured`} (the schema's enum, §1.6).
+
+A
 negative result is recorded with the same standing as a
 positive one — the record is the pack's memory of what
 NOT to re-propose without new evidence. A pack emitted
