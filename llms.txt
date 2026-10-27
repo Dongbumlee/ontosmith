@@ -10,7 +10,8 @@
 - [Whitepaper](docs/whitepaper.md): the long-form technical report and the canonical quality record (§5) — system, method, measured scores with intervals, failure anatomy, gate adoptions and rejections, cost accounting, limitations
 - [Connections](docs/connections.md): the connection layer — seats, the reference profile (default preset), recommended models, the custom-binding contract, and `ontosmith configure`, the wizard (with its template twin) that declares bindings
 - [Serving](docs/serving.md): the one graph in Neo4j, `ontosmith search`, the sample API, and the demo app
-- [Hands-on guide](docs/hands-on.md): the whole loop in four tracks over your own documents — the quickstart build, the same build under an ontology domain pack, drafting your own pack with the ontology builder, and importing a public ontology (FIBO over CUAD) through the same builder gates — plus an appendix track
+- [Hands-on guide](docs/hands-on.md): the whole loop in four tracks over your own documents — the quickstart build, the same build under an ontology domain pack, drafting your own pack with the ontology builder, and importing a public ontology (FIBO over CUAD) through the same builder gates
+- [Hands-on appendix](docs/hands-on-appendix.md): the appendix track — reproduce the reference build: the flagship loop (profile → counted projection → gold audit → capped live run → corrected scoring) replayed against shipped artifacts and a fetched dataset subset
 - [CLI reference](docs/cli-reference.md): every `ontosmith` command and its options, refreshed by hand from the live `--help` surface — the file says so in its own header
 - [Pack design](docs/PACK_DESIGN.md): the pack-format contract — what a pack is, its files, and the rules it is loaded, versioned, and measured under
 - [Adjudication contract](docs/ADJUDICATION.md): the standing specification for machine adjudication in the quality records, including the six seam rulings

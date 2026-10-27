@@ -145,7 +145,7 @@ build's corrected scoring replays from its shipped
 adjudication appendix — no model calls, and the script
 exits non-zero if any figure drifts:
 `python examples/demo/replay_scores.py`
-([guide](docs/hands-on.md), appendix track). Every
+([appendix track](docs/hands-on-appendix.md)). Every
 headline figure maps to the command that recomputes it
 in [reproduce/](reproduce/).
 
@@ -229,7 +229,7 @@ over HTTP and needs the server, not the extra.)
 | Read this project as an LLM | [llms.txt](llms.txt) — the machine-readable orientation |
 | Design an ontology for my domain | `ontosmith ontology` — the loop below; [hands-on](docs/hands-on.md) Track 3 |
 | Import an ontology my domain already has | `ontosmith ontology import` — BYO schema; [hands-on](docs/hands-on.md) Track 4 |
-| Audit my own benchmark gold | `ontosmith verify` — [hands-on](docs/hands-on.md) appendix track |
+| Audit my own benchmark gold | `ontosmith verify` — [hands-on appendix](docs/hands-on-appendix.md) |
 | Serve and query a built graph | [docs/serving.md](docs/serving.md) — `ontosmith search` / `serve` + the demo app at `/` over the build's Neo4j store (the shipped demo serves from its recorded files, no store needed) |
 | Contribute | [CONTRIBUTING.md](CONTRIBUTING.md) |
 

@@ -123,4 +123,4 @@ distributed under the MIT license; its document text derives
 from Wikipedia and remains under the upstream CC BY-SA
 terms. The corpus itself is **not** redistributed by this
 repository — the demo fetch path downloads it from its
-source (`docs/hands-on.md`).
+source (`docs/hands-on-appendix.md`).

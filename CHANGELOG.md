@@ -34,6 +34,24 @@ and the project adheres to
   approval file by placeholder. Found by the same
   retroactive verification.
 
+### Changed
+
+- **Hands-on guide restructured for a lighter first
+  read.** The appendix track (reproduce the reference
+  build, steps A1–A9) moved to its own document,
+  `docs/hands-on-appendix.md`; the front matter was
+  compressed (the four tracks now open in a compact
+  table, Track 1 starts at the top of the guide, and
+  the profile/pack glossary moved into Track 1's
+  opening); the pipeline-path install block moved to
+  the end of the guide as an advanced note; and the
+  example-document-sets table was slimmed and moved
+  ahead of Track 2. Layout only — no step text
+  changed: every command, quoted output, and
+  checkpoint is the VM-verified text, relocated
+  verbatim. README, llms.txt, and the benchmarks
+  appendix now point at the appendix document.
+
 ## [0.1.1] - 2026-10-27
 
 Release notes: [v0.1.1 on GitHub](https://github.com/Dongbumlee/ontosmith/releases/tag/v0.1.1).

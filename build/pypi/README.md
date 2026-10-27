@@ -145,7 +145,7 @@ build's corrected scoring replays from its shipped
 adjudication appendix — no model calls, and the script
 exits non-zero if any figure drifts:
 `python examples/demo/replay_scores.py`
-([guide](https://github.com/Dongbumlee/ontosmith/blob/main/docs/hands-on.md), appendix track). Every
+([appendix track](https://github.com/Dongbumlee/ontosmith/blob/main/docs/hands-on-appendix.md)). Every
 headline figure maps to the command that recomputes it
 in [reproduce/](https://github.com/Dongbumlee/ontosmith/tree/main/reproduce).
 
@@ -231,7 +231,7 @@ to Neo4j over HTTP and needs the server, not the extra.)
 | Read this project as an LLM | [llms.txt](https://github.com/Dongbumlee/ontosmith/blob/main/llms.txt) — the machine-readable orientation |
 | Design an ontology for my domain | `ontosmith ontology` — the loop below; [hands-on](https://github.com/Dongbumlee/ontosmith/blob/main/docs/hands-on.md) Track 3 |
 | Import an ontology my domain already has | `ontosmith ontology import` — BYO schema; [hands-on](https://github.com/Dongbumlee/ontosmith/blob/main/docs/hands-on.md) Track 4 |
-| Audit my own benchmark gold | `ontosmith verify` — [hands-on](https://github.com/Dongbumlee/ontosmith/blob/main/docs/hands-on.md) appendix track |
+| Audit my own benchmark gold | `ontosmith verify` — [hands-on appendix](https://github.com/Dongbumlee/ontosmith/blob/main/docs/hands-on-appendix.md) |
 | Serve and query a built graph | [docs/serving.md](https://github.com/Dongbumlee/ontosmith/blob/main/docs/serving.md) — `ontosmith search` / `serve` + the demo app at `/` over the build's Neo4j store (the shipped demo serves from its recorded files, no store needed) |
 | Contribute | [CONTRIBUTING.md](https://github.com/Dongbumlee/ontosmith/blob/main/CONTRIBUTING.md) |
 
