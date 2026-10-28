@@ -69,14 +69,26 @@ endpoint, the mention span as it appears in the quote
 and — when the mention is not the entity's name — a
 resolution proposal: the antecedent span, verbatim from
 the document, that names the entity. guard_triples
-verifies BOTH spans with the same verbatim discipline as
-the quote itself; an unverifiable span blocks the item
-with a reason code (mention_missing / mention_span /
-mention_antecedent), never a silent drop. The quote is
-never rewritten — the resolution travels as annotation,
-and GATES judges the resolution as its own decision
-before the fact (stage_gates), so the proposer proposes
-and Jev decides, as everywhere else in the pipeline.
+verifies every DECLARED span with the same verbatim
+discipline as the quote itself: a mention that is
+present but unverifiable blocks the item by name
+(mention_missing / mention_span / mention_antecedent),
+never a silent drop. An endpoint whose mention data is
+absent — the proposer did not answer for it — is not
+blocked: it falls back to the legacy evidence path and
+is judged on its quote exactly as without the layer.
+(Cut 2: the first cut blocked absence too, and the
+measured Phase 2 A/B showed the proposer's unreliable
+mention-field compliance culling a quarter of all
+proposals before judging. The layer is additive by
+policy — only a declared-but-invalid mention can
+block — and every fallback is counted by endpoint in
+the batch accounting, so the fallback rate is always
+visible.) The quote is never rewritten — the resolution
+travels as annotation, and GATES judges the resolution
+as its own decision before the fact (stage_gates), so
+the proposer proposes and Jev decides, as everywhere
+else in the pipeline.
 """
 from __future__ import annotations
 
@@ -332,7 +344,9 @@ def _mention_from_item(it: dict, ep: str) -> dict:
     subject_mention_type / subject_antecedent fields the
     mention prompt asks for, gathered into one dict.
     Missing or malformed fields stay missing — guard_triples
-    decides what that means (mention_missing), the parse
+    decides what that means (an absent mention falls back
+    to the legacy evidence path for that endpoint; a
+    present-but-invalid one blocks by name), the parse
     layer invents nothing."""
     m: dict = {}
     span = it.get(f"{ep}_mention")
@@ -523,43 +537,57 @@ def quote_window(text: str, quote: str, half: int = WINDOW) -> str:
 # Deterministic guards
 # ------------------------------------------------------------------
 def _verify_mentions(it: dict, qn: str, doc_norm: str,
-                     sn: str, on: str) -> dict | str:
+                     sn: str, on: str) -> tuple[dict, list] | str:
     """Verify one item's mention records (issue #54).
 
-    Returns the cleaned mentions dict, or the block reason
-    string. The discipline mirrors the quote's: every span
-    is verbatim or the item is blocked by name —
+    Returns (cleaned, fallback) — the verified mention
+    records by endpoint, and the endpoints whose mention
+    data was ABSENT — or the block reason string when a
+    DECLARED mention is invalid. The policy (cut 2) is
+    per-endpoint and additive:
 
-    - mention_missing: an endpoint carries no usable
-      mention record (no span, or a type outside
-      MENTION_TYPES) although the profile declared the
-      layer — the proposer was asked and did not answer.
-    - mention_span: the mention span is not a verbatim
-      (whitespace-normalized) substring of the item's
-      quote — the mention must appear in the quote, that
-      is where the judge will look for it.
-    - mention_antecedent: a non-named mention (pronominal /
-      descriptive) without a usable resolution: the
-      antecedent is absent, is not a verbatim substring of
-      the document, or does not name the endpoint (neither
-      surface contains the other — "Paul Desmarais" for
-      "Paul Desmarais Jr." passes; an unrelated phrase
-      does not).
+    - Absent: the endpoint carries no mention record, or
+      the record has no usable span (the proposer did not
+      answer for that endpoint — the measured Phase 2
+      shape: the mention fields were simply omitted). The
+      endpoint falls back to the legacy evidence path:
+      the item is judged on its quote exactly as without
+      the layer, and the fallback is counted by endpoint
+      in the batch accounting.
+    - Present but invalid blocks the item by name, with
+      the quote's own verbatim discipline:
+      - mention_missing: a span was declared but its type
+        is missing or outside MENTION_TYPES — a malformed
+        answer, not an absent one.
+      - mention_span: the mention span is not a verbatim
+        (whitespace-normalized) substring of the item's
+        quote — the mention must appear in the quote, that
+        is where the judge will look for it.
+      - mention_antecedent: a non-named mention
+        (pronominal / descriptive) without a usable
+        resolution: the antecedent is absent, is not a
+        verbatim substring of the document, or does not
+        name the endpoint (neither surface contains the
+        other — "Paul Desmarais" for "Paul Desmarais Jr."
+        passes; an unrelated phrase does not).
 
     A "named" mention needs no antecedent: the span in the
     quote IS the attestation, judged as before.
     """
     raw = it.get("mentions")
-    if not isinstance(raw, dict):
-        return "mention_missing"
     cleaned: dict = {}
+    fallback: list = []
     for ep, surf_n in (("subject", sn), ("object", on)):
-        m = raw.get(ep)
+        m = raw.get(ep) if isinstance(raw, dict) else None
         if not isinstance(m, dict):
-            return "mention_missing"
-        span, mtype = m.get("span"), m.get("type")
-        if not isinstance(span, str) or not span.strip() \
-                or mtype not in MENTION_TYPES:
+            fallback.append(ep)
+            continue
+        span = m.get("span")
+        if not isinstance(span, str) or not span.strip():
+            fallback.append(ep)
+            continue
+        mtype = m.get("type")
+        if mtype not in MENTION_TYPES:
             return "mention_missing"
         if norm_ws(span) not in qn:
             return "mention_span"
@@ -576,7 +604,7 @@ def _verify_mentions(it: dict, qn: str, doc_norm: str,
                 return "mention_antecedent"
             rec["antecedent"] = ant.strip()
         cleaned[ep] = rec
-    return cleaned
+    return cleaned, fallback
 
 
 _PUNCT_SPACE_RX = re.compile(r"\s*([^\w\s])\s*")
@@ -660,12 +688,19 @@ def guard_triples(items: list[dict], doc_text: str,
     - `mentions`: the profile declared the mention layer
       (issue #54). Each item's mention records are verified
       by _verify_mentions after the quote gate and before
-      attestation: both spans verbatim, a non-named mention
-      carrying a verbatim, endpoint-naming antecedent.
-      Kept items carry the cleaned `mentions` dict into
-      candidacy; blocked items carry the records as
-      proposed. Default False = the checks do not run and
-      records are exactly the legacy shape.
+      attestation: declared spans verbatim, a non-named
+      mention carrying a verbatim, endpoint-naming
+      antecedent. The layer is additive (cut 2): an
+      endpoint whose mention data is absent falls back to
+      the legacy evidence path — kept items name those
+      endpoints in `mention_fallback` and carry the
+      cleaned `mentions` dict (verified endpoints only;
+      the key is absent when every endpoint fell back, so
+      the record is exactly the legacy shape). Only a
+      declared-but-invalid mention blocks, and blocked
+      items carry the records as proposed. Default
+      False = the checks do not run and records are
+      exactly the legacy shape.
     """
     doc_norm = norm_ws(doc_text)
     doc_punct = punct_collapse(doc_norm) \
@@ -697,7 +732,15 @@ def guard_triples(items: list[dict], doc_text: str,
             if isinstance(mres, str):
                 blocked.append({**base, "reason": mres})
                 continue
-            base["mentions"] = mres
+            cleaned_m, fallback_eps = mres
+            if cleaned_m:
+                base["mentions"] = cleaned_m
+            else:
+                # Every endpoint fell back: the kept record
+                # is exactly the legacy shape.
+                base.pop("mentions", None)
+            if fallback_eps:
+                base["mention_fallback"] = fallback_eps
         # L0: attested somewhere in the document at all?
         if sn not in doc_norm or on not in doc_norm:
             blocked.append({**base, "reason": "l0_attest"})

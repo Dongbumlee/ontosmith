@@ -153,6 +153,28 @@ and the project adheres to
 
 ### Changed
 
+- **Mention layer: absence now falls back instead of
+  blocking (issue #54, cut 2).** The first cut's guard
+  treated an endpoint whose mention data was absent the
+  same as an invalid mention, and the Phase 2 A/B
+  measured the cost: 69 of 257 proposals culled as
+  `mention_missing` on the proposer's unreliable field
+  compliance, Tier-1 recall 0.1066 -> 0.0772. The layer
+  is now additive by policy: an endpoint with no mention
+  data proceeds under the legacy evidence path — judged
+  on its quote exactly as without the layer — while a
+  mention that is declared but invalid (span outside
+  the quote, antecedent absent / not verbatim / naming
+  another entity, malformed type) still blocks by name.
+  Declared, valid resolutions are judged by GATES
+  exactly as before. Every fallback is counted by
+  endpoint in the stage metrics and restated in the
+  finish record (`candidates_fallback`), and candidates
+  name their fallback endpoints on the record, so the
+  fallback rate is always visible. The re-measurement
+  runs the same pre-registered A/B as Phase 2 (criteria
+  unchanged); its verdict will be recorded here.
+
 - **Hands-on guide restructured for a lighter first
   read.** The appendix track (reproduce the reference
   build, steps A1–A9) moved to its own document,

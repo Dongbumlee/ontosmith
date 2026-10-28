@@ -9,9 +9,15 @@ first):
 
 - the proposer emits per-endpoint mention spans + types +
   verbatim antecedent resolutions;
-- the guards verify BOTH spans verbatim — an unverifiable
-  span blocks by name (mention_missing / mention_span /
-  mention_antecedent), never silently;
+- the guards verify every DECLARED span verbatim — a
+  present-but-invalid mention blocks by name
+  (mention_missing / mention_span / mention_antecedent),
+  never silently; an endpoint whose mention data is
+  absent falls back to the legacy evidence path and is
+  judged on its quote (cut 2 — the layer is additive:
+  only a declared-but-invalid mention can block), and
+  every fallback is counted by endpoint in the batch
+  accounting;
 - GATES judges each resolution as its own Jev decision
   before the fact: clear -> judged as usual; review band
   -> judged but capped at Tier-2 review by ROUTE;
@@ -20,18 +26,21 @@ first):
 
 Pinned here: the accessor fails closed; the undeclared
 path is byte-identical (legacy prompt, legacy records);
-the span discipline; the three resolution outcomes; the
-route cap and the drop reason classes.
+the span discipline; the fallback policy; the three
+resolution outcomes; the route cap and the drop reason
+classes.
 
 Batch-level guards added after the Phase 2 verdict (the
 A/B failed on an interaction the unit tests above never
 simulated — see the verdict record in the changelog):
-the finish record restates guard-block counts by reason,
-so a mention_missing cliff cannot be silent at the
+the finish record restates guard-block counts by reason
+and mention fallback counts by endpoint, so neither a
+block cliff nor a silent fallback can hide at the
 finish; a scripted partial-compliance proposer (27%
-field omission, the measured Phase 2 rate) characterizes
-the fail-closed cliff exactly; and fully compliant input
-survives identically with the layer on and off.
+field omission, the measured Phase 2 rate) survives via
+fallback with the fallback count equal to the omission
+count; and fully compliant input survives identically
+with the layer on and off.
 """
 import io
 import json
@@ -167,15 +176,54 @@ class TestMentionGuards(unittest.TestCase):
         kept, _blocked = self.guard(it)
         self.assertEqual(len(kept), 1)
 
-    def test_missing_mentions_blocked_by_name(self):
+    def test_missing_mentions_fall_back(self):
+        # Cut 2: no mention data at all is NOT a block.
+        # Both endpoints fall back to the legacy evidence
+        # path, the fallback is named on the kept record,
+        # and the record carries no mentions — exactly the
+        # legacy shape.
         kept, blocked = self.guard(_item())
-        self.assertEqual(kept, [])
-        self.assertEqual(blocked[0]["reason"], "mention_missing")
+        self.assertEqual(blocked, [])
+        self.assertEqual(len(kept), 1)
+        self.assertEqual(kept[0]["mention_fallback"],
+                         ["subject", "object"])
+        self.assertNotIn("mentions", kept[0])
+        # The parse layer's shape for omitted fields —
+        # an empty record per endpoint — falls back too.
+        kept, blocked = self.guard(_item(
+            mentions={"subject": {}, "object": {}}))
+        self.assertEqual(blocked, [])
+        self.assertEqual(kept[0]["mention_fallback"],
+                         ["subject", "object"])
+        self.assertNotIn("mentions", kept[0])
+
+    def test_partial_absence_falls_back_per_endpoint(self):
+        # Object declared and valid, subject absent: only
+        # the subject falls back; the verified object
+        # mention rides into candidacy.
+        m = {"object": {"span": "Power Corp", "type": "named"}}
+        kept, blocked = self.guard(_item(mentions=m))
+        self.assertEqual(blocked, [])
+        self.assertEqual(kept[0]["mention_fallback"],
+                         ["subject"])
+        self.assertEqual(set(kept[0]["mentions"]), {"object"})
+
+    def test_fallback_does_not_excuse_an_invalid_mention(self):
+        # Subject absent (would fall back), object declared
+        # with a span outside the quote: the declared-but-
+        # invalid mention still blocks the item by name.
+        m = {"object": {"span": "the company", "type": "named"}}
+        _kept, blocked = self.guard(_item(mentions=m))
+        self.assertEqual(blocked[0]["reason"], "mention_span")
 
     def test_bad_type_is_mention_missing(self):
+        # A span WAS declared; its malformed type makes the
+        # mention present-but-invalid, not absent — it
+        # blocks, it does not fall back.
         m = _named_mentions()
         m["subject"] = {"span": "Paul Desmarais Jr.", "type": "pronoun"}
-        _kept, blocked = self.guard(_item(mentions=m))
+        kept, blocked = self.guard(_item(mentions=m))
+        self.assertEqual(kept, [])
         self.assertEqual(blocked[0]["reason"], "mention_missing")
 
     def test_span_not_in_quote_blocked(self):
@@ -220,6 +268,7 @@ class TestMentionGuards(unittest.TestCase):
         kept, _blocked = self.guard(_item(), mentions=False)
         self.assertEqual(len(kept), 1)
         self.assertNotIn("mentions", kept[0])
+        self.assertNotIn("mention_fallback", kept[0])
 
 
 def _gates_batch(root, candidates):
@@ -391,11 +440,14 @@ class TestRouteResolution(unittest.TestCase):
 # fixture proposer is perfectly compliant. The tests below
 # run the real CANDIDATES stage over scripted proposers so
 # the failure class itself is pinned: its visibility at
-# the finish, its exact cliff shape under partial
-# compliance, and its absence under full compliance. The
-# guard POLICY is not changed here — a future policy
-# change (e.g. a legacy-evidence fallback for a missing
-# mention block) must rewrite the cliff test on purpose.
+# the finish, its exact shape under partial compliance,
+# and its absence under full compliance. Cut 2 changed
+# the guard policy (absence falls back to the legacy
+# evidence path; only a declared-but-invalid mention
+# blocks), and these tests were rewritten with it on
+# purpose: the omission slice survives via fallback, and
+# the fallback count is pinned against the omission count
+# at the stage and at the finish.
 
 
 def _scripted_items(n, omit):
@@ -415,6 +467,26 @@ def _scripted_items(n, omit):
                 "object_mention": f"Company {i}",
                 "object_mention_type": "named"})
         items.append(it)
+    return items
+
+
+def _scripted_invalid_items(n):
+    """n proposals that DECLARE mention data, badly: the
+    subject's mention span ("He") does not appear in the
+    quote, so the mention is present-but-invalid — the
+    shape that still blocks by name under cut 2
+    (mention_span)."""
+    items = []
+    for i in range(n):
+        items.append({
+            "subject": f"Person {i}", "relation": "leads",
+            "object": f"Company {i}",
+            "quote": f"Person {i} leads Company {i}",
+            "subject_mention": "He",
+            "subject_mention_type": "pronominal",
+            "subject_antecedent": f"Person {i}",
+            "object_mention": f"Company {i}",
+            "object_mention_type": "named"})
     return items
 
 
@@ -453,27 +525,31 @@ def _run_candidates_stage(root, batch_id, items, mention):
 
 
 class TestMentionFinishAccounting(unittest.TestCase):
-    """A mention_missing cliff appears BY NAME AND COUNT
-    in the finish record an operator signs off on — the
-    #51 rule (the finish must state what the stages
-    decided) applied to guard blocks. The surface pinned:
+    """Guard blocks and mention fallbacks appear BY NAME
+    AND COUNT in the finish record an operator signs off
+    on — the #51 rule (the finish must state what the
+    stages decided) applied to both. The surfaces pinned:
     batch.metrics["finish"]["candidates_blocked"]
-    ({"total", "by_reason"}) plus the finish log line."""
+    ({"total", "by_reason"}) and ["candidates_fallback"]
+    ({"endpoints", "by_endpoint"}), plus the finish log
+    lines."""
 
     def setUp(self):
         self.root = Path(tempfile.mkdtemp())
         self.addCleanup(shutil.rmtree, self.root, True)
 
     def test_block_counts_reach_the_finish_record(self):
+        # Declared-but-invalid mentions (span outside the
+        # quote): the shape that still blocks under cut 2.
         b, stage_out = _run_candidates_stage(
             self.root, "mention-finish",
-            _scripted_items(100, omit=27), mention=True)
+            _scripted_invalid_items(27), mention=True)
         # The stage's own accounting (pre-existing surface).
         cm = b.metrics["candidates"]
         self.assertEqual(cm["blocked"], 27)
         self.assertEqual(cm["blocked_reasons"],
-                         {"mention_missing": 27})
-        self.assertIn("mention_missing", stage_out)
+                         {"mention_span": 27})
+        self.assertIn("mention_span", stage_out)
         # The finish record restates it — before this, the
         # finish carried only the ER account and a guard
         # cliff was silent there.
@@ -483,60 +559,105 @@ class TestMentionFinishAccounting(unittest.TestCase):
         self.assertEqual(
             b.metrics["finish"]["candidates_blocked"],
             {"total": 27,
-             "by_reason": {"mention_missing": 27}})
+             "by_reason": {"mention_span": 27}})
+        self.assertNotIn("candidates_fallback",
+                         b.metrics["finish"])
         self.assertIn("finish: CANDIDATES blocked 27",
                       out.getvalue())
-        self.assertIn("mention_missing", out.getvalue())
+        self.assertIn("mention_span", out.getvalue())
+
+    def test_fallback_counts_reach_the_finish_record(self):
+        # The Phase 2 omission shape under cut 2: nothing
+        # blocks, and the finish must say how much of the
+        # run was judged on the legacy evidence path — a
+        # fallback with no finish line would read as an
+        # ordinary fully-compliant mention run.
+        b, stage_out = _run_candidates_stage(
+            self.root, "mention-finish-fallback",
+            _scripted_items(100, omit=27), mention=True)
+        self.assertEqual(b.metrics["candidates"]["blocked"], 0)
+        self.assertIn("mention fallback: 54", stage_out)
+        out = io.StringIO()
+        with redirect_stdout(out):
+            batch_run._finish_summary(b, self.root, None)
+        self.assertEqual(
+            b.metrics["finish"]["candidates_fallback"],
+            {"endpoints": 54,
+             "by_endpoint": {"subject": 27, "object": 27}})
+        self.assertNotIn("candidates_blocked",
+                         b.metrics["finish"])
+        self.assertIn("finish: CANDIDATES mention fallback "
+                      "54 endpoint(s)", out.getvalue())
 
     def test_no_blocks_no_finish_noise(self):
         b, _ = _run_candidates_stage(
             self.root, "mention-finish-clean",
             _scripted_items(12, omit=0), mention=True)
-        self.assertEqual(b.metrics["candidates"]["blocked"], 0)
+        cm = b.metrics["candidates"]
+        self.assertEqual(cm["blocked"], 0)
+        self.assertEqual(cm["proposer"]
+                         ["mention_fallback_subject"], 0)
+        self.assertEqual(cm["proposer"]
+                         ["mention_fallback_object"], 0)
         with redirect_stdout(io.StringIO()):
             batch_run._finish_summary(b, self.root, None)
         self.assertNotIn("finish", b.metrics)
 
 
 class TestMentionPartialCompliance(unittest.TestCase):
-    """The cliff, characterized exactly. The fixture's
-    omission rate is the measured Phase 2 rate: the A/B
-    run recorded 69 mention_missing blocks out of 257
-    proposals (≈27%; cap-recall-measurement.md, Phase 2
-    section). Here 27 of 100 scripted proposals omit the
-    mention fields; under the current fail-closed policy
-    every one of them blocks by name before judging and
-    every compliant proposal survives. This test is the
-    reviewed artifact of that behavior — changing the
-    policy means rewriting it deliberately."""
+    """Partial compliance, characterized exactly. The
+    fixture's omission rate is the measured Phase 2 rate:
+    the v1 A/B run recorded 69 mention_missing blocks out
+    of 257 proposals (≈27%; cap-recall-measurement.md,
+    Phase 2 section) — under v1's fail-closed policy the
+    omission slice was culled before judging and Tier-1
+    recall fell 0.1066 -> 0.0772. Cut 2 makes the layer
+    additive, and this test is the reviewed artifact of
+    the new behavior: here 27 of 100 scripted proposals
+    omit the mention fields, EVERY proposal survives —
+    the 27 omission items via fallback, the 73 compliant
+    ones with verified mentions — and the fallback count
+    equals the omission count exactly (27 items x 2
+    endpoints). The v1 cliff is now a measured fallback
+    rate; changing either means rewriting this test
+    deliberately."""
 
     def setUp(self):
         self.root = Path(tempfile.mkdtemp())
         self.addCleanup(shutil.rmtree, self.root, True)
 
-    def test_cliff_matches_the_omission_count(self):
+    def test_omission_slice_falls_back_and_is_counted(self):
         b, _ = _run_candidates_stage(
             self.root, "mention-cliff",
             _scripted_items(100, omit=27), mention=True)
         m = b.metrics["candidates"]
         self.assertEqual(m["proposer"]["proposed"], 100)
-        self.assertEqual(m["blocked"], 27)
-        self.assertEqual(m["blocked_reasons"],
-                         {"mention_missing": 27})
-        self.assertEqual(m["total"], 73)
+        self.assertEqual(m["blocked"], 0)
+        self.assertEqual(m["blocked_reasons"], {})
+        self.assertEqual(m["total"], 100)
+        self.assertEqual(
+            m["proposer"]["mention_fallback_subject"], 27)
+        self.assertEqual(
+            m["proposer"]["mention_fallback_object"], 27)
         d = batch_dir(self.root, "mention-cliff")
-        blocked = [json.loads(line)
-                   for line in open(d / "candidates_blocked.jsonl")]
-        self.assertEqual(len(blocked), 27)
-        self.assertTrue(all(r["reason"] == "mention_missing"
-                            for r in blocked))
-        # The culled set is exactly the non-compliant slice.
-        self.assertEqual({r["subject"] for r in blocked},
-                         {f"Person {i}" for i in range(27)})
+        self.assertFalse(
+            (d / "candidates_blocked.jsonl").exists())
         kept = [json.loads(line)
                 for line in open(d / "candidates.jsonl")]
-        self.assertEqual(len(kept), 73)
-        self.assertTrue(all("mentions" in r for r in kept))
+        self.assertEqual(len(kept), 100)
+        # The fallback set is exactly the non-compliant
+        # slice, named on each record, and those records
+        # are otherwise the legacy shape (no mentions).
+        fb = [r for r in kept if "mention_fallback" in r]
+        self.assertEqual(len(fb), 27)
+        self.assertEqual({r["subject"] for r in fb},
+                         {f"Person {i}" for i in range(27)})
+        self.assertTrue(all(
+            r["mention_fallback"] == ["subject", "object"]
+            for r in fb))
+        self.assertTrue(all("mentions" not in r for r in fb))
+        withm = [r for r in kept if "mentions" in r]
+        self.assertEqual(len(withm), 73)
 
 
 class TestMentionCompliantParity(unittest.TestCase):
@@ -560,6 +681,11 @@ class TestMentionCompliantParity(unittest.TestCase):
         self.assertEqual(lm["blocked"], 0)
         self.assertEqual(mm["total"], lm["total"])
         self.assertEqual(mm["total"], 40)
+        # Fully compliant input never falls back.
+        self.assertEqual(
+            mm["proposer"]["mention_fallback_subject"], 0)
+        self.assertEqual(
+            mm["proposer"]["mention_fallback_object"], 0)
         # The record-shape difference is the layer's own:
         # kept mention-mode candidates carry the verified
         # mention records; legacy candidates never do.

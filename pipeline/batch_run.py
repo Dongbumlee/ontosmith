@@ -765,7 +765,9 @@ def stage_candidates(b: Batch, root: Path, stages: list[str]) -> None:
                       "chunks": 0, "chunks_at_cap": 0,
                       "max_per_chunk": 0,
                       "mention_candidates": 0,
-                      "mention_resolutions": 0}
+                      "mention_resolutions": 0,
+                      "mention_fallback_subject": 0,
+                      "mention_fallback_object": 0}
     pair_stats = {"enumerated": 0, "answered": 0, "calls": 0,
                   "outcomes": {}, "alias_emitted": 0}
     # Silent-path counters: the stage's
@@ -1098,6 +1100,18 @@ def stage_candidates(b: Batch, root: Path, stages: list[str]) -> None:
                     if any(m.get("antecedent")
                            for m in it["mentions"].values()):
                         proposer_stats["mention_resolutions"] += 1
+                # Endpoints whose mention data was absent
+                # fell back to the legacy evidence path
+                # (issue #54, cut 2): the fallback rides the
+                # candidate record and is counted by
+                # endpoint, so the fallback rate is visible
+                # in the stage metrics and at the finish.
+                if it.get("mention_fallback"):
+                    rec["mention_fallback"] = \
+                        it["mention_fallback"]
+                    for ep in it["mention_fallback"]:
+                        proposer_stats[
+                            f"mention_fallback_{ep}"] += 1
                 doc_llm.append(rec)
             for bl in blocked:
                 rec = {
@@ -1307,6 +1321,23 @@ def stage_candidates(b: Batch, root: Path, stages: list[str]) -> None:
              f"{proposer_stats['chunks_at_cap']}/"
              f"{proposer_stats['chunks']} "
              f"(cap {proposer_stats['max_per_chunk']} per chunk)")
+    fb_total = (proposer_stats.get("mention_fallback_subject", 0)
+                + proposer_stats.get("mention_fallback_object", 0))
+    if fb_total:
+        # Mention-layer fallbacks (issue #54, cut 2):
+        # endpoints whose mention data was absent were
+        # judged on the quote under the legacy evidence
+        # path. Named on the run output like guard blocks:
+        # the fallback rate is the layer's compliance
+        # signal, and it must not be silent either.
+        _log(b.batch_id,
+             f"CANDIDATES mention fallback: {fb_total} "
+             f"endpoint(s) (subject "
+             f"{proposer_stats['mention_fallback_subject']}, "
+             f"object "
+             f"{proposer_stats['mention_fallback_object']}) "
+             f"judged on the quote under the legacy "
+             f"evidence path")
     if blocked_all:
         # Guard blocks are reported BY NAME in the run
         # output, not only in the metrics record — a relation
@@ -2846,13 +2877,29 @@ def _finish_summary(b: Batch, root: Path, registry) -> None:
     at the finish from an ordinary sparse run. When the
     stage blocked anything, the finish carries the
     by-reason counts in its metrics and names them on its
-    log line."""
+    log line.
+
+    And the same rule covers mention-layer fallbacks
+    (issue #54, cut 2): endpoints whose mention data was
+    absent were judged on the quote under the legacy
+    evidence path. The fallback rate is the layer's
+    compliance signal — if it is not restated at the
+    finish, a run whose proposer never answered the
+    mention fields reads as an ordinary mention run. When
+    any endpoint fell back, the finish carries the counts
+    by endpoint in its metrics and names them on its log
+    line."""
     account = (_er_terminal_account(registry, b.batch_id)
                if registry is not None else None)
     cand = b.metrics.get("candidates") or {}
     blocked_total = cand.get("blocked") or 0
     blocked_reasons = dict(cand.get("blocked_reasons") or {})
-    if account is None and not blocked_total:
+    prop = cand.get("proposer") or {}
+    fb_by_endpoint = {
+        "subject": prop.get("mention_fallback_subject") or 0,
+        "object": prop.get("mention_fallback_object") or 0}
+    fb_total = fb_by_endpoint["subject"] + fb_by_endpoint["object"]
+    if account is None and not blocked_total and not fb_total:
         return
     finish: dict = {}
     if account is not None:
@@ -2861,6 +2908,10 @@ def _finish_summary(b: Batch, root: Path, registry) -> None:
         finish["candidates_blocked"] = {
             "total": blocked_total,
             "by_reason": blocked_reasons}
+    if fb_total:
+        finish["candidates_fallback"] = {
+            "endpoints": fb_total,
+            "by_endpoint": fb_by_endpoint}
     b.metrics["finish"] = finish
     save_batch(b, root)
     if account is not None:
@@ -2883,6 +2934,12 @@ def _finish_summary(b: Batch, root: Path, registry) -> None:
              f"finish: CANDIDATES blocked {blocked_total} "
              f"(by reason: {blocked_reasons}) — see "
              f"candidates_blocked.jsonl")
+    if fb_total:
+        _log(b.batch_id,
+             f"finish: CANDIDATES mention fallback "
+             f"{fb_total} endpoint(s) (by endpoint: "
+             f"{fb_by_endpoint}) — judged on the quote "
+             f"under the legacy evidence path")
 
 
 def run_batch(b: Batch, root: Path, doc_texts: dict[str, str] | None,
