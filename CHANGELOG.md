@@ -171,9 +171,26 @@ and the project adheres to
   endpoint in the stage metrics and restated in the
   finish record (`candidates_fallback`), and candidates
   name their fallback endpoints on the record, so the
-  fallback rate is always visible. The re-measurement
-  runs the same pre-registered A/B as Phase 2 (criteria
-  unchanged); its verdict will be recorded here.
+  fallback rate is always visible. **Measured (the
+  same pre-registered A/B as Phase 2, criteria
+  unchanged): the fallback policy removes the first
+  cut's failure point but still does not ship as a
+  recall feature.** `mention_missing` blocks fell
+  69 → 0, the 18 endpoints without mention data were
+  judged on their quotes, and judged-file candidate
+  recall recovered (0.0793 → 0.0943); raw Tier-1
+  precision held (0.5588) and cost held ($0.00291/doc
+  vs a $0.00312 ceiling). But Tier-1 recall reached
+  0.0895 against the baseline's 0.1066 (paired net
+  −25): this draw's proposal channel was thinner
+  (249 proposals vs the baseline draw's 327; candidate
+  paired net already −23 before judging), and
+  resolution judging cost 7 rejected + 4 review-capped
+  of 81. The guard semantics stay (absence is not
+  invalidity, and the fallback accounting stands);
+  the layer remains an experimental opt-in with the
+  measured trade-off. Full record: the cap-recall
+  measurement (cut-2 section) and issue #55.
 
 - **Hands-on guide restructured for a lighter first
   read.** The appendix track (reproduce the reference
