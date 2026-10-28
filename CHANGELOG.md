@@ -7,6 +7,30 @@ and the project adheres to
 
 ## [Unreleased]
 
+### Added
+
+- **Mention layer, first cut (issue #54)** — profile-gated
+  (`mention_layer` in setup_config; absent = off, and the
+  undeclared path is byte-identical). Entities register by
+  noun surface forms, so facts stated via pronouns, definite
+  descriptions, or cross-sentence evidence had no citable
+  path to an entity and drops recorded only a score. With
+  the layer declared, the free proposer emits per-endpoint
+  mention spans (verbatim, as they appear in the quote),
+  mention types (named / pronominal / descriptive), and —
+  for non-named mentions — a resolution proposal: an
+  antecedent span, verbatim from the document. The guards
+  verify both spans with the same discipline as quotes;
+  an unverifiable span blocks the candidate by name
+  (`mention_missing` / `mention_span` /
+  `mention_antecedent`), never silently. GATES judges each
+  resolution as its own Jev decision before the fact:
+  clear proceeds, ambiguous (review band) is capped at
+  Tier-2 review, rejected drops with reason class
+  `resolution_rejected` — distinguished from
+  `fact_rejected` in the drop accounting. The quote is
+  never rewritten; resolution travels as annotation.
+
 ### Fixed
 
 - **The serving index silently covered only part of a

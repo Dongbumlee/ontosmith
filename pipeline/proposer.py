@@ -54,6 +54,29 @@ to a family are profile data threaded through the `framing` /
 slot_framing / slot_rules). The standalone harnesses' contract
 text survives as the CUAD profile's declared framing — the
 prompt CUAD builds is byte-identical to the recipe above.
+
+Mention layer (issue #54, profile-gated by the
+`mention_layer` setup_config key; absent = off and every
+behavior below is inert): entities register and link by
+noun surface forms, so a fact the text states through a
+pronoun, a definite description, or a sentence other than
+the one naming the entity has no citable path to its
+endpoint — the proposer either resolves it silently or
+skips it, and a dropped candidate records only a score.
+With the layer on, the proposer additionally emits, per
+endpoint, the mention span as it appears in the quote
+(verbatim), its type (named / pronominal / descriptive),
+and — when the mention is not the entity's name — a
+resolution proposal: the antecedent span, verbatim from
+the document, that names the entity. guard_triples
+verifies BOTH spans with the same verbatim discipline as
+the quote itself; an unverifiable span blocks the item
+with a reason code (mention_missing / mention_span /
+mention_antecedent), never a silent drop. The quote is
+never rewritten — the resolution travels as annotation,
+and GATES judges the resolution as its own decision
+before the fact (stage_gates), so the proposer proposes
+and Jev decides, as everywhere else in the pipeline.
 """
 from __future__ import annotations
 
@@ -99,6 +122,57 @@ Rules:
 - quote: the SHORTEST verbatim phrase from the excerpt that states
   the fact (a clause, not a whole paragraph). Character-for-
   character; never paraphrase.
+- Only facts the excerpt states. If none, return [].
+
+Excerpt:
+---
+{text}
+---"""
+
+# Mention types the proposer may declare for an endpoint's
+# mention span (issue #54). "named" = the mention is the
+# entity's name or a form of it; "pronominal" = a pronoun;
+# "descriptive" = a definite description that is not the
+# name ("the company", "the German racer").
+MENTION_TYPES = ("named", "pronominal", "descriptive")
+
+# The mention-layer variant of the triple prompt (issue
+# #54): identical rules for the triple itself, plus the
+# per-endpoint mention fields. Used only when the profile
+# declares the mention layer; the base template above is
+# untouched so undeclared profiles build byte-identical
+# prompts.
+TRIPLE_PROMPT_MENTION = """{framing}
+
+Return ONLY a JSON array of at most {maxn} objects:
+{{"subject": ..., "relation": ..., "object": ..., "quote": ...,
+  "subject_mention": ..., "subject_mention_type": ...,
+  "subject_antecedent": ..., "object_mention": ...,
+  "object_mention_type": ..., "object_antecedent": ...}}
+
+Rules:
+- subject / object: named entities only — parties, companies,
+  people, defined terms, documents, dates, amounts, jurisdictions.
+  Never pronouns, never bare role words alone ("the party").
+- relation: the short verb phrase as stated in the text
+  (e.g. "grants", "shall pay", "is located in", "terminates").
+- quote: the SHORTEST verbatim phrase from the excerpt that states
+  the fact (a clause, not a whole paragraph). Character-for-
+  character; never paraphrase.
+- subject_mention / object_mention: the exact words IN THE
+  QUOTE that refer to the subject / object — the name itself,
+  a pronoun ("He", "They", "it"), or a description
+  ("the company"). Copy them character-for-character from
+  the quote.
+- subject_mention_type / object_mention_type: "named" when
+  the mention is the entity's name or a form of it;
+  "pronominal" for a pronoun; "descriptive" for a
+  description that is not the name.
+- subject_antecedent / object_antecedent: when the mention
+  type is not "named", the SHORTEST verbatim phrase from
+  the excerpt that names the entity the mention refers to
+  (character-for-character; it may sit outside the quote).
+  When the type is "named", use "".
 - Only facts the excerpt states. If none, return [].
 
 Excerpt:
@@ -222,7 +296,8 @@ def _parse_array(content: str, salvage: bool) -> list:
 
 def _build_triple_prompt(chunk: str, guidance: str = "",
                          framing: str | None = None,
-                         maxn: int | None = None) -> str:
+                         maxn: int | None = None,
+                         mentions: bool = False) -> str:
     """The proposer prompt for one chunk .
 
     The base is the domain-neutral TRIPLE_PROMPT template filled
@@ -237,8 +312,13 @@ def _build_triple_prompt(chunk: str, guidance: str = "",
     from the corpus profile by
     pipeline/profile_config.derive_guidance), the guidance block is
     appended after the base prompt.
+
+    `mentions` (the profile's mention-layer declaration,
+    issue #54) selects TRIPLE_PROMPT_MENTION instead of the
+    base template; the default path is untouched.
     """
-    base = TRIPLE_PROMPT.format(
+    template = TRIPLE_PROMPT_MENTION if mentions else TRIPLE_PROMPT
+    base = template.format(
         framing=framing or TRIPLE_FRAMING_DEFAULT,
         maxn=MAX_PER_CHUNK if maxn is None else maxn, text=chunk)
     if not guidance:
@@ -246,11 +326,33 @@ def _build_triple_prompt(chunk: str, guidance: str = "",
     return base + "\n\n" + guidance
 
 
+def _mention_from_item(it: dict, ep: str) -> dict:
+    """One endpoint's mention record from a raw proposal
+    item (issue #54): the flat subject_mention /
+    subject_mention_type / subject_antecedent fields the
+    mention prompt asks for, gathered into one dict.
+    Missing or malformed fields stay missing — guard_triples
+    decides what that means (mention_missing), the parse
+    layer invents nothing."""
+    m: dict = {}
+    span = it.get(f"{ep}_mention")
+    if isinstance(span, str) and span.strip():
+        m["span"] = span.strip()
+    mtype = it.get(f"{ep}_mention_type")
+    if isinstance(mtype, str) and mtype.strip():
+        m["type"] = mtype.strip().lower()
+    ant = it.get(f"{ep}_antecedent")
+    if isinstance(ant, str) and ant.strip():
+        m["antecedent"] = ant.strip()
+    return m
+
+
 def propose_triples_for_doc(doc_id: str, text: str, key: str,
                             model: str = DEFAULT_MODEL,
                             guidance: str = "",
                             framing: str | None = None,
-                            max_per_chunk: int | None = None) -> dict:
+                            max_per_chunk: int | None = None,
+                            mentions: bool = False) -> dict:
     """Raw triple proposals for one document (unguarded).
 
     Returns {items, cost, calls, errors, chunks, chunks_at_cap};
@@ -268,6 +370,13 @@ def propose_triples_for_doc(doc_id: str, text: str, key: str,
     ceiling — the saturation signal: a chunk at the cap is
     indistinguishable from a chunk that merely had that many
     facts, unless it is counted (issue #52).
+
+    mentions (the profile's mention-layer declaration,
+    issue #54) selects the mention prompt variant; items then
+    also carry a `mentions` dict ({subject, object} ->
+    {span, type, antecedent?}) as proposed — span
+    verification is guard_triples' job, as for typed
+    endpoints above.
     """
     cap = MAX_PER_CHUNK if max_per_chunk is None else max_per_chunk
     tasks = _chunks(text)
@@ -277,7 +386,7 @@ def propose_triples_for_doc(doc_id: str, text: str, key: str,
         try:
             content, u = _chat(
                 _build_triple_prompt(chunk, guidance, framing,
-                                     maxn=cap),
+                                     maxn=cap, mentions=mentions),
                 model, 12000 if _is_haiku55(model) else 6000, key)
             items = _parse_array(content, salvage=True)
             err = None
@@ -302,6 +411,10 @@ def propose_triples_for_doc(doc_id: str, text: str, key: str,
                     tv = it.get(tk)
                     if isinstance(tv, str) and tv.strip():
                         rec[tk] = tv.strip()
+                if mentions:
+                    rec["mentions"] = {
+                        ep: _mention_from_item(it, ep)
+                        for ep in ("subject", "object")}
                 out.append(rec)
         return out, u, err
 
@@ -409,6 +522,63 @@ def quote_window(text: str, quote: str, half: int = WINDOW) -> str:
 # ------------------------------------------------------------------
 # Deterministic guards
 # ------------------------------------------------------------------
+def _verify_mentions(it: dict, qn: str, doc_norm: str,
+                     sn: str, on: str) -> dict | str:
+    """Verify one item's mention records (issue #54).
+
+    Returns the cleaned mentions dict, or the block reason
+    string. The discipline mirrors the quote's: every span
+    is verbatim or the item is blocked by name —
+
+    - mention_missing: an endpoint carries no usable
+      mention record (no span, or a type outside
+      MENTION_TYPES) although the profile declared the
+      layer — the proposer was asked and did not answer.
+    - mention_span: the mention span is not a verbatim
+      (whitespace-normalized) substring of the item's
+      quote — the mention must appear in the quote, that
+      is where the judge will look for it.
+    - mention_antecedent: a non-named mention (pronominal /
+      descriptive) without a usable resolution: the
+      antecedent is absent, is not a verbatim substring of
+      the document, or does not name the endpoint (neither
+      surface contains the other — "Paul Desmarais" for
+      "Paul Desmarais Jr." passes; an unrelated phrase
+      does not).
+
+    A "named" mention needs no antecedent: the span in the
+    quote IS the attestation, judged as before.
+    """
+    raw = it.get("mentions")
+    if not isinstance(raw, dict):
+        return "mention_missing"
+    cleaned: dict = {}
+    for ep, surf_n in (("subject", sn), ("object", on)):
+        m = raw.get(ep)
+        if not isinstance(m, dict):
+            return "mention_missing"
+        span, mtype = m.get("span"), m.get("type")
+        if not isinstance(span, str) or not span.strip() \
+                or mtype not in MENTION_TYPES:
+            return "mention_missing"
+        if norm_ws(span) not in qn:
+            return "mention_span"
+        rec = {"span": span.strip(), "type": mtype}
+        if mtype != "named":
+            ant = m.get("antecedent")
+            if not isinstance(ant, str) or not ant.strip():
+                return "mention_antecedent"
+            ant_n = norm_ws(ant)
+            if ant_n not in doc_norm:
+                return "mention_antecedent"
+            if not (ant_n == surf_n or ant_n in surf_n
+                    or surf_n in ant_n):
+                return "mention_antecedent"
+            rec["antecedent"] = ant.strip()
+        cleaned[ep] = rec
+    return cleaned
+
+
 _PUNCT_SPACE_RX = re.compile(r"\s*([^\w\s])\s*")
 
 
@@ -427,7 +597,8 @@ def guard_triples(items: list[dict], doc_text: str,
                   entity_types: set[str] | None = None,
                   theme_attest_key: str | None = None,
                   quote_punct_insensitive: bool = False,
-                  theme_attest_chunk: bool = False
+                  theme_attest_chunk: bool = False,
+                  mentions: bool = False
                   ) -> tuple[list[dict], list[dict]]:
     """Apply G1 + L0 attestation + role-word + theme guards.
 
@@ -486,6 +657,15 @@ def guard_triples(items: list[dict], doc_text: str,
       hand-authored pack). The relaxation is weaker than
       the quote test — the object need only co-occur in the
       chunk — so it is a declared opt-in, never a default.
+    - `mentions`: the profile declared the mention layer
+      (issue #54). Each item's mention records are verified
+      by _verify_mentions after the quote gate and before
+      attestation: both spans verbatim, a non-named mention
+      carrying a verbatim, endpoint-naming antecedent.
+      Kept items carry the cleaned `mentions` dict into
+      candidacy; blocked items carry the records as
+      proposed. Default False = the checks do not run and
+      records are exactly the legacy shape.
     """
     doc_norm = norm_ws(doc_text)
     doc_punct = punct_collapse(doc_norm) \
@@ -501,6 +681,10 @@ def guard_triples(items: list[dict], doc_text: str,
                 tv = tv.strip()
                 if entity_types is None or tv in entity_types:
                     base[tk] = tv
+        if mentions and isinstance(it.get("mentions"), dict):
+            # As proposed, for the blocked sidecar's audit;
+            # replaced by the verified record below.
+            base["mentions"] = it["mentions"]
         qn = norm_ws(q)
         if not qn or (qn not in doc_norm
                       and not (doc_punct is not None
@@ -508,6 +692,12 @@ def guard_triples(items: list[dict], doc_text: str,
             blocked.append({**base, "reason": "g1_quote"})
             continue
         sn, on = norm_ws(s), norm_ws(o)
+        if mentions:
+            mres = _verify_mentions(it, qn, doc_norm, sn, on)
+            if isinstance(mres, str):
+                blocked.append({**base, "reason": mres})
+                continue
+            base["mentions"] = mres
         # L0: attested somewhere in the document at all?
         if sn not in doc_norm or on not in doc_norm:
             blocked.append({**base, "reason": "l0_attest"})

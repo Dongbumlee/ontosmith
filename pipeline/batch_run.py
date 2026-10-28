@@ -544,6 +544,7 @@ def stage_candidates(b: Batch, root: Path, stages: list[str]) -> None:
     from .profile_config import (
         derive_guidance,
         endpoint_type_names,
+        mention_layer_enabled,
         pair_judge_generic_relation,
         proposer_framing,
         proposer_max_per_chunk,
@@ -559,6 +560,18 @@ def stage_candidates(b: Batch, root: Path, stages: list[str]) -> None:
     # prompt is byte-identical to the pre-#52 recipe.
     proposer_cap = proposer_max_per_chunk(setup_cfg) if use_llm \
         else None
+    # The mention layer (issue #54): the profile's
+    # declaration switches the free proposer to the mention
+    # prompt variant and the guards to span verification;
+    # absent = off and this stage is byte-identical to the
+    # pre-layer behavior.
+    mention_on = mention_layer_enabled(setup_cfg) if use_llm \
+        else False
+    if mention_on:
+        _log(b.batch_id,
+             "CANDIDATES: mention layer ON (mention spans + "
+             "antecedent resolutions proposed, spans verified "
+             "by the guards, resolutions judged at GATES)")
     # Domain framing: the family's declared framing
     # for the proposer / pair-judge base templates, threaded as
     # data; None (profile declares none) selects the builders'
@@ -750,7 +763,9 @@ def stage_candidates(b: Batch, root: Path, stages: list[str]) -> None:
                       "slots_proposed": 0, "typed_kept": 0,
                       "types_dropped_unknown": 0,
                       "chunks": 0, "chunks_at_cap": 0,
-                      "max_per_chunk": 0}
+                      "max_per_chunk": 0,
+                      "mention_candidates": 0,
+                      "mention_resolutions": 0}
     pair_stats = {"enumerated": 0, "answered": 0, "calls": 0,
                   "outcomes": {}, "alias_emitted": 0}
     # Silent-path counters: the stage's
@@ -1033,7 +1048,8 @@ def stage_candidates(b: Batch, root: Path, stages: list[str]) -> None:
             res = _prop.propose_triples_for_doc(
                 doc_id, text, key, model=b.config.llm_model,
                 guidance=guidance, framing=triple_framing,
-                max_per_chunk=proposer_cap)
+                max_per_chunk=proposer_cap,
+                mentions=mention_on)
             proposer_cost = _conn_add_cost(
                 proposer_cost, res["cost"])
             proposer_stats["proposed"] += res["proposed"]
@@ -1055,7 +1071,8 @@ def stage_candidates(b: Batch, root: Path, stages: list[str]) -> None:
                 res["items"], text, role_words=role_words,
                 entity_types=endpoint_types or None,
                 quote_punct_insensitive=quote_punct_insensitive,
-                theme_attest_chunk=theme_attest_chunk)
+                theme_attest_chunk=theme_attest_chunk,
+                mentions=mention_on)
             proposer_stats["typed_kept"] += sum(
                 1 for it in kept
                 if it.get("subject_type") or it.get("object_type"))
@@ -1072,6 +1089,15 @@ def stage_candidates(b: Batch, root: Path, stages: list[str]) -> None:
                 for tk in ("subject_type", "object_type"):
                     if it.get(tk):
                         rec[tk] = it[tk]
+                # Verified mention records ride along the
+                # same way (issue #54): GATES judges any
+                # resolution they carry before the fact.
+                if it.get("mentions"):
+                    rec["mentions"] = it["mentions"]
+                    proposer_stats["mention_candidates"] += 1
+                    if any(m.get("antecedent")
+                           for m in it["mentions"].values()):
+                        proposer_stats["mention_resolutions"] += 1
                 doc_llm.append(rec)
             for bl in blocked:
                 rec = {
@@ -1083,6 +1109,8 @@ def stage_candidates(b: Batch, root: Path, stages: list[str]) -> None:
                 for tk in ("subject_type", "object_type"):
                     if bl.get(tk):
                         rec[tk] = bl[tk]
+                if bl.get("mentions"):
+                    rec["mentions"] = bl["mentions"]
                 doc_blocked.append(rec)
             if slot_categories:
                 sres = _prop.propose_slots_for_doc(
@@ -1291,16 +1319,64 @@ def stage_candidates(b: Batch, root: Path, stages: list[str]) -> None:
              f"candidates_blocked.jsonl")
 
 
+def _resolution_needs(c: dict) -> list:
+    """The endpoint resolutions a candidate carries (issue
+    #54): [(endpoint, mention record)] for each endpoint
+    whose verified mention record proposes an antecedent
+    resolution. Empty for legacy candidates and for
+    candidates whose mentions are all named."""
+    m = c.get("mentions") or {}
+    return [(ep, m[ep]) for ep in ("subject", "object")
+            if isinstance(m.get(ep), dict)
+            and m[ep].get("antecedent")]
+
+
+def _fold_costs(costs: list):
+    """Fold one item's per-call costs into its recorded
+    cost: the first call's cost as-is (so a single-call
+    item records exactly what the pre-mention code
+    recorded, None included), later calls folded in with
+    the connection layer's None-aware accumulation (any
+    unmetered call makes the item's cost unknown)."""
+    total = costs[0]
+    for extra in costs[1:]:
+        total = _conn_add_cost(total, extra)
+    return total
+
+
 def stage_gates(b: Batch, root: Path, stages: list[str],
-                decide_fn) -> None:
+                decide_fn, resolution_decide_fn=None) -> None:
     """GATES: Jev noul per candidate (queue-based, resumable).
 
     Candidates are enqueued as work items. Workers claim, judge, complete.
     A crash mid-stage loses nothing — unclaimed items stay queued.
+
+    Mention layer (issue #54): a candidate carrying
+    antecedent resolutions has each resolution judged as
+    its own Jev decision BEFORE the fact (the proposer
+    proposes, Jev decides). The candidate's resolution
+    score is the weaker endpoint's. At/above the review
+    band's high edge the resolution is clear and the fact
+    is judged as usual; inside the band the resolution is
+    ambiguous — the fact is judged but ROUTE caps the
+    candidate at Tier-2 review; below the triple threshold
+    the resolution is rejected, the fact is never judged,
+    and the judgment record carries drop_reason
+    "resolution_rejected" so the drop accounting can tell
+    a rejected resolution from a rejected fact.
+    Candidates carrying resolutions while no resolution
+    judge is wired refuse the stage by name (fail closed).
     """
     from .queue import WorkQueue
     d = batch_dir(root, b.batch_id)
     candidates = [json.loads(l) for l in open(d / "candidates.jsonl")]
+    if resolution_decide_fn is None and any(
+            _resolution_needs(c) for c in candidates):
+        raise RuntimeError(
+            "GATES: candidates carry mention resolutions "
+            "(issue #54) but no resolution judge was wired — "
+            "refusing to judge facts on unjudged resolutions "
+            "(fail closed)")
     # The $ projection is a planning heuristic, printed only
     # when the judge seat can meter spend at all: on
     # a cost-less binding a dollar figure would fabricate
@@ -1336,8 +1412,41 @@ def stage_gates(b: Batch, root: Path, stages: list[str],
             _log(b.batch_id, "GATES: nothing to do (already complete)")
 
         def judge(c):
-            return decide_fn(c["context"], c["subject"], c["relation"],
-                             c["object"], model=b.config.gate_model)
+            result: dict = {}
+            costs: list = []
+            needs = _resolution_needs(c)
+            if needs:
+                p_res = None
+                for ep, m in needs:
+                    p_i, u_i = resolution_decide_fn(
+                        c["context"], m["span"], m["antecedent"],
+                        c["subject"] if ep == "subject"
+                        else c["object"],
+                        model=b.config.gate_model)
+                    costs.append(u_i.get("cost"))
+                    p_res = p_i if p_res is None else min(p_res, p_i)
+                result["p_resolution"] = p_res
+                if p_res >= b.config.review_band_hi:
+                    result["resolution_status"] = "clear"
+                elif p_res >= b.config.triple_threshold:
+                    result["resolution_status"] = "review"
+                else:
+                    # Not a judged-negative fact: p_true 0.0
+                    # is a routing sentinel, and the record
+                    # carries the reason class that makes the
+                    # distinction everywhere downstream.
+                    result.update({
+                        "resolution_status": "rejected",
+                        "drop_reason": "resolution_rejected",
+                        "fact_judged": False})
+                    return {**result, "p_true": 0.0,
+                            "cost": _fold_costs(costs)}
+            p_true, usage = decide_fn(
+                c["context"], c["subject"], c["relation"],
+                c["object"], model=b.config.gate_model)
+            costs.append(usage.get("cost"))
+            return {**result, "p_true": p_true,
+                    "cost": _fold_costs(costs)}
 
         # Spend already banked by a previous (crashed) session of this
         # stage, so the mid-loop cap check below is resume-correct.
@@ -1385,11 +1494,10 @@ def stage_gates(b: Batch, root: Path, stages: list[str],
                 for fut in as_completed(futs):
                     it = futs[fut]
                     try:
-                        p_true, usage = fut.result()
-                        cost = usage.get("cost")
+                        result = fut.result()
+                        cost = result.get("cost")
                         total_cost = _conn_add_cost(total_cost, cost)
-                        q.complete(it.item_id,
-                                   {"p_true": p_true, "cost": cost},
+                        q.complete(it.item_id, result,
                                    batch_id=b.batch_id, run_id=b.run_id)
                     except Exception as e:
                         errs += 1
@@ -1437,10 +1545,16 @@ def stage_gates(b: Batch, root: Path, stages: list[str],
                 c = json.loads(payload_s)
                 if status == "done" and result_s:
                     r = json.loads(result_s)
-                    judgments.append({**c,
-                                      "p_true": r["p_true"],
-                                      "cost": r["cost"],
-                                      "error": None})
+                    j = {**c, "p_true": r["p_true"],
+                         "cost": r["cost"], "error": None}
+                    # Mention-layer fields ride the judgment
+                    # when the result carries them (issue
+                    # #54); absent = the legacy record shape.
+                    for k in ("p_resolution", "resolution_status",
+                              "drop_reason", "fact_judged"):
+                        if k in r:
+                            j[k] = r[k]
+                    judgments.append(j)
                 else:
                     judgments.append({**c, "p_true": 0.0, "cost": 0,
                                       "error": f"status={status}"})
@@ -1461,6 +1575,15 @@ def stage_gates(b: Batch, root: Path, stages: list[str],
     b.metrics["gates"] = {"judged": len(judgments), "errors": errs,
                           "cost_usd": _round_cost(total_cost),
                           "seconds": round(dt, 1)}
+    res_counts: dict[str, int] = {}
+    for j in judgments:
+        st = j.get("resolution_status")
+        if st:
+            res_counts[st] = res_counts.get(st, 0) + 1
+    if res_counts:
+        b.metrics["gates"]["resolutions"] = res_counts
+        _log(b.batch_id,
+             f"GATES: mention resolutions judged — {res_counts}")
     _record_cost(b, "GATES", _round_cost(total_cost))
     save_batch(b, root)
     advance(b, root, [*stages, "GATES"])
@@ -1514,6 +1637,16 @@ def stage_route(b: Batch, root: Path, stages: list[str]) -> None:
     asserted/path, so neither rule fires on them — their guards ran
     at proposal time (pipeline/proposer.py). C2 theme-presence likewise
     lives at extraction level (§5), not here.
+
+    Mention layer (issue #54): a judgment whose resolution
+    landed in the review band (resolution_status "review")
+    is capped at Tier 2 — the ambiguous resolution goes to
+    the human review queue with resolution_review set,
+    never a silent Tier-1 accept. Dropped rows gain a
+    reason_class when the judgment carries mention-layer
+    fields: the drop_reason itself ("resolution_rejected")
+    or "fact_rejected" — the two drop classes the pre-layer
+    accounting could not tell apart.
     """
     d = batch_dir(root, b.batch_id)
     judgments = [json.loads(l) for l in open(d / "judgments.jsonl")]
@@ -1526,6 +1659,7 @@ def stage_route(b: Batch, root: Path, stages: list[str]) -> None:
                          "demotions skipped, none invented")
     counts = {"tier1": 0, "tier2": 0, "dropped": 0}
     demotes = {"C4": 0, "C1": 0}
+    res_caps = 0
     with open(d / "routed.jsonl", "w") as rf, \
             open(d / "review_queue.jsonl", "w") as qf, \
             open(d / "dropped_queue.jsonl", "w") as df:
@@ -1551,21 +1685,28 @@ def stage_route(b: Batch, root: Path, stages: list[str]) -> None:
                     tier = 2
                     demotes[reason] += 1
                     j["armc_demote"] = reason
+            if tier == 1 and j.get("resolution_status") == "review":
+                tier = 2
+                res_caps += 1
+                j["resolution_capped"] = True
             if tier == 1:
                 j["tier"], j["tag"] = 1, "VERIFIED"
                 counts["tier1"] += 1
             elif tier == 2:
                 j["tier"], j["tag"] = 2, "UNVERIFIED"
                 counts["tier2"] += 1
-                qf.write(json.dumps({
+                qrow = {
                     "batch_id": b.batch_id, "run_id": b.run_id,
                     "doc_id": j["doc_id"], "subject": j["subject"],
                     "relation": j["relation"], "object": j["object"],
-                    "p_true": p, "status": "TO_BE_REVIEWED"}) + "\n")
+                    "p_true": p, "status": "TO_BE_REVIEWED"}
+                if j.get("resolution_capped"):
+                    qrow["resolution_review"] = True
+                qf.write(json.dumps(qrow) + "\n")
             else:
                 j["tier"], j["tag"] = 0, "DROPPED"
                 counts["dropped"] += 1
-                df.write(json.dumps({
+                drow = {
                     "batch_id": b.batch_id, "run_id": b.run_id,
                     "doc_id": j["doc_id"], "subject": j["subject"],
                     "relation": j["relation"], "object": j["object"],
@@ -1574,9 +1715,18 @@ def stage_route(b: Batch, root: Path, stages: list[str]) -> None:
                     # dropped row whose gate call FAILED (judgments
                     # row error, e.g. DLQ) is distinguishable from a
                     # judged negative everywhere downstream.
-                    "error": j.get("error")}) + "\n")
+                    "error": j.get("error")}
+                # Mention-layer reason classes (issue #54):
+                # a rejected resolution is not a rejected
+                # fact, and the drop record says which.
+                if j.get("drop_reason"):
+                    drow["reason_class"] = j["drop_reason"]
+                elif j.get("resolution_status"):
+                    drow["reason_class"] = "fact_rejected"
+                df.write(json.dumps(drow) + "\n")
             rf.write(json.dumps(j) + "\n")
     b.metrics["route"] = {**counts, "armc_demotes": demotes,
+                          "resolution_review_caps": res_caps,
                           "route_baseline": "arm_c"}
     _record_cost(b, "ROUTE", 0.0)  # deterministic local routing
     save_batch(b, root)
@@ -2709,6 +2859,7 @@ def _finish_summary(b: Batch, root: Path, registry) -> None:
 
 def run_batch(b: Batch, root: Path, doc_texts: dict[str, str] | None,
               decide_fn=None, er_decide_fn=None,
+              resolution_decide_fn=None,
               registry=None, graph=None,
               live_decide: bool = False,
               keep_run_id: bool = False) -> Batch:
@@ -2836,7 +2987,8 @@ def run_batch(b: Batch, root: Path, doc_texts: dict[str, str] | None,
             assert decide_fn is not None, "decide_fn required for GATES"
             _check_cost_cap(b)
             _beat(b, root, "GATES")
-            stage_gates(b, root, stages, decide_fn)
+            stage_gates(b, root, stages, decide_fn,
+                        resolution_decide_fn=resolution_decide_fn)
             stages.append("GATES")
         if b.status == BatchStatus.GATED:
             _check_cost_cap(b)

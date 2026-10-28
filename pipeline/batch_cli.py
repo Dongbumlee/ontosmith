@@ -392,6 +392,62 @@ def _er_decide_fn(name_a: str, name_b: str, label: str, context: str,
         result.get("usage"), binding)
 
 
+def _resolution_decide_fn(context: str, mention: str, antecedent: str,
+                          entity: str, model: str = JUDGE_MODEL):
+    """Jev noul via the judge seat (issue #54): does the
+    mention in the excerpt refer to the claimed entity, on
+    the evidence of the proposed antecedent?
+
+    The proposer proposed the resolution (mention span +
+    verbatim antecedent); this gate decides it, exactly as
+    _decide_fn decides facts. A response missing the score
+    field is a gate FAILURE (raised), never a silent 0.0.
+    """
+    import urllib.request
+    binding = connections.seat("judge")
+    key = binding.require_key()
+    state = (f"Document excerpt:\n{context}\n\n"
+             f"Mention in the text: '{mention}'\n"
+             f"Proposed antecedent (the text said to name who or "
+             f"what the mention refers to): '{antecedent}'\n"
+             f"Claimed referent: '{entity}'")
+    payload = {
+        "model": model, "state": state,
+        "questions": {"q1": {
+            "type": "noul",
+            "instructions": (
+                f"Does the mention '{mention}' in the document refer "
+                f"to '{entity}'? The proposed antecedent "
+                f"'{antecedent}' is the evidence offered for that "
+                "reference. Answer true only if the document makes "
+                "clear that the mention refers to that entity — "
+                "if the antecedent names a different entity, or the "
+                "reference is ambiguous, answer false."),
+            "criteria": {
+                "true": "The mention clearly refers to the claimed entity.",
+                "false": ("The mention refers to something else, or "
+                          "the reference is ambiguous.")}}}}
+    body = json.dumps(payload).encode()
+    req = urllib.request.Request(
+        binding.systemone_url, data=body,
+        headers={"Content-Type": "application/json",
+                 "Authorization": f"Bearer {key}",
+                 "X-Title": "ontosmith"},
+        method="POST")
+    with urllib.request.urlopen(req, timeout=60) as resp:
+        result = json.loads(resp.read())
+    ans = result.get("answers", {}).get("q1", {})
+    # Same rule as _decide_fn — a missing score field is a
+    # gate failure, never a silent judged negative.
+    if not isinstance(ans, dict) or "noul" not in ans:
+        raise RuntimeError(
+            "resolution gate response missing 'noul' score field "
+            f"(answer keys: {sorted(ans) if isinstance(ans, dict) else type(ans).__name__}); "
+            "refusing to record an unjudged resolution as 0.0")
+    return float(ans["noul"]), connections.normalize_usage(
+        result.get("usage"), binding)
+
+
 def _load_batch_or_exit(root: Path, batch_id: str) -> Batch:
     """Load a batch or exit with a named error: a
     typo'd id is a user error, not a traceback."""
@@ -449,6 +505,7 @@ def cmd_run(args) -> None:
     graph = Neo4jGraphStore()
     run_batch(b, sroot, doc_texts, decide_fn=_decide_fn,
               er_decide_fn=_er_decide_fn,
+              resolution_decide_fn=_resolution_decide_fn,
               registry=registry, graph=graph, live_decide=True,
               keep_run_id=args.reuse_run)
 

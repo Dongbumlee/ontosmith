@@ -164,6 +164,15 @@ CONSUMED_KEYS: dict[str, str] = {
                               "proposer.propose_triples_for_doc "
                               "max_per_chunk; absent = the core "
                               "default MAX_PER_CHUNK)",
+    "mention_layer": "CANDIDATES->GATES mention layer "
+                     "(issue #54): the free proposer emits "
+                     "per-endpoint mention spans + types + "
+                     "verbatim antecedent resolutions, the "
+                     "guards verify both spans, and GATES "
+                     "judges each resolution before the fact "
+                     "(stage_candidates / stage_gates -> "
+                     "proposer.mention_layer_enabled; absent "
+                     "= off, byte-identical legacy path)",
     "slot_framing": "CANDIDATES clause-slot prompt opening line "
                     "(stage_candidates -> "
                     "proposer.propose_slots_for_doc)",
@@ -1106,6 +1115,24 @@ def proposer_max_per_chunk(cfg: dict | None) -> int | None:
         raise ValueError(
             f"proposer_max_per_chunk must be a positive "
             f"integer, got {v!r} (fail closed)")
+    return v
+
+
+def mention_layer_enabled(cfg: dict | None) -> bool:
+    """The family's mention-layer declaration (issue #54).
+
+    Absent = off: the free proposer runs the legacy prompt
+    and the CANDIDATES->GATES path is byte-identical to the
+    pre-layer behavior. A declared value must be a boolean —
+    anything else fails closed, like the other recipe
+    declarations."""
+    v = (cfg or {}).get("mention_layer")
+    if v is None:
+        return False
+    if not isinstance(v, bool):
+        raise ValueError(
+            f"mention_layer must be a boolean, got {v!r} "
+            "(fail closed)")
     return v
 
 
