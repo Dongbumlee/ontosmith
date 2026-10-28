@@ -158,6 +158,12 @@ CONSUMED_KEYS: dict[str, str] = {
     "proposer_framing": "CANDIDATES free-proposer triple prompt "
                         "opening line (stage_candidates -> "
                         "proposer.propose_triples_for_doc)",
+    "proposer_max_per_chunk": "CANDIDATES free-proposer "
+                              "per-chunk proposal ceiling "
+                              "(stage_candidates -> "
+                              "proposer.propose_triples_for_doc "
+                              "max_per_chunk; absent = the core "
+                              "default MAX_PER_CHUNK)",
     "slot_framing": "CANDIDATES clause-slot prompt opening line "
                     "(stage_candidates -> "
                     "proposer.propose_slots_for_doc)",

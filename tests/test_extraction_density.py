@@ -85,6 +85,15 @@ class TestProposerMaxPerChunkAccessor(unittest.TestCase):
                 profile_config.proposer_max_per_chunk(
                     {"proposer_max_per_chunk": bad})
 
+    def test_key_is_registered_for_validation(self):
+        # The knob must be declarable: create-time validation
+        # refuses any setup_config key with no registered
+        # consumer, so an unregistered knob would be a
+        # declared-but-unusable no-op (caught live on the
+        # verification box before this registration landed).
+        self.assertEqual(profile_config.setup_config_errors(
+            {"proposer_max_per_chunk": 25}), [])
+
 
 class TestPerDocDistribution(unittest.TestCase):
     def test_counts_every_document_including_zero(self):
