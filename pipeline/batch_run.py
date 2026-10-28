@@ -2581,6 +2581,80 @@ def _preflight_store(b: Batch, stages: list[str], graph) -> None:
                  f"replaced graph's full history)")
 
 
+def _er_terminal_account(registry, batch_id: str) -> dict | None:
+    """ER decisions for one batch, counted by terminal state
+    (issue #51): merges recorded, pairs held for settlement,
+    and of those held, how many a human has settled (merge /
+    keep-separate) and how many are still unactioned.
+
+    The counts ride on the registry's own settlement
+    semantics (er_review_pairs pairs each review row with its
+    settlement row). Returns None when the registry cannot
+    account — registries without a decision store hold
+    nothing visible (the interface default)."""
+    pairs_fn = getattr(registry, "er_review_pairs", None)
+    decisions_fn = getattr(registry, "er_decisions", None)
+    if pairs_fn is None or decisions_fn is None:
+        return None
+    try:
+        pairs = pairs_fn(batch_id)
+        merged = sum(1 for r in decisions_fn()
+                     if r.get("batch_id") == batch_id
+                     and r.get("outcome") == "merged")
+    except Exception:
+        return None
+    settled_merge = sum(
+        1 for p in pairs
+        if (p.get("settled") or {}).get("outcome") == "merged")
+    settled_separate = sum(
+        1 for p in pairs
+        if (p.get("settled") or {}).get("outcome")
+        == "kept_separate")
+    unactioned = sum(1 for p in pairs if p.get("settled") is None)
+    return {"merged": merged, "held_total": len(pairs),
+            "held_settled_merge": settled_merge,
+            "held_settled_keep_separate": settled_separate,
+            "held_unactioned": unactioned}
+
+
+def _finish_summary(b: Batch, root: Path, registry) -> None:
+    """The batch finish line (issue #51): a completed build
+    accounts for its ER decisions by terminal state in its
+    own report — the metrics block and the run log — and a
+    build ending with unactioned settlement holds says so
+    loudly, naming the remedy.
+
+    Before this, WRITE recorded er_review_pairs in its stage
+    metrics and named the remedy on its log line, but the
+    finish (the summary a reader signs off on) carried no ER
+    accounting at all: the multilingual pilot's build
+    finished VERIFIED with 44 of 49 ER decisions held and
+    nothing at the finish line said the graph shipped with
+    those pairs unmerged. The hold itself is the product's
+    measured design (a human decision, never an auto-merge);
+    what was missing is that the build must state it."""
+    account = (_er_terminal_account(registry, b.batch_id)
+               if registry is not None else None)
+    if account is None:
+        return
+    b.metrics["finish"] = {"er": account}
+    save_batch(b, root)
+    _log(b.batch_id,
+         f"finish: ER decisions — {account['merged']} merged, "
+         f"{account['held_total']} held for settlement "
+         f"({account['held_settled_merge']} settled merge, "
+         f"{account['held_settled_keep_separate']} settled "
+         f"keep-separate, {account['held_unactioned']} "
+         f"unactioned)")
+    if account["held_unactioned"]:
+        _log(b.batch_id,
+             f"ER SETTLEMENT PENDING: "
+             f"{account['held_unactioned']} held pair(s) are "
+             f"unactioned — this graph ships with those "
+             f"entities unmerged until a human settles them: "
+             f"ontosmith batch er-review {b.batch_id}")
+
+
 def run_batch(b: Batch, root: Path, doc_texts: dict[str, str] | None,
               decide_fn=None, er_decide_fn=None,
               registry=None, graph=None,
@@ -2734,6 +2808,7 @@ def run_batch(b: Batch, root: Path, doc_texts: dict[str, str] | None,
             _beat(b, root, "VERIFY")
             stage_verify(b, root, stages, registry, graph)
             stages.append("VERIFY")
+        _finish_summary(b, root, registry)
         _log(b.batch_id, f"batch run complete at {b.status.value}")
     except Exception as e:
         mark_failed(b, root, stages, str(e)[:500])
