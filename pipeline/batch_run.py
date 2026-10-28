@@ -1980,47 +1980,80 @@ def _index_serving(b: Batch, root: Path, graph) -> dict | None:
     return gs.ensure_serving(b.batch_id)
 
 
-def stage_index(b: Batch, root: Path, stages: list[str],
-                graph=None) -> None:
-    """INDEX: Tier 2 chunks → embeddings → vector index
-    (UNVERIFIED) — and the serving projection: the stage
-    ensures the store's serving schema and projects the
-    chunks it just embedded into the store, so the build's
-    finish line (search / serve) works on a fresh store
-    with no step in between."""
-    import pickle
-    _log(b.batch_id, "INDEX: building Tier 2 vector index")
-    d = batch_dir(root, b.batch_id)
-    # Tier 2 = routed tier 2, chunked by doc
-    texts = {}
-    with open(d / "texts.jsonl") as f:
-        for line in f:
-            r = json.loads(line)
-            texts[r["doc_id"]] = r["text"]
-    tier2_docs = set()
-    with open(d / "routed.jsonl") as f:
-        for line in f:
-            j = json.loads(line)
-            if j.get("tier") == 2:
-                tier2_docs.add(j["doc_id"])
+def _chunk_documents(texts: dict[str, str],
+                     doc_best_tier: dict[str, int],
+                     batch_id: str) -> tuple[list[str], list[dict]]:
+    """The serving chunk universe of a build: EVERY document,
+    in sorted doc order, cut into 1000-char windows (a window
+    is kept when its stripped length exceeds 100 chars).
+
+    Each chunk is tagged by its document's best routed tier —
+    tier 1 → VERIFIED, otherwise UNVERIFIED; a document with
+    no routed rows defaults to tier 2 / UNVERIFIED. This is
+    the tagging query_stack.project_serving applies to the
+    flagship corpus; stage_index and the VERIFY coverage
+    check share this one implementation so the stage and its
+    invariant can never disagree about what coverage means.
+
+    History: before issue #50 the stage chunked only
+    documents holding a Tier-2-routed candidate, so a
+    Tier-1-heavy build's serving index silently covered a
+    subset of the corpus (multilingual pilot, 2026-10-27:
+    1 of 16 documents). Sorted iteration keeps the index a
+    deterministic function of the inputs."""
     chunks, meta = [], []
-    # Sorted: tier2_docs is a set, and its
-    # iteration order leaked into the pickle — the same routed
-    # input could produce chunk arrays in different orders across
-    # runs. The index content is now a deterministic function of
-    # the routed rows.
-    for doc_id in sorted(tier2_docs):
-        text = texts.get(doc_id, "")
+    for doc_id in sorted(texts):
+        text = texts[doc_id]
+        tier = doc_best_tier.get(doc_id, 2)
+        tag = "VERIFIED" if tier == 1 else "UNVERIFIED"
         for i in range(0, len(text), 1000):
             ch = text[i:i + 1000]
             if len(ch.strip()) > 100:
                 chunks.append(ch)
                 meta.append({"doc_id": doc_id, "chunk_idx": i // 1000,
-                             "tag": "UNVERIFIED", "tier": 2,
-                             "batch_id": b.batch_id})
+                             "tag": tag, "tier": tier,
+                             "batch_id": batch_id})
+    return chunks, meta
+
+
+def stage_index(b: Batch, root: Path, stages: list[str],
+                graph=None) -> None:
+    """INDEX: document chunks → embeddings → vector index —
+    and the serving projection: the stage ensures the
+    store's serving schema and projects the chunks it just
+    embedded into the store, so the build's finish line
+    (search / serve) works on a fresh store with no step in
+    between.
+
+    The chunk universe is the whole build (every document,
+    tagged by its best routed tier) — see _chunk_documents.
+    The artifact keeps its historical name
+    (tier2_index.pkl): stored batches and the serving
+    readers resolve it by that name; its scope is no longer
+    Tier 2 only."""
+    import pickle
+    _log(b.batch_id, "INDEX: building vector index over all documents")
+    d = batch_dir(root, b.batch_id)
+    texts = {}
+    with open(d / "texts.jsonl") as f:
+        for line in f:
+            r = json.loads(line)
+            texts[r["doc_id"]] = r["text"]
+    doc_best_tier: dict[str, int] = {}
+    with open(d / "routed.jsonl") as f:
+        for line in f:
+            j = json.loads(line)
+            t = j.get("tier")
+            if t in (1, 2):
+                cur = doc_best_tier.get(j["doc_id"])
+                if cur is None or t < cur:
+                    doc_best_tier[j["doc_id"]] = t
+    chunks, meta = _chunk_documents(texts, doc_best_tier, b.batch_id)
     if not chunks:
-        _log(b.batch_id, "INDEX: no Tier 2 chunks, skipping")
-        b.metrics["index"] = {"chunks": 0}
+        _log(b.batch_id, "INDEX: no chunks (no document window "
+                         "passed the length rule), skipping")
+        b.metrics["index"] = {"chunks": 0, "documents": 0,
+                              "documents_total": len(texts)}
         # The schema is still this stage's to ensure: chunk
         # search against a store with no full-text index
         # refuses by name, chunks or no chunks.
@@ -2040,7 +2073,10 @@ def stage_index(b: Batch, root: Path, stages: list[str],
                      "chunks": chunks,
                      "model": b.config.embed_model}, f)
     emb_usage = embedder.usage
+    n_docs = len({m["doc_id"] for m in meta})
     b.metrics["index"] = {"chunks": len(chunks),
+                         "documents": n_docs,
+                         "documents_total": len(texts),
                          "dims": int(embs.shape[1]),
                          "model": b.config.embed_model,
                          "input_tokens": emb_usage["input_tokens"]}
@@ -2067,7 +2103,8 @@ def stage_index(b: Batch, root: Path, stages: list[str],
                  else round(emb_usage["cost"], 4))
     save_batch(b, root)
     advance(b, root, [*stages, "INDEX"])
-    _log(b.batch_id, f"INDEX done: {len(chunks)} Tier 2 chunks")
+    _log(b.batch_id, f"INDEX done: {len(chunks)} chunks over "
+                     f"{n_docs} of {len(texts)} documents")
 
 
 def stage_verify(b: Batch, root: Path, stages: list[str],
@@ -2093,10 +2130,18 @@ def stage_verify(b: Batch, root: Path, stages: list[str],
        a manifest; with a manifest, a property join of 0
        attestations FAILS the check —
        VERIFIED is never recorded on key existence alone.
-    7. Tier-2 index match: tier2_index.pkl is opened and
+    7. Index artifact match: tier2_index.pkl is opened and
        its chunk count and embedding model are compared against
        the INDEX metrics; when INDEX recorded 0 chunks the file
        must not exist. pass=None when no INDEX metrics exist.
+    8. Serving coverage: the distinct documents in the batch's
+       chunk index must equal the chunkable documents in
+       texts.jsonl (expected coverage re-derived with the
+       shared chunking rule, not read from INDEX metrics);
+       with a production store attached, the store's chunk
+       documents for the batch must match as well. Partial
+       coverage FAILS — a green VERIFY means the serving
+       index covers the whole build (issue #50).
 
     Graph checks are scoped by batch_id, NOT run_id: edges legitimately
     carry the id of the run that minted them, so run-scoping made the
@@ -2297,6 +2342,71 @@ def stage_verify(b: Batch, root: Path, stages: list[str],
                 "pass": False, "chunks": n_chunks,
                 "note": f"tier2_index.pkl unreadable: {e}"}
 
+    # 8. Serving coverage: the chunk index must cover every
+    #    chunkable document in the build. Checks 1-7 assert
+    #    the index artifact is consistent with INDEX's own
+    #    metrics; none of them compared the index against the
+    #    corpus — which is how a build whose serving index
+    #    held 1 of 16 documents recorded VERIFIED (the
+    #    Tier-2-only chunking of issue #50, measured by the
+    #    multilingual pilot, 2026-10-27). Expected coverage
+    #    is re-derived here from texts.jsonl with the shared
+    #    chunking rule (_chunk_documents), never from the
+    #    stage's metrics. When the graph is a production
+    #    Neo4j store, the store-side chunk documents for this
+    #    batch must match too — the projection is what
+    #    search actually reads.
+    if n_chunks is None:
+        checks["serving_coverage"] = {
+            "pass": None, "note": "no INDEX metrics recorded"}
+    else:
+        texts_v: dict[str, str] = {}
+        with open(d / "texts.jsonl") as f:
+            for line in f:
+                r = json.loads(line)
+                texts_v[r["doc_id"]] = r["text"]
+        _, want_meta = _chunk_documents(texts_v, {}, b.batch_id)
+        want_docs = {m["doc_id"] for m in want_meta}
+        have_docs: set[str] = set()
+        if pkl_p.exists():
+            import pickle
+            try:
+                with open(pkl_p, "rb") as f:
+                    have_docs = {m["doc_id"] for m in
+                                 (pickle.load(f).get("meta") or [])}
+            except Exception:
+                have_docs = set()
+        missing_docs = sorted(want_docs - have_docs)
+        extra_docs = sorted(have_docs - want_docs)
+        cov = {"pass": not missing_docs and not extra_docs,
+               "documents_expected": len(want_docs),
+               "documents_indexed": len(have_docs),
+               "missing_documents": missing_docs[:10],
+               "extra_documents": extra_docs[:10]}
+        client = getattr(graph, "c", None)
+        if client is not None:
+            from .neo4j_store import Neo4jClient
+            if isinstance(client, Neo4jClient):
+                try:
+                    rows = client.run([{"statement":
+                        "MATCH (c:Chunk {batch_id: $b}) "
+                        "RETURN DISTINCT c.doc_id",
+                        "parameters": {"b": b.batch_id}}])[0]
+                    store_docs = {r["row"][0] for r in rows}
+                    cov["documents_in_store"] = len(store_docs)
+                    store_missing = sorted(want_docs - store_docs)
+                    if store_missing:
+                        cov["pass"] = False
+                        cov["missing_from_store"] = store_missing[:10]
+                except Exception as e:
+                    cov["store_note"] = (
+                        f"store-side coverage unreadable: {e}")
+        if not cov["pass"]:
+            cov["note"] = (
+                "serving index coverage is partial: search "
+                "would silently cover only part of this build")
+        checks["serving_coverage"] = cov
+
     all_pass = all(c.get("pass") for c in checks.values()
                    if c.get("pass") is not None)
     b.metrics["verify"] = {"checks": checks, "all_pass": all_pass}
@@ -2378,7 +2488,7 @@ def _preflight_bindings(b: Batch, stages: list[str],
     checked only when the caller drives GATES with the live CLI
     decide function (``live_decide``) — stub-driven runs (tests,
     replay) are untouched. The embedder seat is deliberately not
-    preflighted: INDEX calls it only when Tier-2 chunks exist,
+    preflighted: INDEX calls it only when chunks exist,
     and its own call site raises the same named error.
     """
     from . import connections as _conn
