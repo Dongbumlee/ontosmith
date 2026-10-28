@@ -481,6 +481,24 @@ def _is_valid_entity(text: str) -> bool:
     return True
 
 
+def _per_doc_distribution(candidates: list[dict],
+                          doc_ids) -> dict:
+    """Candidate counts per document, over EVERY built
+    document (a document with no candidates counts 0).
+    Reported by CANDIDATES so extraction sparsity is a
+    printed fact, not a hidden one (issue #52)."""
+    import statistics
+    counts = {doc_id: 0 for doc_id in doc_ids}
+    for c in candidates:
+        if c.get("doc_id") in counts:
+            counts[c["doc_id"]] += 1
+    vals = sorted(counts.values())
+    if not vals:
+        return {"documents": 0, "min": 0, "median": 0, "max": 0}
+    return {"documents": len(vals), "min": vals[0],
+            "median": statistics.median(vals), "max": vals[-1]}
+
+
 def stage_candidates(b: Batch, root: Path, stages: list[str]) -> None:
     """CANDIDATES: RER-based triple extraction → candidates.
 
@@ -528,12 +546,19 @@ def stage_candidates(b: Batch, root: Path, stages: list[str]) -> None:
         endpoint_type_names,
         pair_judge_generic_relation,
         proposer_framing,
+        proposer_max_per_chunk,
         slot_framing,
         slot_rules,
     )
     guidance = derive_guidance(setup_cfg) if use_llm else ""
     endpoint_types = endpoint_type_names(setup_cfg) if use_llm \
         else set()
+    # The free proposer's per-chunk proposal ceiling: the
+    # profile may declare its own (proposer_max_per_chunk);
+    # absent a declaration the core default applies and the
+    # prompt is byte-identical to the pre-#52 recipe.
+    proposer_cap = proposer_max_per_chunk(setup_cfg) if use_llm \
+        else None
     # Domain framing: the family's declared framing
     # for the proposer / pair-judge base templates, threaded as
     # data; None (profile declares none) selects the builders'
@@ -723,7 +748,9 @@ def stage_candidates(b: Batch, root: Path, stages: list[str]) -> None:
     proposer_cost = 0.0
     proposer_stats = {"proposed": 0, "calls": 0, "errors": 0,
                       "slots_proposed": 0, "typed_kept": 0,
-                      "types_dropped_unknown": 0}
+                      "types_dropped_unknown": 0,
+                      "chunks": 0, "chunks_at_cap": 0,
+                      "max_per_chunk": 0}
     pair_stats = {"enumerated": 0, "answered": 0, "calls": 0,
                   "outcomes": {}, "alias_emitted": 0}
     # Silent-path counters: the stage's
@@ -1005,12 +1032,18 @@ def stage_candidates(b: Batch, root: Path, stages: list[str]) -> None:
             key = _conn.seat("proposer").require_key()
             res = _prop.propose_triples_for_doc(
                 doc_id, text, key, model=b.config.llm_model,
-                guidance=guidance, framing=triple_framing)
+                guidance=guidance, framing=triple_framing,
+                max_per_chunk=proposer_cap)
             proposer_cost = _conn_add_cost(
                 proposer_cost, res["cost"])
             proposer_stats["proposed"] += res["proposed"]
             proposer_stats["calls"] += res["calls"]
             proposer_stats["errors"] += res["errors"]
+            proposer_stats["chunks"] += res["chunks"]
+            proposer_stats["chunks_at_cap"] += res["chunks_at_cap"]
+            proposer_stats["max_per_chunk"] = (
+                proposer_cap if proposer_cap is not None
+                else _prop.MAX_PER_CHUNK)
             if endpoint_types:
                 proposer_stats["types_dropped_unknown"] += sum(
                     1 for it in res["items"]
@@ -1223,10 +1256,29 @@ def stage_candidates(b: Batch, root: Path, stages: list[str]) -> None:
     # GATES' queue results). Proposer spend IS checkpointed (above).
     _record_cost(b, "CANDIDATES",
                  _round_cost(_conn_add_cost(llm_cost, proposer_cost)))
+    # Extraction density, reported (issue #52): the
+    # per-document distribution over every built document,
+    # and — for the free proposer — how many chunks reached
+    # the per-chunk proposal ceiling. Before this, totals
+    # were all the stage printed: a cap-bound run and a
+    # naturally sparse run were indistinguishable.
+    per_doc = _per_doc_distribution(candidates, texts.keys())
+    b.metrics["candidates"]["per_doc"] = per_doc
     save_batch(b, root)
     advance(b, root, [*stages, "CANDIDATES"])
     _log(b.batch_id, f"CANDIDATES done: {len(candidates)} "
                      f"(by method: {by_method})")
+    _log(b.batch_id,
+         f"CANDIDATES density: per-doc candidates min "
+         f"{per_doc['min']} / median {per_doc['median']} / "
+         f"max {per_doc['max']} over {per_doc['documents']} "
+         f"documents")
+    if proposer_stats.get("chunks"):
+        _log(b.batch_id,
+             f"CANDIDATES density: proposer chunks at cap "
+             f"{proposer_stats['chunks_at_cap']}/"
+             f"{proposer_stats['chunks']} "
+             f"(cap {proposer_stats['max_per_chunk']} per chunk)")
     if blocked_all:
         # Guard blocks are reported BY NAME in the run
         # output, not only in the metrics record — a relation

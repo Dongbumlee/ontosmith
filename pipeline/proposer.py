@@ -221,7 +221,8 @@ def _parse_array(content: str, salvage: bool) -> list:
 
 
 def _build_triple_prompt(chunk: str, guidance: str = "",
-                         framing: str | None = None) -> str:
+                         framing: str | None = None,
+                         maxn: int | None = None) -> str:
     """The proposer prompt for one chunk .
 
     The base is the domain-neutral TRIPLE_PROMPT template filled
@@ -239,7 +240,7 @@ def _build_triple_prompt(chunk: str, guidance: str = "",
     """
     base = TRIPLE_PROMPT.format(
         framing=framing or TRIPLE_FRAMING_DEFAULT,
-        maxn=MAX_PER_CHUNK, text=chunk)
+        maxn=MAX_PER_CHUNK if maxn is None else maxn, text=chunk)
     if not guidance:
         return base
     return base + "\n\n" + guidance
@@ -248,22 +249,35 @@ def _build_triple_prompt(chunk: str, guidance: str = "",
 def propose_triples_for_doc(doc_id: str, text: str, key: str,
                             model: str = DEFAULT_MODEL,
                             guidance: str = "",
-                            framing: str | None = None) -> dict:
+                            framing: str | None = None,
+                            max_per_chunk: int | None = None) -> dict:
     """Raw triple proposals for one document (unguarded).
 
-    Returns {items, cost, calls, errors}; each item carries the
-    chunk it came from (+ its normalized form) for the guards.
-    When the profile's guidance asks for typed endpoints, items
-    also carry subject_type / object_type as proposed (validated
-    against the profile's type vocabulary in guard_triples).
+    Returns {items, cost, calls, errors, chunks, chunks_at_cap};
+    each item carries the chunk it came from (+ its normalized
+    form) for the guards. When the profile's guidance asks for
+    typed endpoints, items also carry subject_type / object_type
+    as proposed (validated against the profile's type
+    vocabulary in guard_triples).
+
+    max_per_chunk is the prompt's per-chunk proposal ceiling:
+    None selects the core default (MAX_PER_CHUNK — the CUAD
+    standalone recipe's value); a profile may declare its own
+    (profile_config.proposer_max_per_chunk). chunks_at_cap
+    counts chunks whose parsed proposal count reached the
+    ceiling — the saturation signal: a chunk at the cap is
+    indistinguishable from a chunk that merely had that many
+    facts, unless it is counted (issue #52).
     """
+    cap = MAX_PER_CHUNK if max_per_chunk is None else max_per_chunk
     tasks = _chunks(text)
 
     def work(task):
         idx, chunk = task
         try:
             content, u = _chat(
-                _build_triple_prompt(chunk, guidance, framing),
+                _build_triple_prompt(chunk, guidance, framing,
+                                     maxn=cap),
                 model, 12000 if _is_haiku55(model) else 6000, key)
             items = _parse_array(content, salvage=True)
             err = None
@@ -292,9 +306,12 @@ def propose_triples_for_doc(doc_id: str, text: str, key: str,
         return out, u, err
 
     items, cost, calls, errors = [], 0.0, 0, 0
+    chunks_at_cap = 0
     with ThreadPoolExecutor(max_workers=8) as ex:
         for out, u, err in ex.map(work, tasks):
             items.extend(out)
+            if len(out) >= cap:
+                chunks_at_cap += 1
             cost = connections.add_cost(cost, u.get("cost"))
             calls += 1
             if err:
@@ -302,7 +319,8 @@ def propose_triples_for_doc(doc_id: str, text: str, key: str,
     return {"items": items,
             "cost": None if cost is None else round(cost, 4),
             "calls": calls,
-            "errors": errors, "proposed": len(items)}
+            "errors": errors, "proposed": len(items),
+            "chunks": len(tasks), "chunks_at_cap": chunks_at_cap}
 
 
 def propose_slots_for_doc(doc_id: str, text: str,

@@ -1086,6 +1086,23 @@ def proposer_framing(cfg: dict | None) -> str | None:
     return _framing_value(cfg, "proposer_framing")
 
 
+def proposer_max_per_chunk(cfg: dict | None) -> int | None:
+    """The family's declared per-chunk proposal ceiling for
+    the free proposer (issue #52); None = the core default
+    (proposer.MAX_PER_CHUNK, the CUAD standalone recipe's
+    value). A declared value must be a positive integer —
+    anything else fails closed, like the other recipe
+    declarations."""
+    v = (cfg or {}).get("proposer_max_per_chunk")
+    if v is None:
+        return None
+    if isinstance(v, bool) or not isinstance(v, int) or v < 1:
+        raise ValueError(
+            f"proposer_max_per_chunk must be a positive "
+            f"integer, got {v!r} (fail closed)")
+    return v
+
+
 def slot_framing(cfg: dict | None) -> str | None:
     """The family's declared opening line for the clause-slot
     prompt; None = neutral core default."""
