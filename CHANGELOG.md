@@ -30,6 +30,22 @@ and the project adheres to
   `resolution_rejected` — distinguished from
   `fact_rejected` in the drop accounting. The quote is
   never rewritten; resolution travels as annotation.
+  **Measured (Re-DocRED 40-doc A/B vs the cap-25 recipe,
+  pre-registered criteria): the first cut does not ship
+  as a recall feature.** Candidate recall was flat
+  (0.1189 vs 0.1183, with a genuinely different proposed
+  slice — 46 gold proposed only with the layer on), and
+  resolution judging behaved as designed (58 clear /
+  3 rejected / 1 review of 62), but Tier-1 recall fell
+  to 0.0772 from 0.1066 (paired net −43): the guards
+  blocked 69 of 257 proposals as `mention_missing`
+  because the proposer's mention-field compliance is
+  unreliable, culling candidates before judging. Raw
+  Tier-1 precision rose (0.4912 → 0.6038) and cost held
+  ($0.00268/doc vs a $0.00312 ceiling). The layer stays
+  an experimental opt-in with that measured trade-off;
+  the full record is in the cap-recall measurement
+  (Phase 2 section) and issue #54.
 
 ### Fixed
 
