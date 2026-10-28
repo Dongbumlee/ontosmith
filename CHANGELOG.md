@@ -9,6 +9,64 @@ and the project adheres to
 
 ### Fixed
 
+- **The serving index silently covered only part of a
+  build's corpus.** INDEX projected chunks only for
+  documents that had produced Tier-2-routed candidates,
+  so a build whose candidates landed mostly Tier 1 served
+  a subset of its documents — in the multilingual pilot's
+  build, 1 of 16 — while VERIFY passed. INDEX now chunks
+  every built document (each chunk tagged with its
+  document's best tier), and VERIFY carries a
+  `serving_coverage` check that re-derives the expected
+  coverage from the batch's texts and fails by name when
+  it is partial. A green VERIFY now means coverage is
+  complete. Found by the multilingual pilot (issue #50);
+  the flagship build's published recall figures were
+  re-checked against its serving projection and stand
+  (509/509 documents).
+
+- **ER pairs held for human settlement were invisible in
+  the batch's own accounting.** WRITE noted the held
+  count, but the finish line said nothing, and a build
+  could ship with every held pair unactioned in silence
+  (the pilot: 44 of 49 ER decisions). The finish line now
+  accounts for ER decisions by terminal state (merged /
+  settled merge / settled keep-separate / unactioned),
+  records the account in the batch metrics, and prints
+  an `ER SETTLEMENT PENDING` line naming the settle
+  command when unactioned holds remain. The settlement
+  policy itself is unchanged — the review band still
+  never auto-merges (issue #51).
+
+- **Extraction density on long documents was capped and
+  unreported.** The free proposer's per-chunk ceiling
+  (10 proposals per 20,000-char chunk, a CUAD-recipe
+  constant) bound every pack and document shape, and
+  nothing reported it: batch metrics now carry the
+  per-document candidate distribution (min / median /
+  max over every built document) and the CANDIDATES log
+  prints it plus the count of chunks that reached the
+  ceiling. The ceiling is now recipe data a profile may
+  declare (`proposer_max_per_chunk`, registered and
+  validated like every setup_config key); undeclared
+  keeps the core default, byte-identical prompts
+  (issue #52).
+
+- **Non-Latin queries retrieved nothing.** The query
+  tokenizer was `[a-z0-9]+`, so a Korean-only query
+  produced zero tokens — the lexical arm never fired and
+  the graph arm's overlap sets were empty — and the
+  arms' length filter also dropped dense two-character
+  Hangul content words. Tokenization is now script-aware
+  (Unicode word tokens; byte-identical streams on ASCII
+  input, so the flagship evaluation mirror is unchanged),
+  the content-token rule counts two-character non-ASCII
+  tokens, and the full-text indexes accept a per-deployment
+  analyzer via `ONTOSMITH_FULLTEXT_ANALYZER` (unset keeps
+  the stock analyzer and the pre-fix schema). Whitespace
+  tokenization is not morphology; the limit is stated in
+  the serving guide (issue #53).
+
 - **Hands-on Track 1 §4 named the wrong store.** The
   finish line printed the file-store serve banner and
   promised ranked documents unconditionally; a reader

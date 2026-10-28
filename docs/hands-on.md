@@ -323,14 +323,16 @@ endpoints and the answer shape are the same either
 way.
 
 `search` answers with linked entities and
-evidence-carrying triples, and — when the store
-holds document chunks — ranked documents as well.
-The file store always carries the document texts;
-the graph store carries chunks when the build
-projected Tier-2 chunks into it (a build whose
-candidates all landed Tier 1 has none, and the
-Documents section then reads `(no chunk matched)`).
-No generated prose: what you see is what the graph
+evidence-carrying triples, and ranked documents as
+well. Both stores carry the document texts: the
+file store from the batch's own index, and the
+graph store because INDEX projects **every built
+document's** chunks into it — each chunk tagged
+with its document's best tier, so a build whose
+candidates all landed Tier 1 serves its whole
+corpus too (VERIFY checks the coverage and fails
+by name if any built document is missing). No
+generated prose: what you see is what the graph
 holds. The demo app at `/` is the same surface in a
 browser.
 
@@ -368,7 +370,12 @@ $ ontosmith batch er-apply demo-4docs
 
 `--keep-separate` is the other settlement: the pair
 stays two entities, the decision is recorded, and
-later runs never re-hold it.
+later runs never re-hold it. The batch's finish line
+accounts for every ER decision by its terminal state
+(merged / settled / still unactioned), and a build
+that ends with unactioned holds says so in its own
+finish line — `ER SETTLEMENT PENDING` — rather than
+shipping the graph quietly.
 
 ## Example document sets
 

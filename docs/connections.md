@@ -399,6 +399,7 @@ everything else:
 | `NEO4J_URL` | HTTP endpoint the client talks to (a local server's transactional API; Aura hosts are detected and use the Query API automatically) | `http://localhost:7474` |
 | `NEO4J_USER` | User | `neo4j` |
 | `NEO4J_PASSWORD` | Password | — (no default; env only) |
+| `ONTOSMITH_FULLTEXT_ANALYZER` | Lucene analyzer for the serving full-text indexes (`chunk_text_ft`, `entity_name_ft`) — set it (e.g. `cjk`) for non-Latin corpora when the server bundles a suitable analyzer. Applies when an index is first created; changing it on an existing store requires dropping those two indexes and re-running a build's INDEX/VERIFY. An invalid name fails the schema ensure by name | — (Neo4j's stock `standard`) |
 
 With a local default install, `NEO4J_PASSWORD` is the
 only variable you must set. Before a build spends

@@ -84,6 +84,21 @@ cannot run — no embeddings in the store, no triple
 overlap — is absent from the list and explained in
 the JSON's `notes`, never silently implied.
 
+**Language.** Query tokenization is script-aware:
+Latin, Hangul, CJK, kana, Cyrillic and other scripts
+tokenize on whitespace and punctuation, so a
+Korean-only question fires the lexical and graph
+arms like an English one. It is whitespace
+tokenization, not morphological analysis — a Korean
+particle attached to a noun does not match the bare
+noun, so questions phrased with bare entity names
+match best. On the store side, the full-text
+indexes take an analyzer chosen per deployment
+(`ONTOSMITH_FULLTEXT_ANALYZER`,
+[connections.md](connections.md)); stock Neo4j
+bundles no Korean morphological analyzer, and `cjk`
+(bigram) is the closest shipped option.
+
 ```bash
 python -m pipeline search --json "Dune stoneware dinnerware"
 python -m pipeline search --k 5 --batch my-batch-id "…"
