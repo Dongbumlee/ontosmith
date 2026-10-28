@@ -904,7 +904,7 @@ def hybrid_search(store, query: str, k: int = 10,
 
     # lexical arm (the lab's text_chunk_rows form)
     toks = [t for t in query_stack.tokenize(query)
-            if len(t) > 2]
+            if query_stack.is_content_token(t)]
     text_rows: list[dict] = []
     if toks:
         text_rows = store.search_chunks(
@@ -972,7 +972,8 @@ def hybrid_search(store, query: str, k: int = 10,
         arms.append("graph")
     triple_scores: dict[int, float] = {}
     qtoks = {t for t in query_stack.tokenize(query)
-             if t not in query_stack.STOP and len(t) > 2}
+             if t not in query_stack.STOP
+             and query_stack.is_content_token(t)}
     for i, (t, ttoks) in enumerate(
             zip(triples, token_sets, strict=True)):
         overlap = len(qtoks & ttoks)

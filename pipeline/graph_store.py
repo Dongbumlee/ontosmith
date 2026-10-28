@@ -42,6 +42,8 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
+import re
 from datetime import UTC, datetime
 
 from .neo4j_store import Neo4jClient
@@ -54,22 +56,59 @@ VECTOR_INDEX = "chunk_embedding"
 CHUNK_TEXT_INDEX = "chunk_text_ft"
 ENTITY_NAME_INDEX = "entity_name_ft"
 
-SCHEMA_STATEMENTS = [
-    "CREATE CONSTRAINT entity_id_unique IF NOT EXISTS "
-    "FOR (e:Entity) REQUIRE e.entity_id IS UNIQUE",
-    "CREATE CONSTRAINT chunk_id_unique IF NOT EXISTS "
-    "FOR (c:Chunk) REQUIRE c.chunk_id IS UNIQUE",
-    "CREATE CONSTRAINT doc_id_unique IF NOT EXISTS "
-    "FOR (d:Document) REQUIRE d.doc_id IS UNIQUE",
-    f"CREATE VECTOR INDEX {VECTOR_INDEX} IF NOT EXISTS "
-    "FOR (c:Chunk) ON (c.embedding) OPTIONS {indexConfig: "
-    f"{{`vector.dimensions`: {EMBED_DIMS}, "
-    "`vector.similarity_function`: 'cosine'}}",
-    f"CREATE FULLTEXT INDEX {CHUNK_TEXT_INDEX} IF NOT EXISTS "
-    "FOR (c:Chunk) ON EACH [c.text]",
-    f"CREATE FULLTEXT INDEX {ENTITY_NAME_INDEX} IF NOT EXISTS "
-    "FOR (e:Entity) ON EACH [e.name]",
-]
+FULLTEXT_ANALYZER_ENV = "ONTOSMITH_FULLTEXT_ANALYZER"
+_ANALYZER_NAME = re.compile(r"^[A-Za-z0-9_.-]+$")
+
+
+def fulltext_analyzer() -> str | None:
+    """The fulltext analyzer chosen for this deployment
+    (issue #53, B3): ``$ONTOSMITH_FULLTEXT_ANALYZER`` when
+    set, else None (Neo4j's stock ``standard`` analyzer —
+    the pre-fix behavior, unchanged for existing installs).
+    Set it to a Lucene analyzer the SERVER bundles (e.g.
+    ``cjk`` for CJK bigram tokenization) when the corpus is
+    non-Latin. Stock Neo4j does not bundle a Korean
+    morphological analyzer (nori); ``cjk`` is the closest
+    shipped option. An invalid name fails the CREATE and
+    therefore the schema ensure — loudly, by name."""
+    value = os.environ.get(FULLTEXT_ANALYZER_ENV, "").strip()
+    return value or None
+
+
+def schema_statements(analyzer: str | None = None) -> list[str]:
+    """The serving schema statements. With no analyzer the
+    statements are byte-identical to the pre-knob schema;
+    with one, both fulltext indexes carry it. Note the
+    IF NOT EXISTS semantics: the knob takes effect when an
+    index is first created — changing it on a store whose
+    indexes already exist requires dropping those indexes
+    (``DROP INDEX chunk_text_ft`` / ``entity_name_ft``) and
+    re-running the ensure."""
+    if analyzer is not None and not _ANALYZER_NAME.match(analyzer):
+        raise ValueError(
+            f"invalid fulltext analyzer name: {analyzer!r}")
+    options = ("" if analyzer is None else
+               " OPTIONS {indexConfig: "
+               f"{{`fulltext.analyzer`: '{analyzer}'}}")
+    return [
+        "CREATE CONSTRAINT entity_id_unique IF NOT EXISTS "
+        "FOR (e:Entity) REQUIRE e.entity_id IS UNIQUE",
+        "CREATE CONSTRAINT chunk_id_unique IF NOT EXISTS "
+        "FOR (c:Chunk) REQUIRE c.chunk_id IS UNIQUE",
+        "CREATE CONSTRAINT doc_id_unique IF NOT EXISTS "
+        "FOR (d:Document) REQUIRE d.doc_id IS UNIQUE",
+        f"CREATE VECTOR INDEX {VECTOR_INDEX} IF NOT EXISTS "
+        "FOR (c:Chunk) ON (c.embedding) OPTIONS {indexConfig: "
+        f"{{`vector.dimensions`: {EMBED_DIMS}, "
+        "`vector.similarity_function`: 'cosine'}}",
+        f"CREATE FULLTEXT INDEX {CHUNK_TEXT_INDEX} IF NOT EXISTS "
+        f"FOR (c:Chunk) ON EACH [c.text]{options}",
+        f"CREATE FULLTEXT INDEX {ENTITY_NAME_INDEX} IF NOT EXISTS "
+        f"FOR (e:Entity) ON EACH [e.name]{options}",
+    ]
+
+
+SCHEMA_STATEMENTS = schema_statements()
 
 _CHUNK_FILTER_KEYS = ("corpus", "batch_id", "doc_id", "tier", "tag")
 
@@ -99,7 +138,7 @@ class GraphStore:
     def ensure_schema(self) -> list[dict]:
         """Create constraints + indexes (all IF NOT EXISTS; safe to
         re-run). Returns the post-state of the §4 indexes."""
-        for stmt in SCHEMA_STATEMENTS:
+        for stmt in schema_statements(fulltext_analyzer()):
             self.c.run([{"statement": stmt, "parameters": {}}])
         self.c.run([{"statement": "CALL db.awaitIndexes(300)",
                      "parameters": {}}])

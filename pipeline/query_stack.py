@@ -95,7 +95,38 @@ STOP = set("what which contracts contract corpus agreement agreements is are doe
 
 
 def tokenize(t: str) -> list[str]:
-    return re.findall(r"[a-z0-9]+", t.lower())
+    """Word tokens for the retrieval arms. Script-aware
+    (issue #53): the pre-fix pattern ``[a-z0-9]+`` yielded
+    ZERO tokens for a Korean-only query, so the lexical arm
+    never fired and the graph arm's overlap sets were empty
+    for non-Latin content. ``[^\\W_]`` is the Unicode word
+    class minus underscore: on lowercased ASCII input it
+    produces exactly the old ``[a-z0-9]+`` stream (the
+    cuad_eval mirror the flagship numbers rest on is
+    unchanged — pinned by test), while Hangul / CJK / kana /
+    Cyrillic / accented-Latin runs now tokenize on
+    whitespace-and-punctuation boundaries like Latin text.
+
+    Known limit, stated plainly: this is whitespace
+    tokenization, not morphological analysis — a Korean
+    particle attached to a noun (삼성전자는) does not match
+    the bare noun (삼성전자). Queries phrased with bare
+    entity surfaces match; full morphology needs an
+    analyzer the stock stack does not bundle (see the
+    fulltext analyzer knob in graph_store)."""
+    return re.findall(r"[^\W_]+", (t or "").lower())
+
+
+def is_content_token(tok: str) -> bool:
+    """Whether a token can carry retrieval signal. The
+    historical rule was ``len(tok) > 2`` — an English-shaped
+    filter that drops function words (a / of / to). Applied
+    to Hangul it also drops dense two-character content
+    words (본사, 위치, 서울), which gutted the arms even
+    after tokenization was fixed; so a two-character token
+    counts when it is non-ASCII. ASCII behavior is exactly
+    the old rule."""
+    return len(tok) > 2 or (len(tok) == 2 and not tok.isascii())
 
 
 def rrf(rankings: list[list[str]], k: int = 60) -> list[str]:
@@ -658,7 +689,7 @@ class GraphData:
 def _overlap_ranking(rows: list[dict], token_sets: list[set],
                      question: str) -> list[str]:
     qtoks = {t for t in tokenize(question)
-             if t not in STOP and len(t) > 2}
+             if t not in STOP and is_content_token(t)}
     doc_score: dict[str, float] = defaultdict(float)
     for e, ttoks in zip(rows, token_sets):
         overlap = len(qtoks & ttoks)
