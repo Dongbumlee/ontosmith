@@ -2834,27 +2834,55 @@ def _finish_summary(b: Batch, root: Path, registry) -> None:
     nothing at the finish line said the graph shipped with
     those pairs unmerged. The hold itself is the product's
     measured design (a human decision, never an auto-merge);
-    what was missing is that the build must state it."""
+    what was missing is that the build must state it.
+
+    The same rule covers CANDIDATES guard blocks (issue
+    #54, post-verdict): the stage totals its blocks by
+    reason in its own metrics and names them on its log
+    line, but the finish — the record a reader signs off
+    on — restated none of it, so a guard cliff (the
+    mention layer's measured mention_missing cull: 69 of
+    257 proposals in the Phase 2 A/B) was indistinguishable
+    at the finish from an ordinary sparse run. When the
+    stage blocked anything, the finish carries the
+    by-reason counts in its metrics and names them on its
+    log line."""
     account = (_er_terminal_account(registry, b.batch_id)
                if registry is not None else None)
-    if account is None:
+    cand = b.metrics.get("candidates") or {}
+    blocked_total = cand.get("blocked") or 0
+    blocked_reasons = dict(cand.get("blocked_reasons") or {})
+    if account is None and not blocked_total:
         return
-    b.metrics["finish"] = {"er": account}
+    finish: dict = {}
+    if account is not None:
+        finish["er"] = account
+    if blocked_total:
+        finish["candidates_blocked"] = {
+            "total": blocked_total,
+            "by_reason": blocked_reasons}
+    b.metrics["finish"] = finish
     save_batch(b, root)
-    _log(b.batch_id,
-         f"finish: ER decisions — {account['merged']} merged, "
-         f"{account['held_total']} held for settlement "
-         f"({account['held_settled_merge']} settled merge, "
-         f"{account['held_settled_keep_separate']} settled "
-         f"keep-separate, {account['held_unactioned']} "
-         f"unactioned)")
-    if account["held_unactioned"]:
+    if account is not None:
         _log(b.batch_id,
-             f"ER SETTLEMENT PENDING: "
-             f"{account['held_unactioned']} held pair(s) are "
-             f"unactioned — this graph ships with those "
-             f"entities unmerged until a human settles them: "
-             f"ontosmith batch er-review {b.batch_id}")
+             f"finish: ER decisions — {account['merged']} merged, "
+             f"{account['held_total']} held for settlement "
+             f"({account['held_settled_merge']} settled merge, "
+             f"{account['held_settled_keep_separate']} settled "
+             f"keep-separate, {account['held_unactioned']} "
+             f"unactioned)")
+        if account["held_unactioned"]:
+            _log(b.batch_id,
+                 f"ER SETTLEMENT PENDING: "
+                 f"{account['held_unactioned']} held pair(s) are "
+                 f"unactioned — this graph ships with those "
+                 f"entities unmerged until a human settles them: "
+                 f"ontosmith batch er-review {b.batch_id}")
+    if blocked_total:
+        _log(b.batch_id,
+             f"finish: CANDIDATES blocked {blocked_total} "
+             f"(by reason: {blocked_reasons}) — see "
+             f"candidates_blocked.jsonl")
 
 
 def run_batch(b: Batch, root: Path, doc_texts: dict[str, str] | None,

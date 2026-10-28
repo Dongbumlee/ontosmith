@@ -78,6 +78,25 @@ and the project adheres to
   policy itself is unchanged — the review band still
   never auto-merges (issue #51).
 
+- **CANDIDATES guard blocks were invisible in the
+  batch's finish record.** The stage totals its blocks
+  by reason in its own metrics and names them on its
+  log line, but the finish — the record a reader signs
+  off on — restated only the ER account, so a guard
+  cliff was indistinguishable at the finish from an
+  ordinary sparse run (the mention layer's measured
+  Phase 2 cull: 69 of 257 proposals blocked as
+  `mention_missing`). The finish now carries the
+  by-reason block counts in its metrics
+  (`finish.candidates_blocked`) and names them on its
+  log line, alongside the ER account. Batch-level tests
+  pin the surfacing, characterize the cliff under a
+  scripted partial-compliance proposer at the measured
+  27% mention-field omission rate, and pin equal
+  candidate survival for compliant input with the layer
+  on and off. The guard policy itself is unchanged
+  (issue #54).
+
 - **Extraction density on long documents was capped and
   unreported.** The free proposer's per-chunk ceiling
   (10 proposals per 20,000-char chunk, a CUAD-recipe
