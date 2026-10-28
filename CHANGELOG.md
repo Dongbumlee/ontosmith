@@ -191,6 +191,18 @@ and the project adheres to
   the layer remains an experimental opt-in with the
   measured trade-off. Full record: the cap-recall
   measurement (cut-2 section) and issue #55.
+  **Precision claim, measured and closed (issue #56).**
+  The raw-precision edge above (0.5588 vs 0.4912) was
+  tested under a separate pre-registration with blinded
+  adjudication (the flagship correction's instrument):
+  adjudicated Tier-1 precision is 0.9562 with the layer
+  and 0.9561 without — a gain of +0.0001 against a
+  registered +0.05 bar. The raw gap was gold's error
+  distribution, not the layer (~90% of both arms'
+  disagreements are in fact supported). The layer does
+  not ship as a precision feature either; the record is
+  the cap-recall measurement (precision program
+  section) and issue #56.
 
 - **Hands-on guide restructured for a lighter first
   read.** The appendix track (reproduce the reference
