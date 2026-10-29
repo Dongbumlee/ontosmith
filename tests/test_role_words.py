@@ -9,6 +9,17 @@ The golden (tests/golden/role_word_guard.json) was captured
 from the PRE-CHANGE code (bool switch + core literal) on the
 fixture below; every guard assertion here compares against
 it byte-for-byte.
+
+Regeneration record: the "off" entry was regenerated when
+identity resolution landed in guard_triples (fragment
+endpoints resolve to the document's canonical census
+surface: this fixture's "Company" -> "The Company" and
+"Affiliate" -> "The Affiliate", each recorded in the kept
+record's `canonicalized`). The "on" entry is unchanged —
+role-word blocks fire before resolution, so the guard-on
+path never reaches it. The equivalence this file pins is
+unchanged: role_words on/off differ only by the role-word
+guard's own verdicts.
 """
 import json
 import shutil

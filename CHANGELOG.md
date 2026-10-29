@@ -94,6 +94,43 @@ and the project adheres to
 
 ### Fixed
 
+- **Fragment endpoints became separate graph nodes.**
+  The proposer types endpoints in the surface the local
+  text uses — a first name alone, a nickname, a surname
+  alone, a name missing its suffix — and the graph keys
+  nodes by name string, so one entity fragmented into
+  several nodes (and a bare surname could wire a
+  relation to the wrong bearer). The census roster
+  itself fed the problem: it glued a title line to the
+  body across a paragraph break, glued sentence-initial
+  prose words onto names ("During Alger"), split a
+  quoted nickname out of its name ("Wilfried" /
+  "Willi" / "Schneider" as three surfaces for
+  Wilfried "Willi" Schneider), and split spaced-hyphen
+  compounds ("Bernheimer - Haus"). The census now
+  keeps sequences inside paragraphs, drops
+  sentence-initial prose words, bridges quoted
+  nicknames (recording them, and the title form, as
+  aliases of the full name), and bridges spaced
+  hyphens; and `guard_triples` — the one funnel every
+  proposal channel passes — resolves each endpoint
+  against the roster before attestation: a fragment
+  naming exactly one canonical surface is rewritten
+  to it (recorded as `canonicalized`), one naming
+  several is flagged (`identity_ambiguous`) and never
+  guessed, and attestation reads the effective
+  endpoint through the entity's recorded mention
+  forms so the canonical name is not blocked for
+  never occurring contiguously. Blocked records still
+  carry the item exactly as proposed. Deterministic
+  code only; no model is consulted on identity.
+  Replaying the sweep pilot's six adjudicated
+  identity failures through the fixed guard: three
+  now resolve to the canonical entity, three are
+  flagged ambiguous (their documents genuinely carry
+  several bearers of the name) instead of shipping
+  silently. Issue #58.
+
 - **The serving index silently covered only part of a
   build's corpus.** INDEX projected chunks only for
   documents that had produced Tier-2-routed candidates,

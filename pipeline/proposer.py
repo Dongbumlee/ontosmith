@@ -592,6 +592,26 @@ def _starts_capital(core: str) -> bool:
     return False
 
 
+_QUOTE_CHARS = frozenset("\"'\u201c\u201d\u2018\u2019\u00ab\u00bb")
+
+# Sentence-initial words that are not name material: at a
+# sentence or paragraph boundary a capitalised token from
+# this set is prose syntax, not the start of a name
+# ("During Alger 's term" censuses Alger, not a person
+# called During Alger).
+_INITIAL_DROP = frozenset(
+    {"during", "after", "before", "when", "while", "as",
+     "in", "on", "at", "by", "for", "from", "with"})
+
+
+def _is_quote_token(raw: str) -> bool:
+    """True for a whitespace token made only of quote
+    characters (the corpus tokenises quotes standalone:
+    'Wilfried " Willi " Schneider')."""
+    return bool(raw) and all(ch in _QUOTE_CHARS
+                             for ch in raw)
+
+
 def census_entities(text: str) -> dict:
     """The deterministic census roster for one document.
 
@@ -599,78 +619,303 @@ def census_entities(text: str) -> dict:
     lowercase connector run may bridge two capitalized
     tokens; a sequence never crosses a sentence boundary
     — abbreviation periods excepted, per the boundary
-    rule above; a leading article — The / A / An — is dropped
-    when a two-or-more-token name follows it, so a
-    sentence-initial "The Bank of America" censuses as
-    "Bank of America", while a short name keeps its
-    article: "The Hague"), builds each surface by joining
-    the token cores with single spaces, and keeps it only
-    if its normalized form is attested under norm_ws
-    containment in the document — an extracted surface
-    that the normalization cannot find (a name whose
-    internal punctuation the joining flattened, e.g.
-    "U.S. Army" -> "u.s army") is dropped AND counted,
-    never silently lost. Dedupes by normalized surface,
-    first surface form wins. Pure function of the text:
-    identical run to run, no API, so the roster's recall
-    against any gold name set is measurable offline (the
-    sweep's pre-flight gate).
+    rule above — and never crosses a paragraph break: a
+    title line and the body are different mention sites,
+    and gluing them manufactures names that occur
+    nowhere). Three surface disciplines keep the roster
+    to names the document actually uses:
 
-    Returns {entities: [{surface, norm}], extracted,
-    unattested}: `extracted` counts every sequence the
-    scan produced, `unattested` the ones the containment
-    test dropped.
+    - a leading article (The / A / An) is dropped when a
+      two-or-more-token name follows it, so a
+      sentence-initial "The Bank of America" censuses as
+      "Bank of America", while a short name keeps its
+      article: "The Hague"; a leading sentence-initial
+      prose word (During / After / In / ...) at a
+      sentence or paragraph boundary is dropped the
+      same way.
+    - a quote-wrapped token inside a sequence is a
+      nickname insertion (Wilfried "Willi" Schneider):
+      quote tokens bridge the sequence instead of
+      breaking it, the wrapped token is excluded from
+      the surface when two or more unwrapped tokens
+      remain, and its normalized form is recorded as an
+      alias of the surface. The entity is attested by
+      its full bridged form, which the alias list also
+      carries.
+    - a surface that differs from another roster
+      surface only by one token, where that token is a
+      recorded nickname alias of the other surface
+      (Willi Schneider vs Wilfried Schneider), folds
+      into the other surface as an alias form.
+
+    Each surface is kept only if attested in the
+    document (norm_ws containment, or the bridged-form
+    attestation above); a surface the normalization
+    cannot find (a name whose internal punctuation the
+    joining flattened, e.g. "U.S. Army" -> "u.s army")
+    is dropped AND counted, never silently lost.
+    Dedupes by normalized surface, first surface form
+    wins. Pure function of the text: identical run to
+    run, no API, so the roster's recall against any
+    gold name set is measurable offline (the sweep's
+    pre-flight gate).
+
+    Returns {entities: [{surface, norm, aliases}],
+    extracted, unattested}: `extracted` counts every
+    sequence the scan produced, `unattested` the ones
+    the containment test dropped. `aliases` are
+    normalized alternate mention forms of the entity
+    (nickname tokens, bridged full forms, folded alias
+    forms) — mention forms, never separate entities.
     """
     doc_norm = norm_ws(text)
-    raw_tokens = text.split()
-    tokens = [_token_core(t) for t in raw_tokens]
-    surfaces: list[str] = []
-    i, n = 0, len(tokens)
-    while i < n:
-        if tokens[i] and _starts_capital(tokens[i]):
-            seq = [tokens[i]]
-            j = i + 1
-            while j < n:
-                # A name sequence never crosses a sentence
-                # boundary: the token before the next one
-                # must not be sentence-final.
-                if _sentence_final(raw_tokens[j - 1]):
+    doc_bridged = norm_ws(" ".join(
+        t for t in text.split() if not _is_quote_token(t)))
+    surfaces: list[tuple[str, list[str], bool]] = []
+    for par in re.split(r"\n\s*\n", text):
+        raw_tokens = par.split()
+        merged: list[str] = []
+        ti = 0
+        while ti < len(raw_tokens):
+            if ti + 2 < len(raw_tokens) + 1 \
+                    and ti + 2 <= len(raw_tokens) - 1 \
+                    and raw_tokens[ti + 1] in ("-", "\u2013") \
+                    and _token_core(raw_tokens[ti]) \
+                    and _starts_capital(
+                        _token_core(raw_tokens[ti])) \
+                    and _token_core(raw_tokens[ti + 2]) \
+                    and _starts_capital(
+                        _token_core(raw_tokens[ti + 2])):
+                merged.append(
+                    _token_core(raw_tokens[ti]) + "-"
+                    + _token_core(raw_tokens[ti + 2]))
+                ti += 3
+                continue
+            merged.append(raw_tokens[ti])
+            ti += 1
+        raw_tokens = merged
+        tokens = [_token_core(t) for t in raw_tokens]
+        quoted: list[bool] = []
+        quote_open = False
+        for rt in raw_tokens:
+            if _is_quote_token(rt):
+                quote_open = not quote_open
+                quoted.append(False)
+            else:
+                quoted.append(
+                    quote_open or rt[:1] in _QUOTE_CHARS)
+        # Sentence-boundary map: a token starts at a
+        # boundary at the paragraph start or right after
+        # a sentence-final raw token (quote tokens are
+        # transparent to the look-back).
+        boundary: list[bool] = []
+        last_raw: str | None = None
+        for idx, rt in enumerate(raw_tokens):
+            boundary.append(
+                last_raw is None or _sentence_final(last_raw))
+            if not _is_quote_token(rt):
+                last_raw = rt
+        i, n = 0, len(tokens)
+        while i < n:
+            if _is_quote_token(raw_tokens[i]):
+                i += 1
+                continue
+            if tokens[i] and _starts_capital(tokens[i]):
+                seq: list[int] = [i]
+                j = i + 1
+                while j < n:
+                    if _is_quote_token(raw_tokens[j]):
+                        j += 1
+                        continue
+                    # A name sequence never crosses a
+                    # sentence boundary: the token before
+                    # the next one must not be
+                    # sentence-final.
+                    prev = j - 1
+                    while _is_quote_token(raw_tokens[prev]):
+                        prev -= 1
+                    if _sentence_final(raw_tokens[prev]):
+                        break
+                    t = tokens[j]
+                    if t and _starts_capital(t):
+                        seq.append(j)
+                        j += 1
+                        continue
+                    k = j
+                    while k < n and tokens[k] \
+                            and tokens[k].lower() \
+                            in _SWEEP_CONNECTORS:
+                        k += 1
+                    if k > j and k < n and tokens[k] \
+                            and _starts_capital(tokens[k]):
+                        seq.extend(range(j, k + 1))
+                        j = k + 1
+                        continue
                     break
-                t = tokens[j]
-                if t and _starts_capital(t):
-                    seq.append(t)
-                    j += 1
-                    continue
-                k = j
-                while k < n and tokens[k] \
-                        and tokens[k].lower() in _SWEEP_CONNECTORS:
-                    k += 1
-                if k > j and k < n and tokens[k] \
-                        and _starts_capital(tokens[k]):
-                    seq.extend(tokens[j:k + 1])
-                    j = k + 1
-                    continue
-                break
-            if len(seq) >= 3 \
-                    and seq[0].lower() in ("the", "a", "an"):
-                seq = seq[1:]
-            surfaces.append(" ".join(seq))
-            i = j
-        else:
-            i += 1
+                cores = [tokens[x] for x in seq]
+                if len(cores) >= 3 \
+                        and cores[0].lower() in ("the", "a", "an"):
+                    seq = seq[1:]
+                    cores = cores[1:]
+                elif len(cores) >= 2 and boundary[i] \
+                        and cores[0].lower() in _INITIAL_DROP:
+                    seq = seq[1:]
+                    cores = cores[1:]
+                plain = [x for x in seq if not quoted[x]]
+                aliases: list[str] = []
+                attested = False
+                if 2 <= len(plain) < len(seq):
+                    aliases = [norm_ws(tokens[x])
+                               for x in seq if quoted[x]]
+                    full = " ".join(cores)
+                    if norm_ws(full) in doc_bridged:
+                        aliases.append(norm_ws(full))
+                        seq = plain
+                        cores = [tokens[x] for x in seq]
+                        attested = True
+                surface = " ".join(cores)
+                if "-" in surface:
+                    spaced = norm_ws(
+                        surface.replace("-", " - "))
+                    if spaced in doc_norm:
+                        aliases.append(spaced)
+                        attested = True
+                surfaces.append(
+                    (surface, aliases, attested))
+                i = j
+            else:
+                i += 1
     entities, seen, unattested = [], set(), 0
-    for s in surfaces:
+    for s, aliases, attested in surfaces:
         sn = norm_ws(s)
-        if sn not in doc_norm:
+        if not attested and sn not in doc_norm:
             unattested += 1
             continue
         if sn in seen:
             continue
         seen.add(sn)
-        entities.append({"surface": s, "norm": sn})
+        entities.append({"surface": s, "norm": sn,
+                         "aliases": sorted(set(aliases))})
+    # Fold alias forms: a surface differing from another
+    # in exactly one token, where its token there is a
+    # nickname alias of the other surface, is a mention
+    # form of that entity, not an entity of its own.
+    alias_of: dict[str, str] = {}
+    for e in entities:
+        for a in e["aliases"]:
+            alias_of.setdefault(a, e["norm"])
+    by_norm = {e["norm"]: e for e in entities}
+    folded: set[str] = set()
+    for e in entities:
+        toks = e["norm"].split()
+        for pos, t in enumerate(toks):
+            canon = alias_of.get(t)
+            if canon is None or canon == e["norm"] \
+                    or canon not in by_norm:
+                continue
+            ctoks = canon.split()
+            if len(ctoks) != len(toks):
+                continue
+            cand = toks[:pos] + [ctoks[pos]] + toks[pos + 1:]
+            if " ".join(cand) == canon:
+                by_norm[canon]["aliases"] = sorted(set(
+                    by_norm[canon]["aliases"])
+                    | set(e["aliases"]) | {e["norm"]})
+                folded.add(e["norm"])
+                break
+    entities = [e for e in entities
+                if e["norm"] not in folded]
     return {"entities": entities,
             "extracted": len(surfaces),
             "unattested": unattested}
+
+
+def _identity_index(doc_text: str) -> tuple[dict, dict, set]:
+    """The identity index guard_triples resolves against:
+    (by_norm, alias_of, maximals) from the document's
+    census. by_norm maps a census norm to its entity;
+    alias_of maps an alias norm (nickname, bridged full
+    form, folded alias form) to the canonical entity
+    norm; maximals are the entity norms whose token set
+    is not a proper subset of another entity's — the
+    only surfaces a fragment may resolve INTO."""
+    cen = census_entities(doc_text)
+    by_norm = {e["norm"]: e for e in cen["entities"]}
+    alias_of: dict[str, str] = {}
+    for e in cen["entities"]:
+        for a in e["aliases"]:
+            alias_of.setdefault(a, e["norm"])
+    toks = {n: _identity_tokens(n) for n in by_norm}
+    maximals = {n for n in by_norm
+                if not any(n != m and toks[n] < toks[m]
+                           for m in by_norm)}
+    return by_norm, alias_of, maximals
+
+
+def _name_tokens(norm: str) -> set:
+    """The token set identity resolution compares:
+    whitespace- and hyphen-separated parts. A hyphenated
+    compound (Bernheimer-Haus) is one census token but
+    two name parts — a fragment may name either part."""
+    return {t for t in re.split(r"[\s-]+", norm) if t}
+
+
+def _identity_tokens(norm: str) -> set:
+    """_name_tokens with a leading article removed:
+    the / a / an at the head of a surface is syntax,
+    not identity ("The Hague" is the entity an endpoint
+    "Hague" names; "The Haus" must not outrank the
+    compound it abbreviates)."""
+    toks = _name_tokens(norm)
+    first = norm.split(" ", 1)[0] if norm else ""
+    if first in ("the", "a", "an"):
+        toks.discard(first)
+    return toks
+
+
+def _resolve_endpoint(ep_norm: str, index: tuple,
+                      anchor_norm: str | None = None
+                      ) -> tuple[str | None, list[str]]:
+    """Resolve one proposed endpoint (norm_ws form) to
+    the document's canonical surface for the entity it
+    names. Returns (surface, candidates): surface is the
+    canonical surface to substitute, or None when no
+    resolution applies; a non-empty candidates list
+    means the fragment is ambiguous between those
+    canonical surfaces — ambiguity is reported, never
+    guessed.
+
+    Resolution order (deterministic, code-only):
+    1. an exact census entity that is maximal, or not
+       contained in any other entity, stands as-is;
+    2. a recorded alias (nickname / bridged form /
+       folded alias form) resolves to its entity;
+    3. a fragment of the item's own anchor (the sweep
+       asked about that entity) resolves to the anchor;
+    4. a proper token-subset of exactly ONE maximal
+       surface resolves to it; of several, it is
+       ambiguous; of none, it stands as proposed (the
+       proposer may name entities the census missed —
+       absence from the roster is not proof of error).
+    """
+    by_norm, alias_of, maximals = index
+    if ep_norm in by_norm and ep_norm in maximals:
+        return None, []
+    if ep_norm in alias_of:
+        return by_norm[alias_of[ep_norm]]["surface"], []
+    etoks = _identity_tokens(ep_norm)
+    if anchor_norm and anchor_norm in by_norm \
+            and etoks < _identity_tokens(anchor_norm):
+        return by_norm[anchor_norm]["surface"], []
+    toks = {n: _identity_tokens(n) for n in by_norm}
+    cands = sorted(by_norm[m]["surface"] for m in maximals
+                   if etoks < toks[m]
+                   or (etoks == toks[m] and ep_norm != m))
+    if len(cands) == 1:
+        return cands[0], []
+    if len(cands) > 1:
+        return None, cands
+    return None, []
 
 
 def split_sentences(text: str) -> list[str]:
@@ -685,11 +930,15 @@ def split_sentences(text: str) -> list[str]:
             re.split(r"(?<=[.!?])\s+", masked) if p.strip()]
 
 
-def anchor_contexts(text: str, anchor: str) -> dict:
+def anchor_contexts(text: str, anchor: str,
+                    aliases: list[str] | None = None) -> dict:
     """One anchor's view: the sentences containing a
     census-attested mention of the anchor (normalized
-    substring), each with ± 1 neighbouring sentence, in
-    document order, total ≤ SWEEP_CONTEXT_MAX chars.
+    substring; any of the anchor's census aliases — a
+    nickname or bridged form the canonical surface's
+    own substring cannot find — also counts), each
+    with ± 1 neighbouring sentence, in document order,
+    total ≤ SWEEP_CONTEXT_MAX chars.
 
     Contiguous kept sentences merge into runs; a run that
     would push the view past the ceiling is left out and
@@ -697,8 +946,9 @@ def anchor_contexts(text: str, anchor: str) -> dict:
     truncated mid-run. Returns {context, mention_sentences,
     windows, windows_dropped}."""
     sents = split_sentences(text)
-    an = norm_ws(anchor)
-    hits = [i for i, s in enumerate(sents) if an in norm_ws(s)]
+    forms = [norm_ws(anchor)] + list(aliases or [])
+    hits = [i for i, s in enumerate(sents)
+            if any(f in norm_ws(s) for f in forms)]
     keep: set[int] = set()
     for i in hits:
         keep.update((i - 1, i, i + 1))
@@ -807,7 +1057,8 @@ def propose_sweep_for_doc(doc_id: str, text: str,
 
     def work(task):
         _idx, anchor = task
-        view = anchor_contexts(text, anchor["surface"])
+        view = anchor_contexts(text, anchor["surface"],
+                               anchor.get("aliases"))
         if not view["context"]:
             return [], {}, None, 0, 0, \
                 view["windows_dropped"], True
@@ -1142,6 +1393,25 @@ def guard_triples(items: list[dict], doc_text: str,
       hand-authored pack). The relaxation is weaker than
       the quote test — the object need only co-occur in the
       chunk — so it is a declared opt-in, never a default.
+    Identity resolution (always on, no profile switch):
+    after the quote gate, each endpoint is resolved
+    against the document's census roster
+    (_resolve_endpoint) — a fragment that names exactly
+    one canonical surface (a nickname alias, an alias
+    form, a fragment of the item's own anchor, or a
+    proper token-subset of one maximal surface) is
+    rewritten to that surface and the rewrite is
+    recorded in the kept record's `canonicalized`; a
+    fragment naming several surfaces is recorded in
+    `identity_ambiguous` and left as proposed.
+    Attestation reads the effective endpoint through
+    the entity's recorded mention forms, so a canonical
+    name that never occurs contiguously (a nickname
+    intervenes) is not blocked for occurring nowhere.
+    Blocked records always carry the item as proposed:
+    the resolution lands on the record only when the
+    item is kept.
+
     - `mentions`: the profile declared the mention layer
       (issue #54). Each item's mention records are verified
       by _verify_mentions after the quote gate and before
@@ -1162,6 +1432,12 @@ def guard_triples(items: list[dict], doc_text: str,
     doc_norm = norm_ws(doc_text)
     doc_punct = punct_collapse(doc_norm) \
         if quote_punct_insensitive else None
+    identity = _identity_index(doc_text) if items \
+        else None
+    doc_bridged = norm_ws(" ".join(
+        t for t in doc_text.split()
+        if not _is_quote_token(t))) \
+        if identity is not None else None
     kept, blocked, seen = [], [], set()
     for it in items:
         s, r, o, q = (it["subject"], it["relation"], it["object"],
@@ -1198,34 +1474,114 @@ def guard_triples(items: list[dict], doc_text: str,
                 base.pop("mentions", None)
             if fallback_eps:
                 base["mention_fallback"] = fallback_eps
+        # Identity resolution runs before attestation.
+        # A fragment endpoint (Willi / Alger / Paul
+        # Desmarais for Paul Desmarais Jr.) names its
+        # entity under a mention form, and the graph
+        # keys nodes by name string — an unresolved
+        # fragment is a separate node and a broken
+        # graph, not a stylistic variant. A unique
+        # resolution rewrites the endpoint to the
+        # canonical surface (recorded in
+        # `canonicalized`); an ambiguous one is
+        # recorded in `identity_ambiguous` and left as
+        # proposed. Attestation then reads the
+        # EFFECTIVE endpoint through every mention
+        # form the census recorded for its entity: the
+        # canonical name may never occur contiguously
+        # (Wilfried "Willi" Schneider) while its
+        # bridged form does, so a raw substring test
+        # would block exactly the correct name.
+        forms: dict[str, tuple[list[str], bool]] = {}
+        eff = {"subject": base["subject"],
+               "object": base["object"]}
+        canon: dict[str, list[str]] = {}
+        amb: dict[str, list[str]] = {}
+        if identity is not None:
+            by_norm = identity[0]
+            for ep in ("subject", "object"):
+                res, cands = _resolve_endpoint(
+                    norm_ws(base[ep]), identity,
+                    anchor_norm=it.get("anchor_norm"))
+                if res is not None and res != base[ep]:
+                    canon[ep] = [base[ep], res]
+                    eff[ep] = res
+                elif cands:
+                    amb[ep] = cands
+                effn = norm_ws(eff[ep])
+                ent = by_norm.get(effn)
+                forms[ep] = (
+                    [effn] + (list(ent["aliases"])
+                              if ent else []),
+                    ent is not None or ep in canon)
+
+        def _attested(ep: str, hay: str,
+                      bridged: bool = False) -> bool:
+            # The bridged-document fallback belongs to
+            # L0 alone: it answers "does this entity
+            # occur in the document at all". The quote
+            # and chunk haystacks must NOT fall back to
+            # it — that would widen a quote-level test
+            # into a document-level one and invent the
+            # attestation the theme guard exists to
+            # refuse.
+            fs, bridged_ok = forms.get(
+                ep, ([norm_ws(base[ep])], False))
+            return any(f in hay for f in fs) or (
+                bridged and bridged_ok
+                and doc_bridged is not None
+                and any(f in doc_bridged for f in fs))
+
+        prop_sn, prop_on = sn, on
+        sn, on = norm_ws(eff["subject"]), \
+            norm_ws(eff["object"])
         # L0: attested somewhere in the document at all?
-        if sn not in doc_norm or on not in doc_norm:
+        if not _attested("subject", doc_norm, bridged=True) \
+                or not _attested("object", doc_norm,
+                                 bridged=True):
             blocked.append({**base, "reason": "l0_attest"})
             continue
         chunk_n = it.get("chunk_norm", "")
-        if sn in qn and on in qn:
+        if _attested("subject", qn) \
+                and _attested("object", qn):
             attest = "quote"
-        elif sn in chunk_n and on in chunk_n:
+        elif _attested("subject", chunk_n) \
+                and _attested("object", chunk_n):
             attest = "chunk"
         else:
             attest = "document"
-        if role_words and (sn in role_words or on in role_words):
+        if role_words and (sn in role_words
+                           or on in role_words
+                           or prop_sn in role_words
+                           or prop_on in role_words):
             blocked.append({**base, "reason": "l0_role_word"})
             continue
         toks = [t for t in re.split(r"[^a-z]+", norm_ws(r)) if t]
         if toks and all(t in PREPS for t in toks):
             blocked.append({**base, "reason": "theme_missing"})
             continue
-        if toks and toks[-1] in PREPS and on not in qn:
+        if toks and toks[-1] in PREPS \
+                and not _attested("object", qn):
             span = it.get(theme_attest_key) \
                 if theme_attest_key else None
             if not (isinstance(span, str)
-                    and on in norm_ws(span)) \
+                    and _attested("object",
+                                  norm_ws(span))) \
                     and not (theme_attest_chunk
-                             and on in chunk_n):
+                             and _attested("object",
+                                           chunk_n)):
                 blocked.append({**base,
                                 "reason": "theme_presence"})
                 continue
+        # The resolution lands on the record only
+        # here, once the item is kept: blocked records
+        # carry the item exactly as proposed.
+        if canon:
+            base["subject"] = eff["subject"]
+            base["object"] = eff["object"]
+            base["canonicalized"] = canon
+        if amb:
+            base["identity_ambiguous"] = amb
         k = (sn, norm_ws(r), on)
         if k in seen:
             continue

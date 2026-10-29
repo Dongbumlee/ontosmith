@@ -618,6 +618,17 @@ judge. The guards are:
   document.
 - `l0_role_word` — an endpoint that is only a role
   noun — "the manager" — is not an entity.
+- endpoint identity — an endpoint typed under a
+  mention form (a first name alone, a nickname, a
+  surname alone, a name missing its suffix) is
+  resolved to the document's canonical entity name
+  before judgment, and the rewrite is recorded on the
+  candidate (`canonicalized`). A form that names
+  several entities in the document is flagged
+  (`identity_ambiguous`) and left as proposed rather
+  than guessed — one name string is one graph node,
+  so an unresolved fragment would fragment the
+  entity.
 - `theme_missing` — the relation is nothing but
   prepositions.
 - `theme_presence`.
