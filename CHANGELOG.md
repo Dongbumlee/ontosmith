@@ -46,6 +46,34 @@ and the project adheres to
   an experimental opt-in with that measured trade-off;
   the full record is in the cap-recall measurement
   (Phase 2 section) and issue #54.
+- **Entity sweep (issue #58)** — profile-gated
+  (`entity_sweep` in setup_config; absent = off, and
+  the undeclared path is byte-identical; a non-boolean
+  value fails closed). An additive second proposal
+  pass inside CANDIDATES' free-proposer branch: a
+  deterministic code census names a document's
+  entities, the ones appearing as no endpoint of any
+  chunk-pass item become anchors, and each anchor is
+  re-asked in its own mention view under the chunk
+  prompt plus one anchor rule. Sweep items pass the
+  same guards and merge behind the chunk channel —
+  duplicates and off-anchor items are counted, never
+  shadowing or replacing chunk provenance — and the
+  finish record restates the pass (`candidates_sweep`:
+  anchors, proposed, duplicates, off-anchor, blocked
+  by reason, shipped Tier-1). Measured on the
+  pre-registered 8-document density pilot against lab
+  gold v1.1.0 (issue #58): the pass recovered 33 of
+  139 never-proposed gold labels at Tier-1 (paired
+  net +61 Tier-1 over the pilot docs), but the pooled
+  new-Tier-1 adjudicated precision was 0.676 against
+  a 0.90 bar and the arm cost $0.02423/doc against a
+  $0.00375 ceiling — the pilot failed on precision
+  and cost, the full-corpus run was not licensed, and
+  the pass stays an experimental opt-in pending a
+  redesign decision. The full record is in the
+  cap-recall measurement (Entity sweep sections) and
+  issue #58.
 
 ### Fixed
 
