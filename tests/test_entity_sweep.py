@@ -25,6 +25,18 @@ visible in the finish counts — never a fail-closed cliff
 against the baseline); and the finish-accounting
 restatement (candidates_sweep with shipped Tier-1
 attributed from the routed records).
+
+Cut 2 adds the evidence void: a sweep proposal whose
+evidence span (its quote) is missing — field absent,
+empty, or non-string — or fails norm_ws containment in
+the FULL document text is void at proposal time,
+counted as evidence_missing (proposed = items +
+off_anchor + evidence_missing), checked before the
+anchor test; span verification itself (verbatim exact,
+whitespace-normalized variant) is pinned at the
+function level, and the stage-level stress shows a
+mostly-span-less proposer degrading to zero sweep yield
+with the chunk channel untouched.
 """
 import io
 import json
@@ -217,6 +229,155 @@ class TestSweepPrompt(unittest.TestCase):
             "Additional rule for this pass",
             proposer._build_triple_prompt("Any text."))
 
+    def test_sweep_prompt_carries_the_evidence_rule(self):
+        view = "Gamma Reyes works with Delta Bank."
+        base = proposer._build_triple_prompt(view)
+        sweep = proposer._build_sweep_prompt(view, "Gamma Reyes")
+        added = sweep[len(base):]
+        self.assertIn("Evidence rule for this pass", added)
+        self.assertIn("evidence span", added)
+        self.assertIn("discarded", added)
+        # The chunk prompt itself carries no evidence
+        # rule — the void is a sweep-channel contract.
+        self.assertNotIn("Evidence rule for this pass",
+                         base)
+
+
+ANCHORS = [{"surface": "Gamma Reyes", "norm": "gamma reyes"},
+           {"surface": "Delta Bank", "norm": "delta bank"}]
+
+VALID_ITEM = {"subject": "Gamma Reyes",
+              "relation": "works with",
+              "object": "Delta Bank",
+              "quote": "Gamma Reyes works with Delta Bank"}
+
+
+def _direct_chat(fn):
+    """A proposer._chat stub for propose_sweep_for_doc:
+    fn(anchor_surface) -> the raw items for that anchor's
+    call."""
+    def chat(content, model, max_tokens, key):
+        m = re.search(r'must be the entity "([^"]+)"',
+                      content)
+        return json.dumps(fn(m.group(1))), {"cost": 0.0}
+    return chat
+
+
+def _propose(fn, anchors=ANCHORS, text=DOC):
+    with mock.patch.object(proposer, "_chat",
+                           _direct_chat(fn)):
+        return proposer.propose_sweep_for_doc(
+            "d1", text, anchors, "stub-key")
+
+
+class TestSweepEvidenceVoid(unittest.TestCase):
+    """Cut 2: the evidence span is load-bearing in the
+    sweep channel. Verification is norm_ws containment
+    in the FULL document text; a missing or unverifiable
+    span voids the proposal at proposal time."""
+
+    def test_verbatim_span_passes(self):
+        res = _propose(
+            lambda a: [VALID_ITEM] if a == "Gamma Reyes"
+            else [])
+        self.assertEqual(len(res["items"]), 1)
+        self.assertEqual(res["evidence_missing"], 0)
+        self.assertEqual(res["proposed"], 1)
+
+    def test_whitespace_variant_span_passes(self):
+        # The discipline is whitespace-normalized
+        # verbatim: a span whose whitespace differs from
+        # the document's still verifies.
+        item = dict(VALID_ITEM,
+                    quote="Gamma Reyes   works\nwith  "
+                          "Delta Bank")
+        res = _propose(
+            lambda a: [item] if a == "Gamma Reyes" else [])
+        self.assertEqual(len(res["items"]), 1)
+        self.assertEqual(res["evidence_missing"], 0)
+
+    def test_missing_span_voided(self):
+        item = {k: v for k, v in VALID_ITEM.items()
+                if k != "quote"}
+        res = _propose(
+            lambda a: [item] if a == "Gamma Reyes" else [])
+        self.assertEqual(res["items"], [])
+        self.assertEqual(res["evidence_missing"], 1)
+        self.assertEqual(res["proposed"], 1)
+
+    def test_empty_and_nonstring_span_voided(self):
+        items = [dict(VALID_ITEM, quote="   "),
+                 dict(VALID_ITEM, quote=42)]
+        res = _propose(
+            lambda a: items if a == "Gamma Reyes" else [])
+        self.assertEqual(res["items"], [])
+        self.assertEqual(res["evidence_missing"], 2)
+        self.assertEqual(res["proposed"], 2)
+
+    def test_fabricated_span_voided(self):
+        # A plausible span that is not in the document.
+        item = dict(VALID_ITEM,
+                    quote="Gamma Reyes leads Delta Bank")
+        res = _propose(
+            lambda a: [item] if a == "Gamma Reyes" else [])
+        self.assertEqual(res["items"], [])
+        self.assertEqual(res["evidence_missing"], 1)
+
+    def test_paraphrased_span_voided(self):
+        # Every name present, one word changed — not a
+        # verbatim substring, so no verification.
+        item = dict(VALID_ITEM,
+                    quote="Gamma Reyes works alongside "
+                          "Delta Bank")
+        res = _propose(
+            lambda a: [item] if a == "Gamma Reyes" else [])
+        self.assertEqual(res["items"], [])
+        self.assertEqual(res["evidence_missing"], 1)
+
+    def test_evidence_checked_before_anchor(self):
+        # An item failing BOTH tests counts once, as
+        # evidence_missing — the order is fixed.
+        spanless_off = {"subject": "Alpha Corp",
+                        "relation": "is based in",
+                        "object": "Toronto"}
+        spanned_off = dict(spanless_off,
+                           quote="Alpha Corp is based in "
+                                 "Toronto")
+        res = _propose(
+            lambda a: [spanless_off, spanned_off]
+            if a == "Gamma Reyes" else [])
+        self.assertEqual(res["evidence_missing"], 1)
+        self.assertEqual(res["off_anchor"], 1)
+        self.assertEqual(res["items"], [])
+        self.assertEqual(res["proposed"], 2)
+
+    def test_accounting_identity_mixed(self):
+        def fn(anchor):
+            if anchor == "Gamma Reyes":
+                return [VALID_ITEM,
+                        {k: v for k, v in VALID_ITEM.items()
+                         if k != "quote"},
+                        {"subject": "Alpha Corp",
+                         "relation": "is based in",
+                         "object": "Toronto",
+                         "quote": "Alpha Corp is based in "
+                                  "Toronto"}]
+            return [{"subject": "Delta Bank",
+                     "relation": "is based in",
+                     "object": "Toronto",
+                     "quote": "Delta Bank is based in "
+                              "Toronto"},
+                    dict(VALID_ITEM,
+                         quote="an invented span")]
+        res = _propose(fn)
+        self.assertEqual(len(res["items"]), 2)
+        self.assertEqual(res["off_anchor"], 1)
+        self.assertEqual(res["evidence_missing"], 2)
+        self.assertEqual(
+            res["proposed"],
+            len(res["items"]) + res["off_anchor"]
+            + res["evidence_missing"])
+
 
 class TestSweepStage(unittest.TestCase):
     def setUp(self):
@@ -293,6 +454,85 @@ class TestSweepStage(unittest.TestCase):
             b_on.metrics["candidates"]["sweep"]["merged"], 0)
         self.assertEqual(b_off.metrics["candidates"]["total"],
                          b_on.metrics["candidates"]["total"])
+
+
+class TestSweepEvidenceStage(unittest.TestCase):
+    """Cut 2 at the stage level: span-less and fabricated
+    sweep proposals are voided and counted in the stage
+    metrics and the finish restatement; the chunk
+    channel is untouched."""
+
+    def setUp(self):
+        self.root = Path(tempfile.mkdtemp())
+        self.addCleanup(shutil.rmtree, self.root, True)
+
+    def test_spanless_and_fabricated_counted(self):
+        def fn(anchor):
+            if anchor != "Gamma Reyes":
+                return []
+            return [VALID_ITEM,
+                    {"subject": "Gamma Reyes",
+                     "relation": "employs",
+                     "object": "Delta Bank"},
+                    {"subject": "Gamma Reyes",
+                     "relation": "owns",
+                     "object": "Toronto",
+                     "quote": "Gamma Reyes owns Toronto"}]
+        b, _ = _run_candidates_stage(
+            self.root, "sweep-evidence",
+            _make_chat(sweep_fn=fn), sweep=True)
+        m = b.metrics["candidates"]
+        sw = m["sweep"]
+        self.assertEqual(sw["anchors"], 2)
+        self.assertEqual(sw["proposed"], 3)
+        self.assertEqual(sw["evidence_missing"], 2)
+        self.assertEqual(sw["off_anchor"], 0)
+        self.assertEqual(sw["merged"], 1)
+        self.assertEqual(sw["blocked"], 0)
+        # Chunk candidate + the one grounded sweep
+        # candidate; the voided two are nowhere.
+        self.assertEqual(m["total"], 2)
+        d = batch_dir(self.root, "sweep-evidence")
+        rows = [json.loads(line)
+                for line in open(d / "candidates.jsonl")]
+        sweep_rows = [r for r in rows
+                      if r["method"] == "llm-sweep"]
+        self.assertEqual(len(sweep_rows), 1)
+        self.assertEqual(sweep_rows[0]["relation"],
+                         "works with")
+        # The finish restatement carries the void count.
+        with redirect_stdout(io.StringIO()):
+            batch_run._finish_summary(b, self.root, None)
+        cs = b.metrics["finish"]["candidates_sweep"]
+        self.assertEqual(cs["evidence_missing"], 2)
+        self.assertEqual(cs["proposed"], 3)
+
+    def test_mostly_spanless_degrades_to_zero(self):
+        # Partial-compliance stress for the void: a
+        # proposer that (almost) never grounds its
+        # triples loses the whole sweep yield, visibly,
+        # and the chunk channel stands.
+        def fn(anchor):
+            return [{"subject": anchor,
+                     "relation": "employs",
+                     "object": "Delta Bank"},
+                    {"subject": anchor,
+                     "relation": "owns",
+                     "object": "Toronto",
+                     "quote": f"{anchor} owns Toronto"}]
+        b, _ = _run_candidates_stage(
+            self.root, "sweep-spanless",
+            _make_chat(sweep_fn=fn), sweep=True)
+        m = b.metrics["candidates"]
+        sw = m["sweep"]
+        self.assertEqual(sw["evidence_missing"], 4)
+        self.assertEqual(sw["merged"], 0)
+        self.assertEqual(sw["proposed"], 4)
+        self.assertEqual(m["total"], 1)
+        d = batch_dir(self.root, "sweep-spanless")
+        rows = [json.loads(line)
+                for line in open(d / "candidates.jsonl")]
+        self.assertEqual(rows[0]["method"], "llm")
 
 
 class TestSweepPartialCompliance(unittest.TestCase):
@@ -380,7 +620,7 @@ class TestSweepFinishAccounting(unittest.TestCase):
         self.assertEqual(
             b.metrics["finish"]["candidates_sweep"],
             {"anchors": 2, "proposed": 3, "duplicates": 1,
-             "off_anchor": 0,
+             "off_anchor": 0, "evidence_missing": 0,
              "blocked": {"total": 0, "by_reason": {}},
              "shipped_tier1": 2})
         self.assertIn("finish: CANDIDATES entity sweep",

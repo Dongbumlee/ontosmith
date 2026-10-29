@@ -116,6 +116,30 @@ untouched, with its own prompt — the pass can only add
 proposal mass, which is the structural form of the
 mention layer's measured lesson (a REPLACING variant
 proposed less, and differently, and the draw fell).
+
+Cut 2 (issue #58) makes the item's quote — its
+evidence span — load-bearing in this channel only.
+The first pilot's adjudicated precision was 0.676
+against a 0.90 bar: assertions the text does not
+state, proposed from a narrow anchor view, passed the
+gates. The sweep prompt now states the span as a
+verified term of the contract, and
+propose_sweep_for_doc voids BY CODE any sweep
+proposal whose span is missing (field absent, empty,
+or non-string) or fails norm_ws containment in the
+FULL document text — before the anchor test and
+before the guards, never blocked into the record —
+counted as `evidence_missing` in the stage metrics
+and the finish record's restatement, so the void is
+visible accounting, not the cut-1 parse filter's
+silence (a span-less sweep item there vanished
+uncounted). The accounting identity is
+proposed = items + off_anchor + evidence_missing.
+The void verifies presence, not sufficiency — a
+verbatim span can still be over-read — which is why
+the redesign is measured, not assumed. The chunk
+channel is untouched: its items keep the legacy
+discipline (a parse-required quote, guard-verified).
 """
 from __future__ import annotations
 
@@ -707,15 +731,26 @@ def _build_sweep_prompt(context: str, anchor: str,
     """The sweep prompt for one anchor: the chunk prompt
     built by _build_triple_prompt (the base template stays
     untouched), over the anchor's view instead of a chunk,
-    plus ONE added rule — an endpoint of every triple must
-    be the anchor entity, named as it appears in the text."""
+    plus two added rules: the anchor rule (an endpoint of
+    every triple must be the anchor entity, named as it
+    appears in the text) and — cut 2 — the evidence rule
+    (every triple must carry its evidence span, and the
+    span is verified; a triple without a verifying span
+    is discarded)."""
     base = _build_triple_prompt(context, guidance, framing,
                                 maxn=maxn, mentions=mentions)
     return base + (
         f"\n\nAdditional rule for this pass: one endpoint "
         f"of every triple — the subject or the object — "
         f"must be the entity \"{anchor}\", named exactly "
-        f"as it appears in the excerpt.")
+        f"as it appears in the excerpt."
+        f"\n\nEvidence rule for this pass: every triple "
+        f"must carry its evidence span in \"quote\" — the "
+        f"verbatim phrase from the excerpt that states "
+        f"the fact, copied character-for-character. The "
+        f"span is verified against the document text: a "
+        f"triple whose quote is missing, or whose text "
+        f"does not appear in the document, is discarded.")
 
 
 def propose_sweep_for_doc(doc_id: str, text: str,
@@ -735,27 +770,47 @@ def propose_sweep_for_doc(doc_id: str, text: str,
     view as their chunk fields, so guard_triples' chunk
     attestation rung reads the view.
 
+    Cut 2 — the evidence void, checked FIRST, before
+    the anchor test: an item whose evidence span (its
+    `quote`) is missing — the field absent, empty, or
+    not a string — or whose span fails verification
+    (`norm_ws(quote)` not a substring of the document's
+    `norm_ws` — the FULL document text, strict
+    whitespace-normalized verbatim; no
+    punctuation-insensitive rung softens it) is VOID:
+    counted (`evidence_missing`) and dropped here,
+    never returned, never blocked into the record. An
+    item failing both the evidence test and the anchor
+    test counts as evidence_missing — the order is
+    fixed so the accounting is deterministic.
+
     An item whose NEITHER endpoint is its anchor is
     contract drift: it is counted (`off_anchor`) and
-    dropped here — never returned, never blocked into the
-    record. An anchor with no view (no mention sentence
-    survived the ceiling) is skipped and counted
+    dropped here — never returned, never blocked into
+    the record. An anchor with no view (no mention
+    sentence survived the ceiling) is skipped and counted
     (`anchors_skipped`), never called.
 
     Returns {items, cost, calls, errors, proposed,
-    off_anchor, anchors_asked, anchors_skipped,
-    windows_dropped}; `proposed` counts every parsed item
-    including the off-anchor ones, so the pass's attrition
-    is fully accounted by proposed = items + off_anchor.
+    off_anchor, evidence_missing, anchors_asked,
+    anchors_skipped, windows_dropped}; `proposed` counts
+    every parsed item carrying the triple fields, so the
+    pass's attrition is fully accounted by
+    proposed = items + off_anchor + evidence_missing.
+    (Items lacking a triple field entirely are not
+    triples — malformed, invisible, exactly as on the
+    chunk path.)
     """
     cap = MAX_PER_CHUNK if max_per_chunk is None \
         else max_per_chunk
+    doc_norm = norm_ws(text)
 
     def work(task):
         _idx, anchor = task
         view = anchor_contexts(text, anchor["surface"])
         if not view["context"]:
-            return [], {}, None, 0, view["windows_dropped"], True
+            return [], {}, None, 0, 0, \
+                view["windows_dropped"], True
         try:
             content, u = _chat(
                 _build_sweep_prompt(view["context"],
@@ -767,52 +822,65 @@ def propose_sweep_for_doc(doc_id: str, text: str,
             err = None
         except Exception as e:
             items, u, err = [], {}, str(e)[:200]
-        out, off = [], 0
+        out, off, ev = [], 0, 0
         for it in items:
-            if isinstance(it, dict) and all(
+            if not (isinstance(it, dict) and all(
                     it.get(k) for k in
-                    ("subject", "relation", "object", "quote")):
-                rec = {
-                    "subject": str(it["subject"]).strip(),
-                    "relation": str(it["relation"]).strip(),
-                    "object": str(it["object"]).strip(),
-                    "quote": str(it["quote"]).strip(),
-                    "chunk_idx": -1,
-                    "chunk_norm": norm_ws(view["context"]),
-                    "anchor": anchor["surface"],
-                    "anchor_norm": anchor["norm"]}
-                for tk in ("subject_type", "object_type"):
-                    tv = it.get(tk)
-                    if isinstance(tv, str) and tv.strip():
-                        rec[tk] = tv.strip()
-                if mentions:
-                    rec["mentions"] = {
-                        ep: _mention_from_item(it, ep)
-                        for ep in ("subject", "object")}
-                # On-anchor: an endpoint names the anchor —
-                # equality or containment either way (the
-                # mention layer's naming discipline: a
-                # fuller or shorter form of the same name
-                # still names it; an unrelated endpoint
-                # does not).
-                ends = (norm_ws(rec["subject"]),
-                        norm_ws(rec["object"]))
-                if not any(e == anchor["norm"]
-                           or e in anchor["norm"]
-                           or anchor["norm"] in e
-                           for e in ends):
-                    off += 1
-                    continue
-                out.append(rec)
-        return out, u, err, off, view["windows_dropped"], False
+                    ("subject", "relation", "object"))):
+                continue
+            # The evidence void (cut 2): the span must be
+            # present and verify against the full document
+            # text. A missing or unverifiable span voids
+            # the proposal here — it never reaches the
+            # anchor test or the guards.
+            q = it.get("quote")
+            qn = norm_ws(q) if isinstance(q, str) else ""
+            if not qn or qn not in doc_norm:
+                ev += 1
+                continue
+            rec = {
+                "subject": str(it["subject"]).strip(),
+                "relation": str(it["relation"]).strip(),
+                "object": str(it["object"]).strip(),
+                "quote": q.strip(),
+                "chunk_idx": -1,
+                "chunk_norm": norm_ws(view["context"]),
+                "anchor": anchor["surface"],
+                "anchor_norm": anchor["norm"]}
+            for tk in ("subject_type", "object_type"):
+                tv = it.get(tk)
+                if isinstance(tv, str) and tv.strip():
+                    rec[tk] = tv.strip()
+            if mentions:
+                rec["mentions"] = {
+                    ep: _mention_from_item(it, ep)
+                    for ep in ("subject", "object")}
+            # On-anchor: an endpoint names the anchor —
+            # equality or containment either way (the
+            # mention layer's naming discipline: a
+            # fuller or shorter form of the same name
+            # still names it; an unrelated endpoint
+            # does not).
+            ends = (norm_ws(rec["subject"]),
+                    norm_ws(rec["object"]))
+            if not any(e == anchor["norm"]
+                       or e in anchor["norm"]
+                       or anchor["norm"] in e
+                       for e in ends):
+                off += 1
+                continue
+            out.append(rec)
+        return out, u, err, off, ev, \
+            view["windows_dropped"], False
 
     items, cost, calls, errors = [], 0.0, 0, 0
-    off_anchor = skipped = wdropped = 0
+    off_anchor = evidence_missing = skipped = wdropped = 0
     with ThreadPoolExecutor(max_workers=8) as ex:
-        for out, u, err, off, wd, skip in ex.map(
+        for out, u, err, off, ev, wd, skip in ex.map(
                 work, list(enumerate(anchors))):
             items.extend(out)
             off_anchor += off
+            evidence_missing += ev
             wdropped += wd
             if skip:
                 skipped += 1
@@ -821,16 +889,19 @@ def propose_sweep_for_doc(doc_id: str, text: str,
             calls += 1
             if err:
                 errors += 1
-    # `proposed` follows the chunk pass's semantics — the
-    # items that passed the field filter, before the
-    # guards — plus the off-anchor drops, which also
-    # passed it: proposed = returned items + off_anchor.
+    # `proposed` counts every parsed item carrying the
+    # triple fields — the items that reach the guards,
+    # plus both proposal-time drops, which also carried
+    # them: proposed = items + off_anchor +
+    # evidence_missing.
     return {"items": items,
             "cost": None if cost is None else round(cost, 4),
             "calls": calls,
             "errors": errors,
-            "proposed": len(items) + off_anchor,
+            "proposed": len(items) + off_anchor
+            + evidence_missing,
             "off_anchor": off_anchor,
+            "evidence_missing": evidence_missing,
             "anchors_asked": len(anchors) - skipped,
             "anchors_skipped": skipped,
             "windows_dropped": wdropped}

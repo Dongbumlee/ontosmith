@@ -794,7 +794,8 @@ def stage_candidates(b: Batch, root: Path, stages: list[str]) -> None:
     sweep_cost = 0.0
     sweep_stats = {"anchors": 0, "anchors_asked": 0,
                    "anchors_skipped": 0, "proposed": 0,
-                   "off_anchor": 0, "duplicates": 0,
+                   "off_anchor": 0, "evidence_missing": 0,
+                   "duplicates": 0,
                    "merged": 0, "blocked": 0,
                    "blocked_reasons": {},
                    "calls": 0, "errors": 0,
@@ -1224,6 +1225,8 @@ def stage_candidates(b: Batch, root: Path, stages: list[str]) -> None:
                     sweep_stats["proposed"] += sres["proposed"]
                     sweep_stats["off_anchor"] += \
                         sres["off_anchor"]
+                    sweep_stats["evidence_missing"] += \
+                        sres["evidence_missing"]
                     sweep_stats["anchors_asked"] += \
                         sres["anchors_asked"]
                     sweep_stats["anchors_skipped"] += \
@@ -1478,7 +1481,8 @@ def stage_candidates(b: Batch, root: Path, stages: list[str]) -> None:
     if sweep_on:
         # The sweep's own accounting block (issue #58):
         # what the pass was asked, what it proposed, and
-        # where the proposals died — duplicates behind the
+        # where the proposals died — evidence voids at
+        # proposal time (cut 2), duplicates behind the
         # chunk channel, off-anchor drops, guard blocks by
         # reason. Its spend is folded into the proposer
         # ledger above; the block also carries it separately
@@ -1544,7 +1548,9 @@ def stage_candidates(b: Batch, root: Path, stages: list[str]) -> None:
              f"{sweep_stats['duplicates']} duplicate(s) "
              f"behind the chunk channel, "
              f"{sweep_stats['off_anchor']} off-anchor "
-             f"dropped, {sweep_stats['blocked']} blocked "
+             f"dropped, {sweep_stats['evidence_missing']} "
+             f"evidence-missing voided, "
+             f"{sweep_stats['blocked']} blocked "
              f"(by reason: {sweep_stats['blocked_reasons']})")
     if blocked_all:
         # Guard blocks are reported BY NAME in the run
@@ -3154,6 +3160,8 @@ def _finish_summary(b: Batch, root: Path, registry) -> None:
             "proposed": sweep_blk.get("proposed", 0),
             "duplicates": sweep_blk.get("duplicates", 0),
             "off_anchor": sweep_blk.get("off_anchor", 0),
+            "evidence_missing": sweep_blk.get(
+                "evidence_missing", 0),
             "blocked": {
                 "total": sweep_blk.get("blocked", 0),
                 "by_reason": dict(
@@ -3195,6 +3203,7 @@ def _finish_summary(b: Batch, root: Path, registry) -> None:
              f"{cs['proposed']} proposed, "
              f"{cs['duplicates']} duplicate(s), "
              f"{cs['off_anchor']} off-anchor, "
+             f"{cs['evidence_missing']} evidence-missing, "
              f"{cs['blocked']['total']} blocked "
              f"(by reason: {cs['blocked']['by_reason']}), "
              f"{cs['shipped_tier1']} shipped at Tier 1")
