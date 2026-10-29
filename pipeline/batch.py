@@ -96,18 +96,10 @@ class BatchConfig:
     queue_lease_seconds: int = 300
     audit_sample_n: int = 50
     code_version: str = ""
-    # CANDIDATES source: "llm" is the only source — the LLM
-    # proposer (pipeline/proposer.py: free triples + clause
-    # slots where the profile declares categories, plus the
-    # profile-declared pair-enumeration / sweep / mention
-    # channels, all through the one guard funnel). The
-    # GLiNER+spaCy pipeline source ("pipeline" / "both") was
-    # retired 2026-10-29: unmeasured, English-bound at the
-    # RER layer, and carrying its own identity discipline —
-    # run_batch refuses those values by name. The field is
-    # kept so stored batch configs still load.
-    candidate_source: str = "llm"
-    # Proposer model for the candidate stage.
+    # Proposer model for the candidate stage. (There is no
+    # candidate-source setting: the LLM proposer is the
+    # only source — the GLiNER+spaCy pipeline source and
+    # its candidate_source field were removed 2026-10-29.)
     llm_model: str = PROPOSER_MODEL
 
     def to_dict(self) -> dict:
@@ -115,6 +107,18 @@ class BatchConfig:
 
     @classmethod
     def from_dict(cls, d: dict) -> BatchConfig:
+        # A stored config from the pipeline era may still
+        # carry candidate_source: "llm" (or its absence)
+        # loads silently; a retired value refuses by name
+        # rather than silently running a different builder
+        # than the stored config states.
+        legacy = d.get("candidate_source")
+        if legacy is not None and str(legacy).lower() != "llm":
+            raise ValueError(
+                f"candidate_source {legacy!r} was retired "
+                "2026-10-29: the LLM proposer is the only "
+                "candidate source (the GLiNER+spaCy pipeline "
+                "source is removed)")
         return cls(**{k: v for k, v in d.items() if k in cls.__dataclass_fields__})
 
 

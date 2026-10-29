@@ -55,7 +55,7 @@ $ export OPENROUTER_API_KEY=…        # the preset's key, env only
 $ ontosmith batch create --source examples/corpus --collection demo \
       --docs 'examples/corpus/*.txt' \
       --profile profiles/demo/profile.json \
-      --candidate-source llm
+     
 $ ontosmith batch run demo-4docs
 ```
 

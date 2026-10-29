@@ -304,16 +304,17 @@ and the project adheres to
 
 ### Removed
 
-- **The GLiNER+spaCy pipeline candidate source
-  (`--candidate-source pipeline` / `both`) is retired;
-  the LLM proposer is the only candidate source.** The
-  pipeline path was the product default but was never
-  measured at the standard the LLM path carries, its
-  structural (RER) pass was English-bound by
-  construction (hand-written dependency patterns —
-  each new language would have multiplied channels),
-  and it matched extracted spans to NER mentions with
-  its own order-dependent substring rule, a second
+- **The GLiNER+spaCy pipeline candidate source is
+  retired, and the `candidate_source` setting is
+  removed with it; the LLM proposer is the only
+  candidate source.** The pipeline path was the
+  product default but was never measured at the
+  standard the LLM path carries, its structural
+  (RER) pass was English-bound by construction
+  (hand-written dependency patterns — each new
+  language would have multiplied channels), and it
+  matched extracted spans to NER mentions with its
+  own order-dependent substring rule, a second
   identity discipline beside the guard funnel's (the
   same span could land on different people in
   different documents, and full names could collapse
@@ -323,11 +324,13 @@ and the project adheres to
   deleted, the NER stage writes empty contract rows
   (its `ner.jsonl` consumers read tolerantly), the
   `ontosmith[nlp]` extra is removed from the package,
-  and a stored batch still naming a retired source
-  refuses by name at run start. `--candidate-source`
-  now accepts only `llm` (still the value every
-  hands-on track used). All measured builds were
-  already LLM-path builds; serving is unchanged.
+  and the `--candidate-source` flag and the
+  `candidate_source` config field are gone — with
+  one source there is nothing to select. A stored
+  config still naming a retired value refuses by
+  name at load; one carrying `"llm"` (or nothing)
+  loads silently. All measured builds were already
+  LLM-path builds; serving is unchanged.
 
 ## [0.1.1] - 2026-10-27
 

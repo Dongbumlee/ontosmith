@@ -281,9 +281,9 @@ options:
 ```text
 usage: ontosmith batch create [-h] --source SOURCE --collection COLLECTION
                               --docs DOCS [DOCS ...] [--batch-id BATCH_ID]
-                              [--profile PROFILE] [--candidate-source {llm}]
-                              [--pack PACK] [--max-cost-usd MAX_COST_USD]
-                              [--no-cost-cap] [--frontier-escalation]
+                              [--profile PROFILE] [--pack PACK]
+                              [--max-cost-usd MAX_COST_USD] [--no-cost-cap]
+                              [--frontier-escalation]
                               [--escalation-band-lo ESCALATION_BAND_LO]
                               [--escalation-band-hi ESCALATION_BAND_HI]
 
@@ -297,10 +297,6 @@ options:
   --profile PROFILE     path to a stage-0 profile.json (setup service); its
                         profile_hash is recorded on the batch and into the
                         manifest at INGEST
-  --candidate-source {llm}
-                        CANDIDATES source: llm = the LLM proposer (triples +
-                        profile clause slots). The GLiNER+spaCy pipeline
-                        source was retired 2026-10-29; llm is the only source.
   --pack PACK           domain pack binding this batch (pack_id, family, or
                         pack directory); the executed setup_config is resolved
                         as core baseline + this pack and frozen into the batch

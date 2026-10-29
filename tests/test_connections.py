@@ -582,8 +582,7 @@ class TestBatchProvenanceStamp(unittest.TestCase):
             batch_id="stub-batch", source="test",
             profile=None, pack=None, max_cost_usd=None,
             frontier_escalation=False, escalation_band_lo=None,
-            escalation_band_hi=None, candidate_source="llm",
-            # The custom gateway binding is cost-less (portable
+            escalation_band_hi=None,             # The custom gateway binding is cost-less (portable
             # dialect, no declared rates): creating under a USD
             # cap would refuse by name, so this
             # provenance-focused creation declares no cap.

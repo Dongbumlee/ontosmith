@@ -279,17 +279,12 @@ def stage_candidates(b: Batch, root: Path, stages: list[str]) -> None:
     (deterministic span/attestation/identity guards at
     proposal time), Jev gates judging downstream as usual.
 
-    The GLiNER+spaCy pipeline source ("pipeline" / "both")
-    was retired 2026-10-29 (unmeasured, English-bound,
-    separate identity discipline); run_batch refuses those
-    config values by name before any stage runs, and this
-    stage refuses them again for direct callers.
+    The GLiNER+spaCy pipeline source was retired
+    2026-10-29 (unmeasured, English-bound, separate
+    identity discipline) and the candidate_source
+    setting was removed with it — there is one source,
+    so there is nothing to select.
     """
-    source = (b.config.candidate_source or "llm").lower()
-    if source != "llm":
-        raise ValueError(
-            f"candidate_source {source!r} was retired 2026-10-29: "
-            "the LLM proposer is the only candidate source")
     setup_cfg = _load_setup_config(b, root)
     slot_categories = list((setup_cfg or {}).get(
         "label_categories") or [])
@@ -1021,7 +1016,7 @@ def stage_candidates(b: Batch, root: Path, stages: list[str]) -> None:
             blocked_reasons.get(bl.get("reason", "?"), 0) + 1
     b.metrics["candidates"] = {
         "total": len(candidates),
-        "source": source, "by_method": by_method,
+        "by_method": by_method,
         "blocked": len(blocked_all), "blocked_reasons": blocked_reasons,
         "proposer": {**proposer_stats,
                      "cost_usd": _round_cost(proposer_cost),
@@ -2864,20 +2859,6 @@ def run_batch(b: Batch, root: Path, doc_texts: dict[str, str] | None,
                 "run_id": b.run_id, "code_version": ver,
                 "at": datetime.now(UTC).isoformat()})
         save_batch(b, root)
-    # Candidate-source gate (before the try, same placement
-    # rule as the preflights): the GLiNER+spaCy pipeline
-    # source was retired 2026-10-29 — the LLM proposer is
-    # the only candidate source. A stored batch still
-    # naming "pipeline" / "both" refuses by name here
-    # rather than silently running a different builder
-    # than its config states.
-    _src = (b.config.candidate_source or "llm").lower()
-    if _src != "llm":
-        raise ValueError(
-            f"candidate_source {_src!r} was retired 2026-10-29: "
-            "the LLM proposer is the only candidate source "
-            "(the GLiNER+spaCy pipeline source is removed). "
-            "Set candidate_source to 'llm'.")
     # Preflight (before the try, so a refusal leaves the batch
     # un-failed and un-started): pending stages' seats must have
     # their keys, or the run refuses with BindingKeyError here.

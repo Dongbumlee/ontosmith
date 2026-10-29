@@ -50,14 +50,14 @@ folder of documents anywhere a corpus path appears.
 
 **There is exactly one candidate path.** A build
 gets its candidate triples from the proposer seat
-(a model call), chosen per batch by
-`--candidate-source llm` — the only value the flag
-accepts. Every channel (free triples, clause slots,
-and the profile-declared pair-enumeration, sweep and
-mention passes) proposes through the one guard
-funnel in `pipeline/proposer.py`. **Install nothing
-extra:** no local NER/RER models are involved. (A
-local GLiNER+spaCy pipeline source existed until
+(a model call) — there is no candidate-source
+setting to choose. Every channel (free triples,
+clause slots, and the profile-declared
+pair-enumeration, sweep and mention passes)
+proposes through the one guard funnel in
+`pipeline/proposer.py`. **Install nothing extra:**
+no local NER/RER models are involved. (A local
+GLiNER+spaCy pipeline source existed until
 2026-10-29 and was retired — unmeasured and
 English-bound; the NER stage now writes empty
 contract rows and the build log says so.)
@@ -133,7 +133,7 @@ before a build spends anything.
 $ ontosmith batch create --source examples/corpus --collection demo \
     --docs "examples/corpus/*.txt" \
     --profile profiles/demo/profile.json \
-    --candidate-source llm --max-cost-usd 2
+    --max-cost-usd 2
 profile: demo sha256:7ae51d31fa9120ec
 binding: reference
 created batch demo-4docs with 4 docs
@@ -395,7 +395,7 @@ $ ontosmith profile demo-data --family redocred
 
 $ ontosmith batch create --source demo --collection redocred-dev-subset \
     --docs "demo-data/doc_*.txt" --profile profiles/redocred/profile.json \
-    --pack open-domain --candidate-source llm --max-cost-usd 2
+    --pack open-domain --max-cost-usd 2
 profile: redocred sha256:aceac6fb15f59e38
 pack: open-domain 0.4.0 (payload sha256:ee9a1960f01d44ae…)
 binding: reference
@@ -579,7 +579,7 @@ shipped packs' records show.
 ```console
 $ ontosmith batch create --source examples/corpus --collection demo-own \
     --docs "examples/corpus/*.txt" --profile profiles/demo/profile.json \
-    --pack ./packs/demo-ceramics --candidate-source llm --max-cost-usd 2
+    --pack ./packs/demo-ceramics --max-cost-usd 2
 profile: demo sha256:7ae51d31fa9120ec
 pack: demo-ceramics 0.1.0 (payload sha256:0e521c59d46b0db6…)
 binding: reference
@@ -887,7 +887,7 @@ $ ontosmith batch create --source cuad-subset-100 \
     --collection fibo-cuad-100 \
     --docs "cuad-subset-100/*.txt" \
     --profile profiles/fibo-cuad/profile.json \
-    --candidate-source llm --pack fibo-contracts \
+    --pack fibo-contracts \
     --max-cost-usd 10
 profile: fibo-cuad sha256:b54c32666bb16ea7
 pack: fibo-contracts 0.1.0 (payload sha256:0d77115fb79acf07…)

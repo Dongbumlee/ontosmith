@@ -22,10 +22,10 @@ from pipeline.connections import BindingKeyError
 NO_KEY = {"OPENROUTER_API_KEY": ""}
 
 
-def _batch(source="llm", status=BatchStatus.CREATED):
+def _batch(status=BatchStatus.CREATED):
     return Batch(batch_id="pf-test", run_id="run-1", source="corp",
                  collection="docs", doc_ids=["doc-1"],
-                 config=BatchConfig(candidate_source=source),
+                 config=BatchConfig(),
                  status=status)
 
 
@@ -39,58 +39,60 @@ class TestPreflightHelper(TmpRoot):
     def test_llm_source_pending_candidates_refuses(self):
         with mock.patch.dict(os.environ, NO_KEY):
             with self.assertRaises(BindingKeyError) as cm:
-                batch_run._preflight_bindings(_batch("llm"), [], False)
+                batch_run._preflight_bindings(_batch(), [], False)
         self.assertIn("proposer", str(cm.exception))
         self.assertIn("OPENROUTER_API_KEY", str(cm.exception))
 
     def test_completed_candidates_never_rechecks_proposer(self):
         with mock.patch.dict(os.environ, NO_KEY):
             batch_run._preflight_bindings(
-                _batch("llm"), ["INGEST", "NER", "CANDIDATES"], False)
+                _batch(), ["INGEST", "NER", "CANDIDATES"], False)
 
     def test_key_present_passes(self):
         with mock.patch.dict(os.environ,
                              {"OPENROUTER_API_KEY": "sk-test"}):
-            batch_run._preflight_bindings(_batch("llm"), [], False)
+            batch_run._preflight_bindings(_batch(), [], False)
 
     def test_live_decide_checks_judge(self):
         with mock.patch.dict(os.environ, NO_KEY):
             with self.assertRaises(BindingKeyError) as cm:
                 batch_run._preflight_bindings(
-                    _batch("llm"), ["INGEST", "NER", "CANDIDATES"],
+                    _batch(), ["INGEST", "NER", "CANDIDATES"],
                     True)
         self.assertIn("judge", str(cm.exception))
 
     def test_stub_decide_never_checks_judge(self):
         with mock.patch.dict(os.environ, NO_KEY):
             batch_run._preflight_bindings(
-                _batch("llm"), ["INGEST", "NER", "CANDIDATES"],
+                _batch(), ["INGEST", "NER", "CANDIDATES"],
                 False)
 
     def test_gates_completed_skips_judge(self):
         with mock.patch.dict(os.environ, NO_KEY):
             batch_run._preflight_bindings(
-                _batch("llm"),
+                _batch(),
                 ["INGEST", "NER", "CANDIDATES", "GATES"], True)
 
 
 class TestRunBatchRefusesBeforeStages(TmpRoot):
     def test_retired_sources_refused_by_name(self):
-        # The GLiNER+spaCy pipeline source was retired
-        # 2026-10-29: a stored batch still naming it (or
-        # "both") refuses by name before any stage runs —
-        # never silently runs a different builder than its
-        # config states.
+        # The candidate_source setting was removed with the
+        # GLiNER+spaCy pipeline source (2026-10-29). A stored
+        # config still naming a retired value refuses by
+        # name at load (BatchConfig.from_dict) — never
+        # silently runs a different builder than the stored
+        # config states. The llm-era value and its absence
+        # load silently.
         for source in ("pipeline", "both"):
-            b = _batch(source)
             with self.assertRaises(ValueError) as cm:
-                batch_run.run_batch(b, self.root,
-                                    {"doc-1": "Some text."})
+                BatchConfig.from_dict(
+                    {"candidate_source": source})
             self.assertIn("retired", str(cm.exception))
-            self.assertEqual(b.status, BatchStatus.CREATED)
+        BatchConfig.from_dict({"candidate_source": "llm"})
+        BatchConfig.from_dict({})
 
     def test_refusal_leaves_batch_unstarted(self):
-        b = _batch("llm")
+        b = _batch()
         with mock.patch.dict(os.environ, NO_KEY):
             with self.assertRaises(BindingKeyError):
                 batch_run.run_batch(b, self.root,
@@ -119,7 +121,7 @@ class TestStageCandidatesNamedError(TmpRoot):
             "entities": [{"text": "Acme", "label": "organization"},
                          {"text": "Anna Brian", "label": "person"},
                          {"text": "Paris", "label": "location"}]}) + "\n")
-        b = _batch("llm", status=BatchStatus.NER_DONE)
+        b = _batch(status=BatchStatus.NER_DONE)
         with mock.patch.dict(os.environ, NO_KEY):
             with self.assertRaises(BindingKeyError) as cm:
                 batch_run.stage_candidates(b, self.root,
@@ -185,7 +187,7 @@ class TestStorePreflight(TmpRoot):
         from pipeline.neo4j_store import StoreUnreachableError
         with self.assertRaises(StoreUnreachableError) as cm:
             batch_run._preflight_store(
-                _batch("llm"), [],
+                _batch(), [],
                 _GraphDouble(_DeadClient()))
         msg = str(cm.exception)
         self.assertIn("Neo4j", msg)
@@ -194,22 +196,22 @@ class TestStorePreflight(TmpRoot):
 
     def test_live_store_passes(self):
         batch_run._preflight_store(
-            _batch("llm"), [], _GraphDouble(_LiveClient()))
+            _batch(), [], _GraphDouble(_LiveClient()))
 
     def test_completed_graph_stages_skip_probe(self):
         batch_run._preflight_store(
-            _batch("llm"),
+            _batch(),
             ["INGEST", "NER", "CANDIDATES", "GATES", "ROUTE",
              "WRITE", "INDEX", "VERIFY"],
             _GraphDouble(_DeadClient()))
 
     def test_stub_graph_without_client_untouched(self):
-        batch_run._preflight_store(_batch("llm"), [],
+        batch_run._preflight_store(_batch(), [],
                                     object())
 
     def test_run_batch_refuses_before_stages(self):
         from pipeline.neo4j_store import StoreUnreachableError
-        b = _batch("llm")
+        b = _batch()
         # A stub proposer key so the bindings preflight
         # passes and the STORE preflight is the refusal
         # under test (the pipeline source that used to skip

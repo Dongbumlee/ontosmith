@@ -181,8 +181,7 @@ class TestStageGatesUnmetered(unittest.TestCase):
         self.addCleanup(shutil.rmtree, self.root, True)
 
     def _batch_with_candidates(self, n=2):
-        cfg = BatchConfig(candidate_source="llm",
-                          max_cost_usd=None)
+        cfg = BatchConfig(max_cost_usd=None)
         b = Batch(batch_id="bindings-stage", run_id="run-0001",
                   source="src", collection="coll",
                   doc_ids=["d1"], config=cfg,
@@ -320,7 +319,7 @@ class TestTryItBEndToEnd(unittest.TestCase):
         args = argparse.Namespace(
             source="stubsrc", collection="stubcoll",
             docs=[self.docs_glob], batch_id="fe3-e2e",
-            profile=None, pack="core", candidate_source="llm",
+            profile=None, pack="core",
             no_cost_cap=False, max_cost_usd=None,
             frontier_escalation=False, escalation_band_lo=None,
             escalation_band_hi=None)

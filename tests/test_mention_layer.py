@@ -272,7 +272,7 @@ class TestMentionGuards(unittest.TestCase):
 
 
 def _gates_batch(root, candidates):
-    cfg = BatchConfig(candidate_source="llm", max_cost_usd=None,
+    cfg = BatchConfig(max_cost_usd=None,
                       triple_threshold=0.25, review_band_hi=0.85)
     b = Batch(batch_id="mention-gates", run_id="run-0001",
               source="src", collection="coll", doc_ids=["d1"],
@@ -375,7 +375,7 @@ class TestRouteResolution(unittest.TestCase):
         self.addCleanup(shutil.rmtree, self.root, True)
 
     def _route(self, judgments):
-        cfg = BatchConfig(candidate_source="llm", max_cost_usd=None,
+        cfg = BatchConfig(max_cost_usd=None,
                           triple_threshold=0.25, review_band_hi=0.85)
         b = Batch(batch_id="mention-route", run_id="run-0001",
                   source="src", collection="coll", doc_ids=["d1"],
@@ -496,7 +496,7 @@ def _run_candidates_stage(root, batch_id, items, mention):
     With `mention`, the batch declares the layer via its
     frozen setup_config.resolved.json — the channel a real
     batch executes with. Returns (batch, stage_output)."""
-    cfg = BatchConfig(candidate_source="llm", max_cost_usd=None)
+    cfg = BatchConfig(max_cost_usd=None)
     b = Batch(batch_id=batch_id, run_id="run-0001",
               source="src", collection="coll", doc_ids=["d1"],
               config=cfg, status=BatchStatus.NER_DONE,

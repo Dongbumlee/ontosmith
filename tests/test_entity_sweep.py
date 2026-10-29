@@ -111,7 +111,7 @@ def _run_candidates_stage(root, batch_id, chat, sweep):
     With `sweep`, the batch declares the pass via its
     frozen setup_config.resolved.json — the channel a real
     batch executes with. Returns (batch, stage_output)."""
-    cfg = BatchConfig(candidate_source="llm", max_cost_usd=None)
+    cfg = BatchConfig(max_cost_usd=None)
     b = Batch(batch_id=batch_id, run_id="run-0001",
               source="src", collection="coll", doc_ids=["d1"],
               config=cfg, status=BatchStatus.NER_DONE,

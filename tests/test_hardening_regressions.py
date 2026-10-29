@@ -195,7 +195,6 @@ class TestCandidatesCounters(TmpRoot):
                 b, self.root, ["INGEST", "NER"])
         m = b.metrics["candidates"]
         self.assertEqual(m["total"], 0)
-        self.assertEqual(m["source"], "llm")
         # The corrupted checkpoint reset is on the record.
         self.assertIn("error", m["checkpoint_reset"])
 

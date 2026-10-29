@@ -228,8 +228,6 @@ def cmd_create(args) -> None:
                 args.escalation_band_hi)
     config = BatchConfig(
         code_version=git_code_version(ROOT),
-        candidate_source=getattr(
-            args, "candidate_source", "llm") or "llm",
         **cfg_kwargs)
     # Stop-line rule: a USD cap set on a cost-less
     # binding could never trip — refuse the creation by name
@@ -889,12 +887,7 @@ def main() -> None:
                    help="path to a stage-0 profile.json (setup service); "
                         "its profile_hash is recorded on the batch and "
                         "into the manifest at INGEST")
-    c.add_argument("--candidate-source", default="llm",
-                   choices=["llm"],
-                   help="CANDIDATES source: llm = the LLM proposer "
-                        "(triples + profile clause slots). The "
-                        "GLiNER+spaCy pipeline source was retired "
-                        "2026-10-29; llm is the only source.")
+
     c.add_argument("--pack", default=None,
                    help="domain pack binding this batch (pack_id, "
                         "family, or pack directory); the executed "
