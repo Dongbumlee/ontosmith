@@ -89,6 +89,33 @@ travels as annotation, and GATES judges the resolution
 as its own decision before the fact (stage_gates), so
 the proposer proposes and Jev decides, as everywhere
 else in the pipeline.
+
+Entity sweep (issue #58, profile-gated by the
+`entity_sweep` setup_config key; absent = off and every
+behavior below is inert): the chunk pass proposes at
+document density, and an entity the text names but the
+pass never builds a triple around has no second chance —
+the gold re-examination measured that population at
+~30% of all verified labels (every one attested by name
+in the text; reference-only presence was zero). The
+sweep is an ADDITIVE second pass: a deterministic code
+census extracts the document's candidate name surfaces
+(maximal capitalized sequences, attested under norm_ws
+containment or dropped and counted), the surfaces that
+appear as no endpoint of any chunk-pass item become
+anchors, and each anchor is re-asked in its own view —
+its mention sentences ± 1, capped — under the chunk
+prompt plus one rule (an endpoint of every triple must
+be the anchor). Sweep items pass the same guards and
+merge behind the chunk channel: a sweep item whose key
+equals a chunk-pass item's is a counted duplicate, never
+a replacement, and an item touching neither endpoint of
+its anchor is counted off-anchor and dropped, never
+blocked into the record. The chunk pass runs first,
+untouched, with its own prompt — the pass can only add
+proposal mass, which is the structural form of the
+mention layer's measured lesson (a REPLACING variant
+proposed less, and differently, and the draw fell).
 """
 from __future__ import annotations
 
@@ -448,6 +475,365 @@ def propose_triples_for_doc(doc_id: str, text: str, key: str,
             "calls": calls,
             "errors": errors, "proposed": len(items),
             "chunks": len(tasks), "chunks_at_cap": chunks_at_cap}
+
+
+# ------------------------------------------------------------------
+# Entity sweep (issue #58): deterministic census + per-anchor pass
+# ------------------------------------------------------------------
+# The per-anchor view's character ceiling: the mention
+# sentences of one anchor, ± 1 neighbouring sentence,
+# in document order. Windows beyond the ceiling are
+# counted, never silently truncated.
+SWEEP_CONTEXT_MAX = 3000
+
+# Lowercase function words that may sit INSIDE a name
+# surface, between two capitalized tokens ("Bank of
+# America", "University of the Philippines", "Ludwig van
+# Beethoven"). Language mechanics, not domain vocabulary:
+# a connector never starts or ends a surface, and a
+# surface containing one still has to attest verbatim
+# (norm_ws containment) before it joins the roster.
+_SWEEP_CONNECTORS = frozenset(
+    {"of", "the", "and", "de", "del", "van", "von", "der"})
+
+# Sentence-boundary discipline for the census and the
+# anchor views: the pair census's abbreviation rule
+# (pair_proposer.split_sentences_r3's guard, applied here
+# unconditionally — a mention spanning a false boundary
+# is exactly what the sweep exists to find). A token
+# whose final period belongs to a dotted initialism
+# ("U.S.") or a declared abbreviation word ("St.", "Dr.")
+# does NOT end a sentence; any other token ending in
+# [.!?] does, and a name sequence never crosses it.
+_INITIALISM_RX = re.compile(r"(?<![A-Za-z])(?:[A-Za-z]\.)+")
+_ABBREV_WORD_RX = re.compile(
+    r"(?i)(?<![A-Za-z])(?:st|mt|dr|mr|mrs|ms|no|fig|vs|jr|sr)\.")
+_ABBREV_MASK = "\x00"
+
+
+def _mask_abbrev_periods(text: str) -> str:
+    chars = list(text)
+    for rx in (_INITIALISM_RX, _ABBREV_WORD_RX):
+        for m in rx.finditer(text):
+            for i in range(m.start(), m.end()):
+                if chars[i] == ".":
+                    chars[i] = _ABBREV_MASK
+    return "".join(chars)
+
+
+# Trailing closers that may follow a sentence mark
+# (quotes, parens, brackets) — stripped before the mark
+# is read. Typographic quotes written as escapes, per
+# the lint standard for ambiguous punctuation.
+_TRAILING_CLOSERS = frozenset(
+    "\"'\u201d\u2019\u00bb)]}")
+
+
+def _sentence_final(raw_tok: str) -> bool:
+    """True when a raw whitespace token ends a sentence:
+    it closes with [.!?] (after trailing closers) and the
+    mark is not an abbreviation period."""
+    t = raw_tok
+    while t and t[-1] in _TRAILING_CLOSERS:
+        t = t[:-1]
+    if not t or t[-1] not in ".!?":
+        return False
+    if t[-1] != ".":
+        return True
+    return not any(m.end() == len(t)
+                   for rx in (_INITIALISM_RX, _ABBREV_WORD_RX)
+                   for m in rx.finditer(t))
+
+
+def _token_core(tok: str) -> str:
+    """A whitespace token stripped of its edge punctuation
+    (internal apostrophes / hyphens / periods survive:
+    "O'Brien", "Smith-Jones", "U.S"). Pure-punctuation
+    tokens core to "" — they break name sequences, which
+    is what separates "Paris. London" into two surfaces
+    and keeps a comma-joined list from gluing."""
+    i, j = 0, len(tok)
+    while i < j and not tok[i].isalnum():
+        i += 1
+    while j > i and not tok[j - 1].isalnum():
+        j -= 1
+    return tok[i:j]
+
+
+def _starts_capital(core: str) -> bool:
+    """True when the token's first letter is uppercase."""
+    for ch in core:
+        if ch.isalpha():
+            return ch.isupper()
+    return False
+
+
+def census_entities(text: str) -> dict:
+    """The deterministic census roster for one document.
+
+    Extracts maximal capitalized-token sequences (a
+    lowercase connector run may bridge two capitalized
+    tokens; a sequence never crosses a sentence boundary
+    — abbreviation periods excepted, per the boundary
+    rule above; a leading article — The / A / An — is dropped
+    when a two-or-more-token name follows it, so a
+    sentence-initial "The Bank of America" censuses as
+    "Bank of America", while a short name keeps its
+    article: "The Hague"), builds each surface by joining
+    the token cores with single spaces, and keeps it only
+    if its normalized form is attested under norm_ws
+    containment in the document — an extracted surface
+    that the normalization cannot find (a name whose
+    internal punctuation the joining flattened, e.g.
+    "U.S. Army" -> "u.s army") is dropped AND counted,
+    never silently lost. Dedupes by normalized surface,
+    first surface form wins. Pure function of the text:
+    identical run to run, no API, so the roster's recall
+    against any gold name set is measurable offline (the
+    sweep's pre-flight gate).
+
+    Returns {entities: [{surface, norm}], extracted,
+    unattested}: `extracted` counts every sequence the
+    scan produced, `unattested` the ones the containment
+    test dropped.
+    """
+    doc_norm = norm_ws(text)
+    raw_tokens = text.split()
+    tokens = [_token_core(t) for t in raw_tokens]
+    surfaces: list[str] = []
+    i, n = 0, len(tokens)
+    while i < n:
+        if tokens[i] and _starts_capital(tokens[i]):
+            seq = [tokens[i]]
+            j = i + 1
+            while j < n:
+                # A name sequence never crosses a sentence
+                # boundary: the token before the next one
+                # must not be sentence-final.
+                if _sentence_final(raw_tokens[j - 1]):
+                    break
+                t = tokens[j]
+                if t and _starts_capital(t):
+                    seq.append(t)
+                    j += 1
+                    continue
+                k = j
+                while k < n and tokens[k] \
+                        and tokens[k].lower() in _SWEEP_CONNECTORS:
+                    k += 1
+                if k > j and k < n and tokens[k] \
+                        and _starts_capital(tokens[k]):
+                    seq.extend(tokens[j:k + 1])
+                    j = k + 1
+                    continue
+                break
+            if len(seq) >= 3 \
+                    and seq[0].lower() in ("the", "a", "an"):
+                seq = seq[1:]
+            surfaces.append(" ".join(seq))
+            i = j
+        else:
+            i += 1
+    entities, seen, unattested = [], set(), 0
+    for s in surfaces:
+        sn = norm_ws(s)
+        if sn not in doc_norm:
+            unattested += 1
+            continue
+        if sn in seen:
+            continue
+        seen.add(sn)
+        entities.append({"surface": s, "norm": sn})
+    return {"entities": entities,
+            "extracted": len(surfaces),
+            "unattested": unattested}
+
+
+def split_sentences(text: str) -> list[str]:
+    """Deterministic sentence split for anchor views:
+    boundaries after [.!?] followed by whitespace, with
+    abbreviation periods masked first (the pair census's
+    discipline, without its title-block special case and
+    without any length filter — a short sentence can
+    carry a mention)."""
+    masked = _mask_abbrev_periods(text)
+    return [p.strip().replace(_ABBREV_MASK, ".") for p in
+            re.split(r"(?<=[.!?])\s+", masked) if p.strip()]
+
+
+def anchor_contexts(text: str, anchor: str) -> dict:
+    """One anchor's view: the sentences containing a
+    census-attested mention of the anchor (normalized
+    substring), each with ± 1 neighbouring sentence, in
+    document order, total ≤ SWEEP_CONTEXT_MAX chars.
+
+    Contiguous kept sentences merge into runs; a run that
+    would push the view past the ceiling is left out and
+    counted (`windows_dropped`) — never silently
+    truncated mid-run. Returns {context, mention_sentences,
+    windows, windows_dropped}."""
+    sents = split_sentences(text)
+    an = norm_ws(anchor)
+    hits = [i for i, s in enumerate(sents) if an in norm_ws(s)]
+    keep: set[int] = set()
+    for i in hits:
+        keep.update((i - 1, i, i + 1))
+    runs: list[list[int]] = []
+    for i in sorted(x for x in keep if 0 <= x < len(sents)):
+        if runs and i == runs[-1][-1] + 1:
+            runs[-1].append(i)
+        else:
+            runs.append([i])
+    blocks, dropped, total = [], 0, 0
+    for run in runs:
+        block = " ".join(sents[x] for x in run)
+        add = len(block) + (1 if blocks else 0)
+        if total + add > SWEEP_CONTEXT_MAX:
+            dropped += 1
+            continue
+        blocks.append(block)
+        total += add
+    return {"context": "\n".join(blocks),
+            "mention_sentences": len(hits),
+            "windows": len(blocks),
+            "windows_dropped": dropped}
+
+
+def _build_sweep_prompt(context: str, anchor: str,
+                        guidance: str = "",
+                        framing: str | None = None,
+                        maxn: int | None = None,
+                        mentions: bool = False) -> str:
+    """The sweep prompt for one anchor: the chunk prompt
+    built by _build_triple_prompt (the base template stays
+    untouched), over the anchor's view instead of a chunk,
+    plus ONE added rule — an endpoint of every triple must
+    be the anchor entity, named as it appears in the text."""
+    base = _build_triple_prompt(context, guidance, framing,
+                                maxn=maxn, mentions=mentions)
+    return base + (
+        f"\n\nAdditional rule for this pass: one endpoint "
+        f"of every triple — the subject or the object — "
+        f"must be the entity \"{anchor}\", named exactly "
+        f"as it appears in the excerpt.")
+
+
+def propose_sweep_for_doc(doc_id: str, text: str,
+                          anchors: list[dict], key: str,
+                          model: str = DEFAULT_MODEL,
+                          guidance: str = "",
+                          framing: str | None = None,
+                          max_per_chunk: int | None = None,
+                          mentions: bool = False) -> dict:
+    """Per-anchor proposals for one document (unguarded).
+
+    One proposer-seat call per anchor over its mention
+    view (anchor_contexts), same decoding and per-call
+    ceiling as the chunk pass. Items are parsed with the
+    chunk pass's discipline and carry the anchor they
+    were asked under (`anchor`, `anchor_norm`) plus the
+    view as their chunk fields, so guard_triples' chunk
+    attestation rung reads the view.
+
+    An item whose NEITHER endpoint is its anchor is
+    contract drift: it is counted (`off_anchor`) and
+    dropped here — never returned, never blocked into the
+    record. An anchor with no view (no mention sentence
+    survived the ceiling) is skipped and counted
+    (`anchors_skipped`), never called.
+
+    Returns {items, cost, calls, errors, proposed,
+    off_anchor, anchors_asked, anchors_skipped,
+    windows_dropped}; `proposed` counts every parsed item
+    including the off-anchor ones, so the pass's attrition
+    is fully accounted by proposed = items + off_anchor.
+    """
+    cap = MAX_PER_CHUNK if max_per_chunk is None \
+        else max_per_chunk
+
+    def work(task):
+        _idx, anchor = task
+        view = anchor_contexts(text, anchor["surface"])
+        if not view["context"]:
+            return [], {}, None, 0, view["windows_dropped"], True
+        try:
+            content, u = _chat(
+                _build_sweep_prompt(view["context"],
+                                    anchor["surface"],
+                                    guidance, framing,
+                                    maxn=cap, mentions=mentions),
+                model, 12000 if _is_haiku55(model) else 6000, key)
+            items = _parse_array(content, salvage=True)
+            err = None
+        except Exception as e:
+            items, u, err = [], {}, str(e)[:200]
+        out, off = [], 0
+        for it in items:
+            if isinstance(it, dict) and all(
+                    it.get(k) for k in
+                    ("subject", "relation", "object", "quote")):
+                rec = {
+                    "subject": str(it["subject"]).strip(),
+                    "relation": str(it["relation"]).strip(),
+                    "object": str(it["object"]).strip(),
+                    "quote": str(it["quote"]).strip(),
+                    "chunk_idx": -1,
+                    "chunk_norm": norm_ws(view["context"]),
+                    "anchor": anchor["surface"],
+                    "anchor_norm": anchor["norm"]}
+                for tk in ("subject_type", "object_type"):
+                    tv = it.get(tk)
+                    if isinstance(tv, str) and tv.strip():
+                        rec[tk] = tv.strip()
+                if mentions:
+                    rec["mentions"] = {
+                        ep: _mention_from_item(it, ep)
+                        for ep in ("subject", "object")}
+                # On-anchor: an endpoint names the anchor —
+                # equality or containment either way (the
+                # mention layer's naming discipline: a
+                # fuller or shorter form of the same name
+                # still names it; an unrelated endpoint
+                # does not).
+                ends = (norm_ws(rec["subject"]),
+                        norm_ws(rec["object"]))
+                if not any(e == anchor["norm"]
+                           or e in anchor["norm"]
+                           or anchor["norm"] in e
+                           for e in ends):
+                    off += 1
+                    continue
+                out.append(rec)
+        return out, u, err, off, view["windows_dropped"], False
+
+    items, cost, calls, errors = [], 0.0, 0, 0
+    off_anchor = skipped = wdropped = 0
+    with ThreadPoolExecutor(max_workers=8) as ex:
+        for out, u, err, off, wd, skip in ex.map(
+                work, list(enumerate(anchors))):
+            items.extend(out)
+            off_anchor += off
+            wdropped += wd
+            if skip:
+                skipped += 1
+                continue
+            cost = connections.add_cost(cost, u.get("cost"))
+            calls += 1
+            if err:
+                errors += 1
+    # `proposed` follows the chunk pass's semantics — the
+    # items that passed the field filter, before the
+    # guards — plus the off-anchor drops, which also
+    # passed it: proposed = returned items + off_anchor.
+    return {"items": items,
+            "cost": None if cost is None else round(cost, 4),
+            "calls": calls,
+            "errors": errors,
+            "proposed": len(items) + off_anchor,
+            "off_anchor": off_anchor,
+            "anchors_asked": len(anchors) - skipped,
+            "anchors_skipped": skipped,
+            "windows_dropped": wdropped}
 
 
 def propose_slots_for_doc(doc_id: str, text: str,

@@ -544,6 +544,7 @@ def stage_candidates(b: Batch, root: Path, stages: list[str]) -> None:
     from .profile_config import (
         derive_guidance,
         endpoint_type_names,
+        entity_sweep_enabled,
         mention_layer_enabled,
         pair_judge_generic_relation,
         proposer_framing,
@@ -572,6 +573,21 @@ def stage_candidates(b: Batch, root: Path, stages: list[str]) -> None:
              "CANDIDATES: mention layer ON (mention spans + "
              "antecedent resolutions proposed, spans verified "
              "by the guards, resolutions judged at GATES)")
+    # The entity sweep (issue #58): the profile's
+    # declaration adds an entity-centered second proposal
+    # pass inside the free-proposer branch below — the
+    # chunk pass runs first, untouched; the sweep only
+    # appends candidates for entities the chunk pass never
+    # proposed an endpoint for. Absent = off and this stage
+    # is byte-identical to the pre-sweep behavior.
+    sweep_on = entity_sweep_enabled(setup_cfg) if use_llm \
+        else False
+    if sweep_on:
+        _log(b.batch_id,
+             "CANDIDATES: entity sweep ON (census anchors "
+             "re-asked per anchor after the chunk pass; "
+             "sweep candidates merge behind the chunk "
+             "channel)")
     # Domain framing: the family's declared framing
     # for the proposer / pair-judge base templates, threaded as
     # data; None (profile declares none) selects the builders'
@@ -770,6 +786,21 @@ def stage_candidates(b: Batch, root: Path, stages: list[str]) -> None:
                       "mention_fallback_object": 0}
     pair_stats = {"enumerated": 0, "answered": 0, "calls": 0,
                   "outcomes": {}, "alias_emitted": 0}
+    # Entity-sweep accounting (issue #58), checkpointed
+    # with the proposer stats so a resumed run keeps the
+    # true totals. All counters stay 0 — and no metrics
+    # block is emitted — when the profile does not declare
+    # the sweep.
+    sweep_cost = 0.0
+    sweep_stats = {"anchors": 0, "anchors_asked": 0,
+                   "anchors_skipped": 0, "proposed": 0,
+                   "off_anchor": 0, "duplicates": 0,
+                   "merged": 0, "blocked": 0,
+                   "blocked_reasons": {},
+                   "calls": 0, "errors": 0,
+                   "windows_dropped": 0,
+                   "census_entities": 0, "census_extracted": 0,
+                   "census_unattested": 0}
     # Silent-path counters: the stage's
     # swallowed failures are counted and stamped into the stage
     # metrics — per-doc candidate-cap hits, Phase-2 worker
@@ -798,6 +829,17 @@ def stage_candidates(b: Batch, root: Path, stages: list[str]) -> None:
             for k in pair_stats:
                 pair_stats[k] = ckpt.get("pair_stats", {}).get(
                     k, pair_stats[k])
+            _ckpt_sweep_cost = ckpt.get("sweep_cost_usd", 0.0)
+            sweep_cost = (None if _ckpt_sweep_cost is None
+                          else float(_ckpt_sweep_cost))
+            for k in sweep_stats:
+                if k == "blocked_reasons":
+                    sweep_stats[k] = dict(
+                        ckpt.get("sweep_stats", {}).get(k, {}))
+                else:
+                    sweep_stats[k] = int(
+                        ckpt.get("sweep_stats", {}).get(
+                            k, sweep_stats[k]))
             # Load existing candidates
             if (d / "candidates.jsonl").exists():
                 with open(d / "candidates.jsonl") as f:
@@ -1126,6 +1168,148 @@ def stage_candidates(b: Batch, root: Path, stages: list[str]) -> None:
                 if bl.get("mentions"):
                     rec["mentions"] = bl["mentions"]
                 doc_blocked.append(rec)
+            if sweep_on:
+                # Entity sweep (issue #58): an additive
+                # second pass over the chunk pass's output.
+                # The census is deterministic code; anchors
+                # are the census entities that appear as NO
+                # endpoint of any chunk-pass item for this
+                # document (kept + blocked — the presence
+                # accounting that defined the target
+                # population). Sweep items pass the SAME
+                # guard call (same flags) and merge behind
+                # the chunk channel: an item whose key
+                # equals a chunk-pass item's key is a
+                # counted duplicate and the chunk record
+                # wins. Candidate identity here is the
+                # in-pipeline key — norm_ws endpoints,
+                # relation verbatim (TN canonicalization
+                # remains the scorer's, pack-supplied,
+                # concern at read time).
+                census = _prop.census_entities(text)
+                sweep_stats["census_entities"] += len(
+                    census["entities"])
+                sweep_stats["census_extracted"] += \
+                    census["extracted"]
+                sweep_stats["census_unattested"] += \
+                    census["unattested"]
+                chunk_endpoints = set()
+                chunk_keys = set()
+                for it in kept + blocked:
+                    chunk_endpoints.add(
+                        _prop.norm_ws(it["subject"]))
+                    chunk_endpoints.add(
+                        _prop.norm_ws(it["object"]))
+                    chunk_keys.add((
+                        _prop.norm_ws(it["subject"]),
+                        it["relation"],
+                        _prop.norm_ws(it["object"])))
+                anchors = [e for e in census["entities"]
+                           if e["norm"] not in chunk_endpoints]
+                sweep_stats["anchors"] += len(anchors)
+                if anchors:
+                    sres = _prop.propose_sweep_for_doc(
+                        doc_id, text, anchors, key,
+                        model=b.config.llm_model,
+                        guidance=guidance,
+                        framing=triple_framing,
+                        max_per_chunk=proposer_cap,
+                        mentions=mention_on)
+                    proposer_cost = _conn_add_cost(
+                        proposer_cost, sres["cost"])
+                    sweep_cost = _conn_add_cost(
+                        sweep_cost, sres["cost"])
+                    sweep_stats["calls"] += sres["calls"]
+                    sweep_stats["errors"] += sres["errors"]
+                    sweep_stats["proposed"] += sres["proposed"]
+                    sweep_stats["off_anchor"] += \
+                        sres["off_anchor"]
+                    sweep_stats["anchors_asked"] += \
+                        sres["anchors_asked"]
+                    sweep_stats["anchors_skipped"] += \
+                        sres["anchors_skipped"]
+                    sweep_stats["windows_dropped"] += \
+                        sres["windows_dropped"]
+                    # The guard runs per anchor group (same
+                    # flags — the same call discipline), so
+                    # the merge below, not the guard's own
+                    # in-call dedupe, decides duplicates: a
+                    # fact between two anchors is proposed
+                    # under both, and the second arrival must
+                    # be a COUNTED duplicate. The standing
+                    # key set starts with the chunk channel's
+                    # keys — chunk provenance always wins —
+                    # and gains each merged sweep key.
+                    by_anchor: dict[str, list[dict]] = {}
+                    for it in sres["items"]:
+                        by_anchor.setdefault(
+                            it["anchor_norm"], []).append(it)
+                    seen_keys = set(chunk_keys)
+                    skept, sblocked = [], []
+                    for e in anchors:
+                        group = by_anchor.get(e["norm"])
+                        if not group:
+                            continue
+                        gk, gb = _prop.guard_triples(
+                            group, text,
+                            role_words=role_words,
+                            entity_types=endpoint_types or None,
+                            quote_punct_insensitive=
+                            quote_punct_insensitive,
+                            theme_attest_chunk=theme_attest_chunk,
+                            mentions=mention_on)
+                        skept.extend(gk)
+                        sblocked.extend(gb)
+                    for it in skept:
+                        k = (_prop.norm_ws(it["subject"]),
+                             it["relation"],
+                             _prop.norm_ws(it["object"]))
+                        if k in seen_keys:
+                            sweep_stats["duplicates"] += 1
+                            continue
+                        seen_keys.add(k)
+                        rec = {
+                            "doc_id": doc_id,
+                            "subject": it["subject"],
+                            "relation": it["relation"],
+                            "object": it["object"],
+                            "context": _prop.quote_window(
+                                text, it["quote"]),
+                            "method": "llm-sweep",
+                            "quote": it["quote"],
+                            "attest": it["attest"]}
+                        for tk in ("subject_type", "object_type"):
+                            if it.get(tk):
+                                rec[tk] = it[tk]
+                        if it.get("mentions"):
+                            rec["mentions"] = it["mentions"]
+                        if it.get("mention_fallback"):
+                            rec["mention_fallback"] = \
+                                it["mention_fallback"]
+                        doc_llm.append(rec)
+                        sweep_stats["merged"] += 1
+                    for bl in sblocked:
+                        rec = {
+                            "doc_id": doc_id,
+                            "subject": bl["subject"],
+                            "relation": bl["relation"],
+                            "object": bl["object"],
+                            "context": _prop.quote_window(
+                                text, bl["quote"]),
+                            "method": "llm-sweep",
+                            "quote": bl["quote"],
+                            "reason": bl["reason"]}
+                        for tk in ("subject_type", "object_type"):
+                            if bl.get(tk):
+                                rec[tk] = bl[tk]
+                        if bl.get("mentions"):
+                            rec["mentions"] = bl["mentions"]
+                        doc_blocked.append(rec)
+                        sweep_stats["blocked"] += 1
+                        sweep_stats["blocked_reasons"][
+                            bl["reason"]] = sweep_stats[
+                                "blocked_reasons"].get(
+                                    bl["reason"], 0) + 1
             if slot_categories:
                 sres = _prop.propose_slots_for_doc(
                     doc_id, text, slot_categories, key,
@@ -1201,7 +1385,9 @@ def stage_candidates(b: Batch, root: Path, stages: list[str]) -> None:
                 "done_docs": sorted(done_docs),
                 "proposer_cost_usd": _round_cost(proposer_cost),
                 "proposer_stats": proposer_stats,
-                "pair_stats": pair_stats}))
+                "pair_stats": pair_stats,
+                "sweep_stats": sweep_stats,
+                "sweep_cost_usd": _round_cost(sweep_cost)}))
             _log(b.batch_id, f"CANDIDATES: {idx+1}/{len(doc_ids)} docs, "
                     f"{len(candidates)} candidates")
             _beat(b, root, "CANDIDATES", len(done_docs), len(doc_ids))
@@ -1289,6 +1475,17 @@ def stage_candidates(b: Batch, root: Path, stages: list[str]) -> None:
         if symmetric_src is not None:
             b.metrics["candidates"]["pair_enum"][
                 "symmetric_source"] = symmetric_src
+    if sweep_on:
+        # The sweep's own accounting block (issue #58):
+        # what the pass was asked, what it proposed, and
+        # where the proposals died — duplicates behind the
+        # chunk channel, off-anchor drops, guard blocks by
+        # reason. Its spend is folded into the proposer
+        # ledger above; the block also carries it separately
+        # so the pass is priced on its own.
+        b.metrics["candidates"]["sweep"] = {
+            **sweep_stats,
+            "cost_usd": _round_cost(sweep_cost)}
     # Ledger: the stage's actual API spend (usage is returned
     # by extract_triples_llm_with_usage for the fallback and by the
     # proposer for its calls, and summed above). spaCy/pair paths
@@ -1338,6 +1535,17 @@ def stage_candidates(b: Batch, root: Path, stages: list[str]) -> None:
              f"{proposer_stats['mention_fallback_object']}) "
              f"judged on the quote under the legacy "
              f"evidence path")
+    if sweep_on:
+        _log(b.batch_id,
+             f"CANDIDATES entity sweep: "
+             f"{sweep_stats['anchors']} anchor(s), "
+             f"{sweep_stats['proposed']} proposed, "
+             f"{sweep_stats['merged']} merged candidates, "
+             f"{sweep_stats['duplicates']} duplicate(s) "
+             f"behind the chunk channel, "
+             f"{sweep_stats['off_anchor']} off-anchor "
+             f"dropped, {sweep_stats['blocked']} blocked "
+             f"(by reason: {sweep_stats['blocked_reasons']})")
     if blocked_all:
         # Guard blocks are reported BY NAME in the run
         # output, not only in the metrics record — a relation
@@ -2888,7 +3096,17 @@ def _finish_summary(b: Batch, root: Path, registry) -> None:
     mention fields reads as an ordinary mention run. When
     any endpoint fell back, the finish carries the counts
     by endpoint in its metrics and names them on its log
-    line."""
+    line.
+
+    And the same rule covers the entity sweep (issue
+    #58): the pass's yield and attrition — anchors asked,
+    proposals made, duplicates dropped behind the chunk
+    channel, off-anchor drops, guard blocks by reason —
+    and its shipped Tier-1 count, attributed from the
+    routed records, are restated here whenever the sweep
+    ran. Without the restatement, a sweep that proposed
+    into a void (every anchor call answered off-anchor,
+    say) reads at the finish as an ordinary run."""
     account = (_er_terminal_account(registry, b.batch_id)
                if registry is not None else None)
     cand = b.metrics.get("candidates") or {}
@@ -2899,7 +3117,9 @@ def _finish_summary(b: Batch, root: Path, registry) -> None:
         "subject": prop.get("mention_fallback_subject") or 0,
         "object": prop.get("mention_fallback_object") or 0}
     fb_total = fb_by_endpoint["subject"] + fb_by_endpoint["object"]
-    if account is None and not blocked_total and not fb_total:
+    sweep_blk = cand.get("sweep") or {}
+    if account is None and not blocked_total and not fb_total \
+            and not sweep_blk:
         return
     finish: dict = {}
     if account is not None:
@@ -2912,6 +3132,33 @@ def _finish_summary(b: Batch, root: Path, registry) -> None:
         finish["candidates_fallback"] = {
             "endpoints": fb_total,
             "by_endpoint": fb_by_endpoint}
+    if sweep_blk:
+        # Shipped attribution from the routed records:
+        # the sweep's candidates are indistinguishable
+        # downstream, but their method survives into
+        # routed.jsonl, so the finish can say how many of
+        # them reached Tier 1.
+        shipped_t1 = 0
+        routed_p = batch_dir(root, b.batch_id) / "routed.jsonl"
+        if routed_p.exists():
+            with open(routed_p) as f:
+                for line in f:
+                    if not line.strip():
+                        continue
+                    r = json.loads(line)
+                    if r.get("method") == "llm-sweep" \
+                            and r.get("tier") == 1:
+                        shipped_t1 += 1
+        finish["candidates_sweep"] = {
+            "anchors": sweep_blk.get("anchors", 0),
+            "proposed": sweep_blk.get("proposed", 0),
+            "duplicates": sweep_blk.get("duplicates", 0),
+            "off_anchor": sweep_blk.get("off_anchor", 0),
+            "blocked": {
+                "total": sweep_blk.get("blocked", 0),
+                "by_reason": dict(
+                    sweep_blk.get("blocked_reasons") or {})},
+            "shipped_tier1": shipped_t1}
     b.metrics["finish"] = finish
     save_batch(b, root)
     if account is not None:
@@ -2940,6 +3187,17 @@ def _finish_summary(b: Batch, root: Path, registry) -> None:
              f"{fb_total} endpoint(s) (by endpoint: "
              f"{fb_by_endpoint}) — judged on the quote "
              f"under the legacy evidence path")
+    if sweep_blk:
+        cs = finish["candidates_sweep"]
+        _log(b.batch_id,
+             f"finish: CANDIDATES entity sweep "
+             f"{cs['anchors']} anchor(s), "
+             f"{cs['proposed']} proposed, "
+             f"{cs['duplicates']} duplicate(s), "
+             f"{cs['off_anchor']} off-anchor, "
+             f"{cs['blocked']['total']} blocked "
+             f"(by reason: {cs['blocked']['by_reason']}), "
+             f"{cs['shipped_tier1']} shipped at Tier 1")
 
 
 def run_batch(b: Batch, root: Path, doc_texts: dict[str, str] | None,

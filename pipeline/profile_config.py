@@ -173,6 +173,22 @@ CONSUMED_KEYS: dict[str, str] = {
                      "(stage_candidates / stage_gates -> "
                      "proposer.mention_layer_enabled; absent "
                      "= off, byte-identical legacy path)",
+    "entity_sweep": "CANDIDATES entity sweep (issue #58): "
+                    "an additive, entity-centered second "
+                    "proposal pass inside the free-proposer "
+                    "branch — a deterministic code census "
+                    "names the document's entities, the ones "
+                    "that appear as no endpoint of any "
+                    "chunk-pass item become anchors, and each "
+                    "anchor is re-asked in its own mention "
+                    "context under the chunk prompt plus one "
+                    "anchor rule; sweep items pass the same "
+                    "guards and merge behind the chunk "
+                    "channel, which is never shadowed "
+                    "(stage_candidates -> "
+                    "proposer.entity_sweep_enabled / "
+                    "proposer.propose_sweep_for_doc; absent "
+                    "= off, byte-identical legacy path)",
     "slot_framing": "CANDIDATES clause-slot prompt opening line "
                     "(stage_candidates -> "
                     "proposer.propose_slots_for_doc)",
@@ -1132,6 +1148,23 @@ def mention_layer_enabled(cfg: dict | None) -> bool:
     if not isinstance(v, bool):
         raise ValueError(
             f"mention_layer must be a boolean, got {v!r} "
+            "(fail closed)")
+    return v
+
+
+def entity_sweep_enabled(cfg: dict | None) -> bool:
+    """The family's entity-sweep declaration (issue #58).
+
+    Absent = off: the free proposer runs only its chunk
+    pass and CANDIDATES is byte-identical to the pre-sweep
+    behavior. A declared value must be a boolean — anything
+    else fails closed, like the other recipe declarations."""
+    v = (cfg or {}).get("entity_sweep")
+    if v is None:
+        return False
+    if not isinstance(v, bool):
+        raise ValueError(
+            f"entity_sweep must be a boolean, got {v!r} "
             "(fail closed)")
     return v
 
