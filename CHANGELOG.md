@@ -55,12 +55,19 @@ and the project adheres to
   entities, the ones appearing as no endpoint of any
   chunk-pass item become anchors, and each anchor is
   re-asked in its own mention view under the chunk
-  prompt plus one anchor rule. Sweep items pass the
+  prompt plus one anchor rule and one evidence rule:
+  every sweep triple must carry a verbatim evidence
+  span copied from the text, verified by code against
+  the full document at proposal time — a missing or
+  unverifiable span voids the proposal before the
+  guards, counted in the finish record as
+  `evidence_missing`. Sweep items pass the
   same guards and merge behind the chunk channel —
   duplicates and off-anchor items are counted, never
   shadowing or replacing chunk provenance — and the
   finish record restates the pass (`candidates_sweep`:
-  anchors, proposed, duplicates, off-anchor, blocked
+  anchors, proposed, duplicates, off-anchor,
+  evidence_missing, blocked
   by reason, shipped Tier-1). Measured on the
   pre-registered 8-document density pilot against lab
   gold v1.1.0 (issue #58): the pass recovered 33 of
@@ -71,7 +78,17 @@ and the project adheres to
   $0.00375 ceiling — the pilot failed on precision
   and cost, the full-corpus run was not licensed, and
   the pass stays an experimental opt-in pending a
-  redesign decision. The full record is in the
+  redesign decision. A pre-registered cut 2
+  (2026-10-29) made the evidence span load-bearing —
+  the void fired zero times on the re-run (the
+  proposer attached a verifying span to all 272
+  proposals) and precision measured 0.657 against
+  the same 0.90 bar, so the pilot failed on
+  precision again; yield and cost passed (P1
+  35/139, paired net +67, $0.0240/doc against a
+  re-registered $0.0323 bar), and the sweep line
+  returns to a close-or-redesign decision. The full
+  record is in the
   cap-recall measurement (Entity sweep sections) and
   issue #58.
 
