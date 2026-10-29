@@ -281,8 +281,7 @@ options:
 ```text
 usage: ontosmith batch create [-h] --source SOURCE --collection COLLECTION
                               --docs DOCS [DOCS ...] [--batch-id BATCH_ID]
-                              [--profile PROFILE]
-                              [--candidate-source {pipeline,llm,both}]
+                              [--profile PROFILE] [--candidate-source {llm}]
                               [--pack PACK] [--max-cost-usd MAX_COST_USD]
                               [--no-cost-cap] [--frontier-escalation]
                               [--escalation-band-lo ESCALATION_BAND_LO]
@@ -298,18 +297,18 @@ options:
   --profile PROFILE     path to a stage-0 profile.json (setup service); its
                         profile_hash is recorded on the batch and into the
                         manifest at INGEST
-  --candidate-source {pipeline,llm,both}
-                        CANDIDATES source: pipeline = RER hybrid; llm =
-                        LLM proposer (triples + profile clause slots); both =
-                        union (default pipeline)
+  --candidate-source {llm}
+                        CANDIDATES source: llm = the LLM proposer (triples +
+                        profile clause slots). The GLiNER+spaCy pipeline
+                        source was retired 2026-10-29; llm is the only source.
   --pack PACK           domain pack binding this batch (pack_id, family, or
                         pack directory); the executed setup_config is resolved
                         as core baseline + this pack and frozen into the batch
                         directory (default: the pack bound to the --profile
                         family, if any)
   --max-cost-usd MAX_COST_USD
-                        stop-line: hard spend cap for the batch (default:
-                        the BatchConfig default)
+                        stop-line: hard spend cap for the batch (default: the
+                        BatchConfig default)
   --no-cost-cap         run with no USD spend cap (the explicit way to run on
                         a cost-less binding; the ledger then records tokens
                         and marks cost not-provided)
@@ -317,11 +316,9 @@ options:
                         enable frontier escalation for non-judging seats
                         (default OFF; the judging seat never escalates)
   --escalation-band-lo ESCALATION_BAND_LO
-                        shaky-band lower bound (with --frontier-
-                        escalation)
+                        shaky-band lower bound (with --frontier-escalation)
   --escalation-band-hi ESCALATION_BAND_HI
-                        shaky-band upper bound (with --frontier-
-                        escalation)
+                        shaky-band upper bound (with --frontier-escalation)
 ```
 
 > **Recorded, not wired (v1):** `--frontier-escalation`

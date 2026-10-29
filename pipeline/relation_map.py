@@ -1,8 +1,9 @@
 """Relation normalization at WRITE.
 
-Relation strings enter the graph from heterogeneous sources: spaCy
-verb lemmas (pipeline), free-text verb phrases (LLM proposer), and
-profile category names (clause-slot proposer). Without a
+Relation strings enter the graph from heterogeneous sources:
+free-text verb phrases (LLM proposer), roster-pair relation
+names (pair enumeration), and profile category names
+(clause-slot proposer). Without a
 normalization step the graph is not addressable by a canonical
 relation vocabulary and retrieval falls back to string token
 overlap (§10b named this a top gap).

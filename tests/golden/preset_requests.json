@@ -21,27 +21,6 @@
   "url": "https://openrouter.ai/api/v1/chat/completions"
  },
  {
-  "call": "rer.extract_triples_llm_with_usage",
-  "headers": {
-   "authorization": "Bearer sk-capture-key"
-  },
-  "payload": {
-   "max_tokens": 2000,
-   "messages": [
-    {
-     "content": "Extract subject-verb-object triples from the sentence below.\nThe sentence may contain OCR errors. Do your best to understand it.\nReturn ONLY a JSON list of triples, each with \"subject\", \"verb\", \"object\".\nUse the exact entity names provided when possible.\nIf no clear relation exists, return [].\n\nSentence: Alice met Bob.\n\nEntities: Alice, Bob\n\nTriples:",
-     "role": "user"
-    }
-   ],
-   "model": "anthropic/claude-haiku-5.5",
-   "provider": {
-    "sort": "throughput"
-   }
-  },
-  "transport": "requests",
-  "url": "https://openrouter.ai/api/v1/chat/completions"
- },
- {
   "call": "decisions.validate_triple",
   "headers": {
    "authorization": "Bearer sk-capture-key",

@@ -349,7 +349,7 @@ class TestStopLineRefusal(unittest.TestCase):
             batch_id="cap-batch", source="test",
             profile=None, pack=None, max_cost_usd=None,
             frontier_escalation=False, escalation_band_lo=None,
-            escalation_band_hi=None, candidate_source="pipeline",
+            escalation_band_hi=None, candidate_source="llm",
             no_cost_cap=False)
         with binding_env(CUSTOM_ENV):
             with mock.patch.object(batch_cli, "ROOT", tmp), \

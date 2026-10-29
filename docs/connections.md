@@ -25,14 +25,16 @@ your connection fills the seats:
 
 | Seat | Job | Plugs into |
 |---|---|---|
-| **Proposer** | Candidate extraction: proposes triples for enumerated pairs (free triples and the fitted pair call). The roster is not this seat's work — roster and NER are local stages | Chat endpoint |
+| **Proposer** | Candidate extraction: proposes triples for enumerated pairs (free triples and the fitted pair call). The roster/census is deterministic code in the proposer's own module, not a model stage | Chat endpoint |
 | **Judge** | The Jev decision gate: decides which candidates are true enough to write | Decision endpoint |
 | **Escalation** | Adjudication escalation for shaky-band items; the gate-evaluation judges (the decisions-route gates' default model, and the text judge) | Chat / decision endpoint |
 | **Drafting** | Schema and profile drafting — an authoring aid behind the human approve gate. **Ships unbound**: no model is named for it until you declare one. **Never judges** | Chat endpoint |
 | **Embedder** | Indexing and question embedding for candidate search and retrieval | Embeddings endpoint |
 
-NER is not a seat: entity spotting on the candidate
-path runs locally (GLiNER) and binds nothing.
+NER is not a seat: the batch NER stage is a contract
+stage that writes empty mention rows (the local
+GLiNER spotter was retired with the pipeline
+candidate source, 2026-10-29) and binds nothing.
 
 Domain packs (a domain's ontology as data) declare
 only these tiers. Model names,

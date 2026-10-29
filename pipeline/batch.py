@@ -56,8 +56,9 @@ class BatchConfig:
     # force and freezes them here, so a batch's
     # config states the models that actually run — the
     # same models its manifest's binding provenance names.
-    # (ner_model is a local GLiNER model; local seats take
-    # no provider binding.)
+    # (ner_model named the local GLiNER model of the
+    # retired pipeline source; the field is inert since
+    # 2026-10-29 and kept so stored configs still load.)
     ner_model: str = NER_MODEL
     gate_model: str = JUDGE_MODEL
     triple_threshold: float = 0.25
@@ -95,12 +96,18 @@ class BatchConfig:
     queue_lease_seconds: int = 300
     audit_sample_n: int = 50
     code_version: str = ""
-    # CANDIDATES source: "pipeline" = the RER hybrid (spaCy ->
-    # LLM fallback -> pairing); "llm" = the LLM proposer only
-    # (pipeline/proposer.py: free triples + clause slots where the
-    # profile declares categories); "both" = union, deduped.
-    candidate_source: str = "pipeline"
-    # Proposer model for candidate_source llm/both.
+    # CANDIDATES source: "llm" is the only source — the LLM
+    # proposer (pipeline/proposer.py: free triples + clause
+    # slots where the profile declares categories, plus the
+    # profile-declared pair-enumeration / sweep / mention
+    # channels, all through the one guard funnel). The
+    # GLiNER+spaCy pipeline source ("pipeline" / "both") was
+    # retired 2026-10-29: unmeasured, English-bound at the
+    # RER layer, and carrying its own identity discipline —
+    # run_batch refuses those values by name. The field is
+    # kept so stored batch configs still load.
+    candidate_source: str = "llm"
+    # Proposer model for the candidate stage.
     llm_model: str = PROPOSER_MODEL
 
     def to_dict(self) -> dict:

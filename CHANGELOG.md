@@ -302,6 +302,33 @@ and the project adheres to
   verbatim. README, llms.txt, and the benchmarks
   appendix now point at the appendix document.
 
+### Removed
+
+- **The GLiNER+spaCy pipeline candidate source
+  (`--candidate-source pipeline` / `both`) is retired;
+  the LLM proposer is the only candidate source.** The
+  pipeline path was the product default but was never
+  measured at the standard the LLM path carries, its
+  structural (RER) pass was English-bound by
+  construction (hand-written dependency patterns —
+  each new language would have multiplied channels),
+  and it matched extracted spans to NER mentions with
+  its own order-dependent substring rule, a second
+  identity discipline beside the guard funnel's (the
+  same span could land on different people in
+  different documents, and full names could collapse
+  to a fragment listed earlier). Rather than grow a
+  third implementation of the identity law for it,
+  the channel is removed: `pipeline/rer.py` is
+  deleted, the NER stage writes empty contract rows
+  (its `ner.jsonl` consumers read tolerantly), the
+  `ontosmith[nlp]` extra is removed from the package,
+  and a stored batch still naming a retired source
+  refuses by name at run start. `--candidate-source`
+  now accepts only `llm` (still the value every
+  hands-on track used). All measured builds were
+  already LLM-path builds; serving is unchanged.
+
 ## [0.1.1] - 2026-10-27
 
 Release notes: [v0.1.1 on GitHub](https://github.com/Dongbumlee/ontosmith/releases/tag/v0.1.1).

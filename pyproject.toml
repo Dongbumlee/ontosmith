@@ -71,10 +71,9 @@ Changelog = "https://github.com/Dongbumlee/ontosmith/blob/main/CHANGELOG.md"
 # Graph write / Neo4j-backed store surface
 # (pipeline.graph_write, neo4j_store, retrieval paths).
 neo4j = ["neo4j"]
-# NER / structural extraction surface: GLiNER (batch
-# NER stage) + spaCy (structural pass) — lazy imports
-# in batch_run / rer.
-nlp = ["spacy", "gliner"]
+# (The nlp extra — GLiNER + spaCy — was removed
+# 2026-10-29 with the pipeline candidate source's
+# retirement; the LLM proposer is the only source.)
 # Graph image / community-detection harness surface.
 viz = ["matplotlib", "networkx", "python-louvain"]
 

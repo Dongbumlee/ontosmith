@@ -48,32 +48,19 @@ folder of documents anywhere a corpus path appears.
   name if it is not serving; the keyless steps never
   touch it.
 
-**First, choose your candidate path — it decides
-what you install.** A build gets its candidate
-triples from one of two paths, chosen per batch by
-`--candidate-source`:
-
-| | **Hands-on tracks** | **Product default** |
-|---|---|---|
-| `--candidate-source` | `llm` | `pipeline` |
-| Who proposes candidates | the proposer seat (a model call) | the local pipeline (NER + a structural pass) |
-| Extra install | **none** | `ontosmith[nlp]`, plus a spaCy model download |
-| GLiNER | never loaded | does the NER / entity spotting |
-| spaCy | not used | its dependency parse feeds the structural (RER) candidate pass |
-
-Every track in this guide runs `--candidate-source
-llm`. On that path GLiNER is never loaded — the build
-log says so, verbatim:
-
-```text
-NER: GLiNER skipped (candidate_source=llm; removed from the LLM path)
-```
-
-and spaCy's structural pass is simply absent. **If
-you are here for the tracks, install nothing extra:**
-no `[nlp]` extra, no spaCy model. The block further
-below is only for readers who later run the product
-default.
+**There is exactly one candidate path.** A build
+gets its candidate triples from the proposer seat
+(a model call), chosen per batch by
+`--candidate-source llm` — the only value the flag
+accepts. Every channel (free triples, clause slots,
+and the profile-declared pair-enumeration, sweep and
+mention passes) proposes through the one guard
+funnel in `pipeline/proposer.py`. **Install nothing
+extra:** no local NER/RER models are involved. (A
+local GLiNER+spaCy pipeline source existed until
+2026-10-29 and was retired — unmeasured and
+English-bound; the NER stage now writes empty
+contract rows and the build log says so.)
 
 Install the package from PyPI — in a virtual
 environment, so the install is yours to discard
@@ -1053,27 +1040,12 @@ own document, [hands-on-appendix.md](hands-on-appendix.md)
 
 ## Advanced: the pipeline candidate path
 
-The product default outside these tracks,
-`--candidate-source pipeline`, spots entities locally
-and needs the extraction extra:
-
-```console
-$ pip install "ontosmith[nlp]"   # pipeline candidate path only
-$ python -m spacy download en_core_web_sm
-```
-
-What each piece does there: **GLiNER** runs the NER
-stage (its model downloads itself on first load).
-**spaCy** — the separate model download — feeds the
-structural RER pass, which reads dependency parses
-for relation verbs. Without the spaCy model, a
-pipeline-path build logs the miss and continues
-without the structural pass; it does not stop.
-
-Size warning: the extra pulls the CUDA torch stack —
-several gigabytes of wheels, and slow on a constrained
-connection. If the torch download is a problem, stay
-on the tracks' `llm` path and skip the extra entirely.
+There is no local-extraction install: the
+`ontosmith[nlp]` extra (GLiNER + spaCy) was removed
+with the pipeline candidate source's retirement
+(2026-10-29). Every build proposes candidates
+through the proposer seat; nothing in a build loads
+a local NLP model.
 
 ## Where to go next
 

@@ -20,7 +20,6 @@ from pipeline import (
     pair_proposer,
     proposer,
     query_stack,
-    rer,
     roster_pass,
     setup_service,
 )
@@ -60,13 +59,6 @@ class TestRewiredDefaults(unittest.TestCase):
         self.assertEqual(proposer.DEFAULT_MODEL, rp.PROPOSER_MODEL)
         self.assertEqual(pair_proposer.DEFAULT_MODEL, rp.PROPOSER_MODEL)
         self.assertEqual(roster_pass.DEFAULT_MODEL, rp.PROPOSER_MODEL)
-
-    def test_rer_signature_defaults(self):
-        for fn in (rer.extract_triples_llm,
-                   rer.extract_triples_llm_with_usage):
-            sig = inspect.signature(fn)
-            self.assertEqual(sig.parameters["model"].default,
-                             rp.PROPOSER_MODEL, fn.__name__)
 
     def test_batch_config_defaults(self):
         defaults = {f.name: f.default

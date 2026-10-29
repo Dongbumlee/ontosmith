@@ -164,15 +164,12 @@ prerequisites, gathered in one place:
    a build needs; [Connections](https://github.com/Dongbumlee/ontosmith/blob/main/docs/connections.md)
    covers the seats it plugs into and the recommended
    models.
-2. **Install the NLP extra and its model** — for the
-   full local pipeline: `pip install "ontosmith[nlp]"`,
-   then `python -m spacy download en_core_web_sm`. The
-   extra is a heavy install — it pulls the CUDA torch
-   stack, several gigabytes — and it serves the
-   default candidate path; a build run with
-   `--candidate-source llm` (the hands-on Track 1
-   route) never loads GLiNER, so try that path first
-   if the download is a problem.
+2. **Nothing else to install** — candidates are
+   proposed by the proposer seat (a model call);
+   there is no local NLP stack. (A GLiNER+spaCy
+   pipeline candidate source and its `ontosmith[nlp]`
+   extra existed until 2026-10-29 and were retired —
+   the LLM proposer is the only candidate source.)
 3. **Neo4j running** — the build needs it: it is the
    graph store WRITE, INDEX, and VERIFY work in.
    Install it, set its password, and export

@@ -99,16 +99,9 @@ through :meth:`SeatBinding.require_key`, which raises
 :class:`BindingKeyError` naming the seat and the key
 variable when that variable is unset or empty — a
 declared-but-broken binding never quietly substitutes
-the preset's key or endpoint. The one availability-gated
-helper (the rer LLM fallback) keeps its documented
-no-key behavior only while the seat carries no user
-declaration; a declared seat with an unresolvable key
-refuses there too. The embedder seat has no fallback at
-all: an embedder use whose key cannot be
+the preset's key or endpoint. The embedder seat has no
+fallback at all: an embedder use whose key cannot be
 resolved refuses the same way, declared or not.
-
-Local seats (spaCy candidate structure, GLiNER NER) run
-on-device and take no binding.
 """
 from __future__ import annotations
 

@@ -39,7 +39,6 @@ from pipeline import (
     embedder,
     proposer,
     query_stack,
-    rer,
     setup_service,
 )
 from pipeline import (
@@ -182,14 +181,6 @@ class PresetCapture:
             self.chat_content = "chat-ok"
             snap("proposer._chat", lambda: proposer._chat(
                 "CONTENT-P", rp.PROPOSER_MODEL, 64, CAPTURE_KEY))
-
-            self.chat_content = ('[{"subject": "Alice", '
-                                 '"verb": "met", '
-                                 '"object": "Bob"}]')
-            snap("rer.extract_triples_llm_with_usage", lambda:
-                 rer.extract_triples_llm_with_usage(
-                     "Alice met Bob.", ["Alice", "Bob"],
-                     api_key=CAPTURE_KEY))
 
             self.decisions_answers = {"holds": {"noul": 0.42}}
             snap("decisions.validate_triple", lambda:
@@ -410,21 +401,6 @@ class TestRefusals(StubServerCase):
                 proposer._chat("x", rp.PROPOSER_MODEL, 8,
                                proposer.api_key())
 
-    def test_rer_declared_binding_missing_key_refuses(self):
-        with binding_env({
-                "ONTOSMITH_PROPOSER_BASE_URL": self.base,
-                "ONTOSMITH_PROPOSER_KEY_ENV": "STUB_MISSING_KEY"}):
-            with self.assertRaises(connections.BindingKeyError):
-                rer.extract_triples_llm_with_usage(
-                    "Alice met Bob.", ["Alice", "Bob"])
-
-    def test_rer_undeclared_keyless_keeps_availability_contract(self):
-        with binding_env():
-            triples, usage = rer.extract_triples_llm_with_usage(
-                "Alice met Bob.", ["Alice", "Bob"])
-        self.assertEqual(triples, [])
-        self.assertEqual(usage["cost"], 0.0)
-
     def test_embedder_declared_missing_key_refuses(self):
         with binding_env({
                 "ONTOSMITH_EMBEDDER_BASE_URL": self.base,
@@ -606,7 +582,7 @@ class TestBatchProvenanceStamp(unittest.TestCase):
             batch_id="stub-batch", source="test",
             profile=None, pack=None, max_cost_usd=None,
             frontier_escalation=False, escalation_band_lo=None,
-            escalation_band_hi=None, candidate_source="pipeline",
+            escalation_band_hi=None, candidate_source="llm",
             # The custom gateway binding is cost-less (portable
             # dialect, no declared rates): creating under a USD
             # cap would refuse by name, so this

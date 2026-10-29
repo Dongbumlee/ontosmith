@@ -90,11 +90,10 @@ class TestPyproject(unittest.TestCase):
                          ["numpy", "requests"])
         extras = proj["optional-dependencies"]
         self.assertEqual(extras["neo4j"], ["neo4j"])
-        self.assertIn("spacy", extras["nlp"])
-        # The batch NER stage hard-imports gliner on the
-        # default (pipeline) candidate path — the nlp extra
-        # is the surface that installs it.
-        self.assertIn("gliner", extras["nlp"])
+        # No "nlp" extra: the GLiNER+spaCy pipeline
+        # candidate source was retired 2026-10-29 — there
+        # is no local NER/RER surface left to install.
+        self.assertNotIn("nlp", extras)
         # No "embed" extra: there is no local
         # embedding path for an extra to install.
         self.assertNotIn("embed", extras)

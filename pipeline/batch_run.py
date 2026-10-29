@@ -7,7 +7,6 @@ from __future__ import annotations
 
 import hashlib
 import json
-import os
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import UTC, datetime
@@ -209,276 +208,46 @@ def stage_ingest(b: Batch, root: Path, doc_texts: dict[str, str],
     _log(b.batch_id, f"INGEST done: {len(seen)} unique docs")
 
 
-def _ner_chunks(text: str) -> list[str]:
-    """Chunk selection for NER: 2,000-char slices, at most 10 per doc.
-
-    Dispersed sampling (2026-10-12): the 10-chunk budget
-    is spread evenly across the whole document (first and last included)
-    instead of head-only [:10], which covered only ~14.4% of corpus
-    chars, all from document heads.
-    """
-    all_chunks = [text[j:j + 2000] for j in range(0, len(text), 2000)]
-    if len(all_chunks) > 10:
-        pick = sorted({round(k * (len(all_chunks) - 1) / 9)
-                       for k in range(10)})
-        return [all_chunks[i] for i in pick]
-    return all_chunks
-
-
-def _ner_env_fixes() -> None:
-    """Env fixes needed before GLiNER loads (also in worker processes)."""
-    os.environ.setdefault("HF_HUB_OFFLINE", "1")
-    # httpx.Client() parses no_proxy/NO_PROXY at construction; bracketed
-    # IPv6 entries like [::1] crash its URLPattern parser. Strip them.
-    for var in ("no_proxy", "NO_PROXY"):
-        val = os.environ.get(var, "")
-        if "[" in val:
-            os.environ[var] = ",".join(
-                p for p in val.split(",") if "[" not in p)
-
-
-def _predict_doc_entities(model, chunks: list[str], labels: list[str],
-                          stats: dict | None = None):
-    """Entities for one doc: batched prediction, per-chunk fallback.
-
-    Dedupes on (text.lower(), label), preserving first-seen order —
-    identical semantics to the original sequential loop.
-
-    Failure accounting: the batched-call
-    failure and every swallowed per-chunk failure increment
-    ``stats`` when one is passed — a chunk the model choked on
-    must not be indistinguishable from a chunk with no entities.
-    """
-    def _bump(field: str) -> None:
-        if stats is not None:
-            stats[field] = stats.get(field, 0) + 1
-
-    ents = []
-    try:
-        import warnings
-        with warnings.catch_warnings():
-            warnings.simplefilter("ignore")
-            per_chunk = model.batch_predict_entities(
-                chunks, labels, threshold=0.5)
-        for chunk_ents in per_chunk:
-            for e in chunk_ents:
-                ents.append({"text": e["text"], "label": e["label"],
-                             "score": round(e["score"], 3)})
-    except Exception:
-        _bump("ner_batch_predict_failures")
-        for ch in chunks:
-            try:
-                for e in model.predict_entities(ch, labels, threshold=0.5):
-                    ents.append({"text": e["text"], "label": e["label"],
-                                 "score": round(e["score"], 3)})
-            except Exception:
-                _bump("ner_chunk_failures")
-    seen, uniq = set(), []
-    for e in ents:
-        k = (e["text"].lower(), e["label"])
-        if k not in seen:
-            seen.add(k)
-            uniq.append(e)
-    return uniq
-
-
-_NER_WORKER_MODEL = None
-_NER_WORKER_LABELS = ["person", "organization", "location", "date", "event"]
-
-
-def _ner_worker_init(model_name: str) -> None:
-    global _NER_WORKER_MODEL
-    _ner_env_fixes()
-    from gliner import GLiNER
-    _NER_WORKER_MODEL = GLiNER.from_pretrained(model_name)
-
-
-def _ner_worker_doc(task):
-    """One doc in a worker process. Returns (doc_id, entities,
-    failed, stats): a doc whose prediction raised is reported as
-    failed with an empty entity list (the catch-all used
-    to return a bare [] indistinguishable from a doc that simply
-    has no entities, and the stage recorded neither)."""
-    doc_id, chunks = task
-    stats: dict = {}
-    try:
-        return doc_id, _predict_doc_entities(
-            _NER_WORKER_MODEL, chunks, _NER_WORKER_LABELS, stats), \
-            False, stats
-    except Exception:
-        return doc_id, [], True, stats
-
-
 def stage_ner(b: Batch, root: Path, stages: list[str]) -> None:
-    """NER: GLiNER over chunked text → ner.jsonl.
+    """NER stage — contract writer only since 2026-10-29.
 
-    Parallel across documents (JEV_NER_WORKERS worker processes, each
-    with its own GLiNER instance; default 2). The main process is the
-    single writer — workers return entities, appends stay ordered by
-    completion and resume semantics are unchanged. On many-core hosts
-    raise JEV_NER_WORKERS; each worker costs ~1 model of RAM.
-    """
-    _ner_env_fixes()
-    labels = list(_NER_WORKER_LABELS)
+    The GLiNER NER stage fed the retired pipeline candidate
+    source. The LLM proposer's guards attest by deterministic
+    text containment and never consult NER mentions, and the
+    document list comes from texts.jsonl — so the stage now
+    emits one empty-entity row per document, keeping the
+    ner.jsonl contract (registry/graph consumers read it
+    tolerantly) and resume semantics unchanged, and never
+    loads a local model. The stage name stays NER because
+    batch checkpoints record it."""
     d = batch_dir(root, b.batch_id)
     texts = {}
     with open(d / "texts.jsonl") as f:
         for line in f:
             r = json.loads(line)
             texts[r["doc_id"]] = r["text"]
-    if (b.config.candidate_source or "pipeline").lower() == "llm":
-        # GLiNER removed from the LLM path (ablation
-        # verdict): the proposer's guards attest by deterministic
-        # text containment and never consult NER mentions; GLiNER's
-        # only llm-path role was the document list, which
-        # texts.jsonl already provides. Emit one empty-entity row
-        # per doc so the ner.jsonl contract and resume semantics
-        # are unchanged, and never load the model. Pipeline/both
-        # sources are unaffected (they consume the mentions).
-        ner_path = d / "ner.jsonl"
-        have = set()
-        if ner_path.exists():
-            for line in ner_path.read_text().splitlines():
-                try:
-                    have.add(json.loads(line)["doc_id"])
-                except Exception:
-                    break
-        with open(ner_path, "a") as out:
-            for doc_id in texts:
-                if doc_id not in have:
-                    out.write(json.dumps({"doc_id": doc_id,
-                                          "entities": []}) + "\n")
-        b.metrics["ner"] = {"entities": 0, "entities_per_doc": 0.0,
-                            "seconds": 0.0, "workers": 0,
-                            "gliner_skipped_llm_path": True}
-        _record_cost(b, "NER", 0.0)
-        save_batch(b, root)
-        advance(b, root, [*stages, "NER"])
-        _log(b.batch_id, "NER: GLiNER skipped (candidate_source=llm; "
-                         "removed from the LLM path)")
-        return
-    total_ents = 0
-    t0 = time.perf_counter()
-    # Resume support: a killed NER stage previously lost all
-    # completed docs. Keep valid lines, drop a possibly truncated
-    # tail line, skip finished doc_ids.
     ner_path = d / "ner.jsonl"
-    done_ids = set()
+    have = set()
     if ner_path.exists():
-        good = []
         for line in ner_path.read_text().splitlines():
             try:
-                rec = json.loads(line)
-                done_ids.add(rec["doc_id"])
-                good.append(line)
-                total_ents += len(rec.get("entities", []))
+                have.add(json.loads(line)["doc_id"])
             except Exception:
                 break
-        ner_path.write_text("".join(l + "\n" for l in good))
-        if done_ids:
-            _log(b.batch_id, f"NER: resuming, {len(done_ids)} docs already done")
-    todo = [(doc_id, _ner_chunks(text)) for doc_id, text in texts.items()
-            if doc_id not in done_ids]
-    workers = max(1, int(os.environ.get("JEV_NER_WORKERS", "2")))
-    done_count = len(done_ids)
-
-    def _emit(out, doc_id, uniq):
-        nonlocal total_ents, done_count
-        total_ents += len(uniq)
-        done_count += 1
-        out.write(json.dumps({"doc_id": doc_id, "entities": uniq}) + "\n")
-        out.flush()
-        if done_count % 10 == 0:
-            _log(b.batch_id, f"NER: {done_count}/{len(texts)} docs")
-            _beat(b, root, "NER", done_count, len(texts))
-
-    ner_stats: dict = {}
-    ner_failed_docs = 0
     with open(ner_path, "a") as out:
-        if workers <= 1 or len(todo) <= 1:
-            _log(b.batch_id, "NER: loading GLiNER")
-            from gliner import GLiNER
-            model = GLiNER.from_pretrained(b.config.ner_model)
-            for doc_id, chunks in todo:
-                _emit(out, doc_id, _predict_doc_entities(
-                    model, chunks, labels, ner_stats))
-        else:
-            _log(b.batch_id, f"NER: {workers} worker processes")
-            import multiprocessing as mp
-            from concurrent.futures import ProcessPoolExecutor
-            ctx = mp.get_context("spawn")
-            with ProcessPoolExecutor(
-                    max_workers=workers, mp_context=ctx,
-                    initializer=_ner_worker_init,
-                    initargs=(b.config.ner_model,)) as ex:
-                futs = {ex.submit(_ner_worker_doc, t): t[0] for t in todo}
-                for fut in as_completed(futs):
-                    doc_id, uniq, failed, wstats = fut.result()
-                    for k, v in wstats.items():
-                        ner_stats[k] = ner_stats.get(k, 0) + v
-                    if failed:
-                        ner_failed_docs += 1
-                    _emit(out, doc_id, uniq)
-    dt = time.perf_counter() - t0
-    b.metrics["ner"] = {"entities": total_ents,
-                        "entities_per_doc": round(total_ents / max(len(texts), 1), 1),
-                        "seconds": round(dt, 1),
-                        "workers": workers,
-                        "failed_docs": ner_failed_docs,
-                        "chunk_failures": ner_stats.get(
-                            "ner_chunk_failures", 0),
-                        "batch_predict_failures": ner_stats.get(
-                            "ner_batch_predict_failures", 0)}
-    _record_cost(b, "NER", 0.0)  # local GLiNER inference, no API spend
+        for doc_id in texts:
+            if doc_id not in have:
+                out.write(json.dumps({"doc_id": doc_id,
+                                      "entities": []}) + "\n")
+    b.metrics["ner"] = {"entities": 0, "entities_per_doc": 0.0,
+                        "seconds": 0.0, "workers": 0,
+                        "gliner_retired": True}
+    _record_cost(b, "NER", 0.0)
     save_batch(b, root)
     advance(b, root, [*stages, "NER"])
-    _log(b.batch_id, f"NER done: {total_ents} entities")
-
-def _split_sentences(text: str) -> list[str]:
-    """Simple sentence splitter. Good enough for candidate context."""
-    import re
-    # Split on sentence boundaries, keep the delimiter
-    parts = re.split(r'(?<=[.!?])\s+', text)
-    return [p.strip() for p in parts if len(p.strip()) > 20]
-
-
-# Common nouns that NER sometimes mislabels as entities.
-# These are not named entities and should not become graph nodes.
-_STOP_ENTITIES = frozenset([
-    "man", "woman", "person", "people", "child", "boy", "girl",
-    "president", "director", "agent", "officer", "member",
-    "government", "committee", "party", "group",
-    "city", "country", "state", "nation",
-    "year", "month", "day", "time",
-    "p", "a", "i",  # single letters from OCR
-])
-
-
-def _is_valid_entity(text: str) -> bool:
-    """Filter out OCR garbage and common nouns before candidate generation.
-
-    Design (2026-10-11): entity quality gate at CANDIDATES stage.
-    The pipeline doesn't clean input (§10.3), but it shouldn't waste gate
-    judgments on obvious non-entities either.
-    """
-    import re
-    t = text.strip()
-    # Too short (but allow 2-char acronyms like UN, US, UK)
-    if len(t) < 2:
-        return False
-    if len(t) == 2 and not (t.isupper() or t.lower() in ("us", "uk", "un", "eu")):
-        return False
-    # Common noun mislabeled as entity
-    if t.lower() in _STOP_ENTITIES:
-        return False
-    # OCR garbage: excessive internal whitespace
-    if re.search(r'\s{3,}', t):
-        return False
-    # OCR garbage: mostly non-alphabetic
-    alpha = sum(1 for c in t if c.isalpha())
-    if alpha < len(t) * 0.5:
-        return False
-    return True
+    _log(b.batch_id, "NER: contract rows written (GLiNER retired "
+                     "2026-10-29; the LLM proposer is the only "
+                     "candidate source)")
 
 
 def _per_doc_distribution(candidates: list[dict],
@@ -500,31 +269,28 @@ def _per_doc_distribution(candidates: list[dict],
 
 
 def stage_candidates(b: Batch, root: Path, stages: list[str]) -> None:
-    """CANDIDATES: RER-based triple extraction → candidates.
+    """CANDIDATES: LLM proposer → candidates.
 
-    Design evolution (2026-10-11):
-    - v1: document-level pairing (mechanical co-occurrence)
-    - v2: sentence-level pairing (contextual, but relation=associated_with)
-    - v3: RER via spaCy — extract actual verb as relation.
-    - v4 (current): Hybrid RER — spaCy → LLM (DeepSeek) → v2 pairing.
-      LLM fallback handles OCR-noisy text where spaCy fails.
+    The LLM proposer (pipeline/proposer.py) is the only
+    candidate source: free triples plus clause slots where
+    the profile declares categories, with the profile's
+    pair-enumeration / entity-sweep / mention channels as
+    declared — every channel through the one guard funnel
+    (deterministic span/attestation/identity guards at
+    proposal time), Jev gates judging downstream as usual.
 
-    The verb becomes the relation. Jev still validates.
-
-    Candidate source (config.candidate_source):
-    - "pipeline": the RER hybrid above, unchanged.
-    - "llm": the LLM proposer only (pipeline/proposer.py) — free
-      triples plus clause slots where the profile declares
-      categories; deterministic span/attestation guards at
-      proposal time, Jev gates judge downstream as usual.
-    - "both": union of the two, deduped on the normalized key.
+    The GLiNER+spaCy pipeline source ("pipeline" / "both")
+    was retired 2026-10-29 (unmeasured, English-bound,
+    separate identity discipline); run_batch refuses those
+    config values by name before any stage runs, and this
+    stage refuses them again for direct callers.
     """
-    source = (b.config.candidate_source or "pipeline").lower()
-    if source not in ("pipeline", "llm", "both"):
-        raise ValueError(f"unknown candidate_source: {source!r}")
-    use_pipeline = source in ("pipeline", "both")
-    use_llm = source in ("llm", "both")
-    setup_cfg = _load_setup_config(b, root) if use_llm else None
+    source = (b.config.candidate_source or "llm").lower()
+    if source != "llm":
+        raise ValueError(
+            f"candidate_source {source!r} was retired 2026-10-29: "
+            "the LLM proposer is the only candidate source")
+    setup_cfg = _load_setup_config(b, root)
     slot_categories = list((setup_cfg or {}).get(
         "label_categories") or [])
     # The role-word guard vocabulary is pack data,
@@ -552,22 +318,19 @@ def stage_candidates(b: Batch, root: Path, stages: list[str]) -> None:
         slot_framing,
         slot_rules,
     )
-    guidance = derive_guidance(setup_cfg) if use_llm else ""
-    endpoint_types = endpoint_type_names(setup_cfg) if use_llm \
-        else set()
+    guidance = derive_guidance(setup_cfg)
+    endpoint_types = endpoint_type_names(setup_cfg)
     # The free proposer's per-chunk proposal ceiling: the
     # profile may declare its own (proposer_max_per_chunk);
     # absent a declaration the core default applies and the
     # prompt is byte-identical to the pre-#52 recipe.
-    proposer_cap = proposer_max_per_chunk(setup_cfg) if use_llm \
-        else None
+    proposer_cap = proposer_max_per_chunk(setup_cfg)
     # The mention layer (issue #54): the profile's
     # declaration switches the free proposer to the mention
     # prompt variant and the guards to span verification;
     # absent = off and this stage is byte-identical to the
     # pre-layer behavior.
-    mention_on = mention_layer_enabled(setup_cfg) if use_llm \
-        else False
+    mention_on = mention_layer_enabled(setup_cfg)
     if mention_on:
         _log(b.batch_id,
              "CANDIDATES: mention layer ON (mention spans + "
@@ -580,8 +343,7 @@ def stage_candidates(b: Batch, root: Path, stages: list[str]) -> None:
     # appends candidates for entities the chunk pass never
     # proposed an endpoint for. Absent = off and this stage
     # is byte-identical to the pre-sweep behavior.
-    sweep_on = entity_sweep_enabled(setup_cfg) if use_llm \
-        else False
+    sweep_on = entity_sweep_enabled(setup_cfg)
     if sweep_on:
         _log(b.batch_id,
              "CANDIDATES: entity sweep ON (census anchors "
@@ -592,37 +354,20 @@ def stage_candidates(b: Batch, root: Path, stages: list[str]) -> None:
     # for the proposer / pair-judge base templates, threaded as
     # data; None (profile declares none) selects the builders'
     # domain-neutral core defaults.
-    triple_framing = proposer_framing(setup_cfg) if use_llm \
-        else None
-    clause_framing = slot_framing(setup_cfg) if use_llm else None
-    clause_rules = slot_rules(setup_cfg) if use_llm else None
+    triple_framing = proposer_framing(setup_cfg)
+    clause_framing = slot_framing(setup_cfg)
+    clause_rules = slot_rules(setup_cfg)
     pair_generic_relation = pair_judge_generic_relation(
-        setup_cfg) if use_llm else None
-    if use_llm:
+        setup_cfg)
+    _log(b.batch_id,
+         f"CANDIDATES: LLM proposer (model={b.config.llm_model}, "
+         f"slot categories={len(slot_categories)}, "
+         f"role-word guard={'on' if role_words else 'off'})")
+    if guidance:
         _log(b.batch_id,
-             f"CANDIDATES: LLM proposer (model={b.config.llm_model}, "
-             f"slot categories={len(slot_categories)}, "
-             f"role-word guard={'on' if role_words else 'off'})")
-        if guidance:
-            _log(b.batch_id,
-                 f"CANDIDATES: profile guidance active "
-                 f"({len(guidance)} chars); endpoint types "
-                 f"validated against {sorted(endpoint_types)}")
-    nlp = None
-    if use_pipeline:
-        import spacy
-
-        from .rer import (
-            extract_triples,
-            extract_triples_constrained,
-            extract_triples_llm_with_usage,
-        )
-        try:
-            nlp = spacy.load("en_core_web_sm")
-        except OSError:
-            nlp = None
-            _log(b.batch_id,
-                 "CANDIDATES: spaCy model not found, using fallback")
+             f"CANDIDATES: profile guidance active "
+             f"({len(guidance)} chars); endpoint types "
+             f"validated against {sorted(endpoint_types)}")
 
     d = batch_dir(root, b.batch_id)
     texts = {}
@@ -641,7 +386,7 @@ def stage_candidates(b: Batch, root: Path, stages: list[str]) -> None:
     # roster.jsonl otherwise. Switch absent/off -> this
     # block is inert and candidate construction is byte-identical
     # to the pre-branch behavior (pinned by the wiring tests).
-    pair_enum = bool(use_llm and setup_cfg
+    pair_enum = bool(setup_cfg
                      and setup_cfg.get("pair_enumeration"))
     pair_window = (setup_cfg or {}).get("pair_window") or "sentence"
     # Pair guard relaxations: profile-selected,
@@ -752,17 +497,9 @@ def stage_candidates(b: Batch, root: Path, stages: list[str]) -> None:
                  f"set: {symmetric_src['n_symmetric']} relations "
                  f"from {symmetric_src['path']}, sha256 "
                  f"{symmetric_src['sha256'][:12]}…)")
-    # NER mentions feed only the pipeline pairing phases; the LLM
-    # proposer never consults them. For llm-only
-    # batches the document list comes from texts.jsonl and
-    # ner.jsonl is not read at all.
-    ner_data = {}
-    if use_pipeline:
-        with open(d / "ner.jsonl") as f:
-            for line in f:
-                r = json.loads(line)
-                ner_data[r["doc_id"]] = r["entities"]
-
+    # The document list comes from texts.jsonl; the LLM
+    # proposer never consults NER mentions (ner.jsonl is a
+    # contract artifact since the pipeline source retired).
     candidates = []
     blocked_all = []  # Arm-B C3-blocked records (killed-set audit sidecar)
     # Verdict sidecar:
@@ -771,7 +508,6 @@ def stage_candidates(b: Batch, root: Path, stages: list[str]) -> None:
     # accounting is reproducible from artifacts alone.
     pair_verdicts: list[dict] = []
     pair_verdicts_consistent = True
-    llm_cost = 0.0  # LLM-fallback spend, summed across docs
     # Proposer spend/stats. Persisted in the checkpoint so a
     # resumed run keeps the true totals (unlike the fallback above).
     proposer_cost = 0.0
@@ -802,18 +538,9 @@ def stage_candidates(b: Batch, root: Path, stages: list[str]) -> None:
                    "windows_dropped": 0,
                    "census_entities": 0, "census_extracted": 0,
                    "census_unattested": 0}
-    # Silent-path counters: the stage's
-    # swallowed failures are counted and stamped into the stage
-    # metrics — per-doc candidate-cap hits, Phase-2 worker
-    # exceptions, RER-LLM fallback failures (delta of rer's call
-    # stats over this stage), and a corrupted-checkpoint reset.
-    cand_counters = {"cap_docs": 0, "cap_dropped": 0,
-                     "llm_worker_errors": 0}
+    # A corrupted-checkpoint reset is stamped into the stage
+    # metrics below (ckpt_reset) — never silent.
     ckpt_reset: dict | None = None
-    from . import rer as _rer_mod
-    rer_stats0 = _rer_mod.llm_call_stats()
-    rer_env = {"JEV_RER_V2": os.environ.get("JEV_RER_V2") == "1",
-               "JEV_RER_LLM": os.environ.get("JEV_RER_LLM") == "1"}
     # Checkpoint for resume: track processed doc_ids
     ckpt_path = d / "candidates.ckpt.json"
     done_docs = set()
@@ -874,146 +601,20 @@ def stage_candidates(b: Batch, root: Path, stages: list[str]) -> None:
                  f"unreadable ({ckpt_reset['error']}); resume "
                  f"state reset — stage restarts from scratch")
 
-    doc_ids = list(ner_data.keys()) if use_pipeline \
-        else list(texts.keys())
+    doc_ids = list(texts.keys())
     _beat(b, root, "CANDIDATES", len(done_docs), len(doc_ids))
     for idx, doc_id in enumerate(doc_ids):
         if doc_id in done_docs:
             continue
-        ents = ner_data.get(doc_id, [])
         text = texts[doc_id]
-        sentences = _split_sentences(text)
-        # Filter entities by quality BEFORE pairing
-        persons = [e["text"] for e in ents
-                   if e["label"] == "person" and _is_valid_entity(e["text"])]
-        orgs = [e["text"] for e in ents
-                if e["label"] == "organization" and _is_valid_entity(e["text"])]
-        locs = [e["text"] for e in ents
-                if e["label"] == "location" and _is_valid_entity(e["text"])]
-        all_ents = persons + orgs + locs
-        seen = set()
-        doc_cands = []
         doc_blocked = []
-
-        def _match(ent_text, all_ents):
-            return next((e for e in all_ents
-                         if ent_text.lower() in e.lower() or e.lower() in ent_text.lower()),
-                        None)
-
-        def _add(subj, verb, obj, sent, method, extra=None):
-            subj_ent = _match(subj, all_ents)
-            obj_ent = _match(obj, all_ents)
-            if subj_ent and obj_ent and subj_ent.lower() != obj_ent.lower():
-                k = (subj_ent.lower(), verb.lower(), obj_ent.lower())
-                if k not in seen:
-                    seen.add(k)
-                    rec = {
-                        "doc_id": doc_id, "subject": subj_ent,
-                        "relation": verb, "object": obj_ent,
-                        "context": sent, "method": method,
-                    }
-                    if extra:
-                        rec.update(extra)
-                    doc_cands.append(rec)
-                    return True
-            return False
-
-        # Phase 1: spaCy on all sentences (fast, local). Queue LLM for failures.
-        # Arm B (JEV_RER_V2=1): structure-constrained extractor — candidates
-        # carry C7 provenance + C4 asserted flag; C3-blocked triples go to the
-        # batch-level blocked list (killed-set audit sidecar).
-        use_v2 = os.environ.get("JEV_RER_V2") == "1"
-        llm_queue = []  # (sent, s_ents)
-        sent_state = {}  # sent index -> rer_found
-        for si, sent in enumerate(sentences if use_pipeline else []):
-            sent_low = sent.lower()
-            rer_found = False
-            if nlp and use_v2:
-                kept, blocked = extract_triples_constrained(sent, nlp)
-                for t in kept:
-                    extra = {"path": t["obj_binding"],
-                             "subj_source": t["subj_source"],
-                             "asserted": t["asserted"]}
-                    if _add(t["subject"], t["verb"], t["object"], sent,
-                            "rer", extra):
-                        rer_found = True
-                for bl in blocked:
-                    subj_ent = _match(bl["subject"], all_ents)
-                    obj_ent = _match(bl["object"], all_ents)
-                    if subj_ent and obj_ent and \
-                            subj_ent.lower() != obj_ent.lower():
-                        doc_blocked.append({
-                            "doc_id": doc_id, "subject": subj_ent,
-                            "relation": bl["verb"], "object": obj_ent,
-                            "context": sent, "method": "rer",
-                            "reason": bl["reason"],
-                        })
-            elif nlp:
-                for subj, verb, obj in extract_triples(sent, nlp):
-                    if _add(subj, verb, obj, sent, "rer"):
-                        rer_found = True
-            sent_state[si] = rer_found
-            if not rer_found and os.environ.get("JEV_RER_LLM") == "1":
-                s_ents = [e for e in all_ents if e.lower() in sent_low][:10]
-                if len(s_ents) >= 2:
-                    llm_queue.append((si, sent, s_ents))
-
-        # Phase 2: LLM fallback in PARALLEL (16 workers).
-        if llm_queue:
-            from concurrent.futures import ThreadPoolExecutor, as_completed
-            def _llm_job(item):
-                si, sent, s_ents = item
-                return si, sent, extract_triples_llm_with_usage(
-                    sent, s_ents, model=b.config.llm_model)
-            with ThreadPoolExecutor(max_workers=16) as ex:
-                for fut in as_completed([ex.submit(_llm_job, it) for it in llm_queue]):
-                    try:
-                        si, sent, (triples, usage) = fut.result()
-                    except Exception:
-                        # A dead worker used to vanish silently:
-                        # its sentence simply got no
-                        # LLM pass. Counted in the stage metrics.
-                        cand_counters["llm_worker_errors"] += 1
-                        continue
-                    llm_cost = _conn_add_cost(
-                        llm_cost, usage.get("cost", 0.0))
-                    for subj, verb, obj in triples:
-                        if _add(subj, verb, obj, sent, "rer-llm"):
-                            sent_state[si] = True
-
-        # Phase 3: pair fallback for sentences where RER found nothing.
-        for si, sent in enumerate(sentences if use_pipeline else []):
-            if sent_state.get(si):
-                continue
-            sent_low = sent.lower()
-            s_persons = [p for p in persons if p.lower() in sent_low]
-            s_orgs = [o for o in orgs if o.lower() in sent_low]
-            s_locs = [l for l in locs if l.lower() in sent_low]
-            for p in s_persons[:4]:
-                for l in s_locs[:3]:
-                    r = "associated_with"
-                    k = (p.lower(), r, l.lower(), sent[:80])
-                    if k not in seen and p.lower() != l.lower():
-                        seen.add(k)
-                        doc_cands.append({"doc_id": doc_id, "subject": p,
-                                          "relation": r, "object": l,
-                                          "context": sent, "method": "pair"})
-                for o in s_orgs[:3]:
-                    r = "associated_with"
-                    k = (p.lower(), r, o.lower(), sent[:80])
-                    if k not in seen and p.lower() != o.lower():
-                        seen.add(k)
-                        doc_cands.append({"doc_id": doc_id, "subject": p,
-                                          "relation": r, "object": o,
-                                          "context": sent, "method": "pair"})
         # LLM proposer — free triples + clause slots.
         # Proposals pass the deterministic guards in pipeline/proposer.py;
         # survivors become candidates judged by Jev at GATES (no score
-        # is assigned here). The pipeline per-doc cap (40) does NOT
-        # apply to proposer candidates: their bound is the recipe's
-        # per-chunk cap, as in the measured standalone path.
+        # is assigned here). Proposer candidates are bounded by the
+        # recipe's per-chunk cap, as in the measured standalone path.
         doc_llm = []
-        if use_llm and pair_enum:
+        if pair_enum:
             # Pair-enumeration: the roster
             # pair census replaces the free proposer. Same guard,
             # same candidate-record discipline (the guard output
@@ -1084,7 +685,7 @@ def stage_candidates(b: Batch, root: Path, stages: list[str]) -> None:
                     if bl.get(tk):
                         rec[tk] = bl[tk]
                 doc_blocked.append(rec)
-        if use_llm and not pair_enum:
+        if not pair_enum:
             from . import connections as _conn
             from . import proposer as _prop
             # Named refusal (BindingKeyError) — see the pair-enum
@@ -1348,26 +949,6 @@ def stage_candidates(b: Batch, root: Path, stages: list[str]) -> None:
                         "context": _prop.quote_window(text, bl["quote"]),
                         "method": "clause-llm", "quote": bl["quote"],
                         "reason": bl["reason"]})
-        if len(doc_cands) > 40:
-            # The per-doc pipeline cap (40) truncates silently by
-            # design of the slice; the truncation itself is
-            # counted so a capped doc is visible in the
-            # stage metrics instead of just producing fewer
-            # candidates.
-            cand_counters["cap_docs"] += 1
-            cand_counters["cap_dropped"] += len(doc_cands) - 40
-        capped = doc_cands[:40]
-        if use_pipeline and doc_llm:
-            # "both": one candidacy per normalized (s, r, o) — the
-            # pipeline record wins (it carries the C7 fields Arm C
-            # consumes); proposer duplicates are dropped here.
-            from .proposer import norm_ws as _nws
-            pipe_keys = {(_nws(c["subject"]), _nws(c["relation"]),
-                          _nws(c["object"])) for c in capped}
-            doc_llm = [c for c in doc_llm
-                       if (_nws(c["subject"]), _nws(c["relation"]),
-                           _nws(c["object"])) not in pipe_keys]
-        candidates.extend(capped)
         candidates.extend(doc_llm)
         blocked_all.extend(doc_blocked)
         # Checkpoint: save progress after each doc
@@ -1430,8 +1011,6 @@ def stage_candidates(b: Batch, root: Path, stages: list[str]) -> None:
     if ckpt_path.exists():
         ckpt_path.unlink()
     # Metrics by method
-    rer_n = sum(1 for c in candidates if c.get("method") in ("rer", "rer-llm"))
-    llm_n = sum(1 for c in candidates if c.get("method") == "rer-llm")
     by_method: dict[str, int] = {}
     for c in candidates:
         by_method[c.get("method", "?")] = \
@@ -1441,31 +1020,12 @@ def stage_candidates(b: Batch, root: Path, stages: list[str]) -> None:
         blocked_reasons[bl.get("reason", "?")] = \
             blocked_reasons.get(bl.get("reason", "?"), 0) + 1
     b.metrics["candidates"] = {
-        "total": len(candidates), "rer": rer_n,
-        "rer_llm": llm_n,
-        "pair": len(candidates) - rer_n
-        - by_method.get("llm", 0) - by_method.get("clause-llm", 0),
-        "rer_llm_cost_usd": _round_cost(llm_cost),
+        "total": len(candidates),
         "source": source, "by_method": by_method,
         "blocked": len(blocked_all), "blocked_reasons": blocked_reasons,
         "proposer": {**proposer_stats,
                      "cost_usd": _round_cost(proposer_cost),
                      "model": b.config.llm_model}}
-    # Silent-path counters: see the cand_counters init.
-    rer_stats1 = _rer_mod.llm_call_stats()
-    b.metrics["candidates"]["rer_llm_calls"] = {
-        "attempts": rer_stats1["attempts"] - rer_stats0["attempts"],
-        "failures": rer_stats1["failures"] - rer_stats0["failures"]}
-    b.metrics["candidates"]["llm_worker_errors"] = \
-        cand_counters["llm_worker_errors"]
-    b.metrics["candidates"]["candidate_cap"] = {
-        "cap": 40, "docs_capped": cand_counters["cap_docs"],
-        "candidates_dropped": cand_counters["cap_dropped"]}
-    if rer_env["JEV_RER_V2"] or rer_env["JEV_RER_LLM"]:
-        # The env toggles change extraction behavior; when either
-        # is active the metrics say so (a rerun under different
-        # toggles must not be indistinguishable from the default).
-        b.metrics["candidates"]["rer_env"] = rer_env
     if ckpt_reset is not None:
         b.metrics["candidates"]["checkpoint_reset"] = ckpt_reset
     if pair_enum:
@@ -1490,15 +1050,12 @@ def stage_candidates(b: Batch, root: Path, stages: list[str]) -> None:
         b.metrics["candidates"]["sweep"] = {
             **sweep_stats,
             "cost_usd": _round_cost(sweep_cost)}
-    # Ledger: the stage's actual API spend (usage is returned
-    # by extract_triples_llm_with_usage for the fallback and by the
-    # proposer for its calls, and summed above). spaCy/pair paths
-    # are local and cost 0. Caveat: on a resumed run, FALLBACK spend
-    # from the crashed session is NOT re-counted (checkpointed docs
-    # are skipped; no durable per-call record exists for it, unlike
-    # GATES' queue results). Proposer spend IS checkpointed (above).
+    # Ledger: the stage's actual API spend is the proposer's
+    # (usage returned per call and summed above). Proposer
+    # spend IS checkpointed (above), so a resumed run keeps
+    # the true total.
     _record_cost(b, "CANDIDATES",
-                 _round_cost(_conn_add_cost(llm_cost, proposer_cost)))
+                 _round_cost(_conn_add_cost(0.0, proposer_cost)))
     # Extraction density, reported (issue #52): the
     # per-document distribution over every built document,
     # and — for the free proposer — how many chunks reached
@@ -2939,8 +2496,10 @@ def _preflight_bindings(b: Batch, stages: list[str],
     and its own call site raises the same named error.
     """
     from . import connections as _conn
-    source = (b.config.candidate_source or "pipeline").lower()
-    if "CANDIDATES" not in stages and source in ("llm", "both"):
+    # The proposer is the only candidate source (the pipeline
+    # source was retired 2026-10-29), so a pending CANDIDATES
+    # always needs its key.
+    if "CANDIDATES" not in stages:
         _conn.seat("proposer").require_key()
     if live_decide and "GATES" not in stages:
         _conn.seat("judge").require_key()
@@ -3305,6 +2864,20 @@ def run_batch(b: Batch, root: Path, doc_texts: dict[str, str] | None,
                 "run_id": b.run_id, "code_version": ver,
                 "at": datetime.now(UTC).isoformat()})
         save_batch(b, root)
+    # Candidate-source gate (before the try, same placement
+    # rule as the preflights): the GLiNER+spaCy pipeline
+    # source was retired 2026-10-29 — the LLM proposer is
+    # the only candidate source. A stored batch still
+    # naming "pipeline" / "both" refuses by name here
+    # rather than silently running a different builder
+    # than its config states.
+    _src = (b.config.candidate_source or "llm").lower()
+    if _src != "llm":
+        raise ValueError(
+            f"candidate_source {_src!r} was retired 2026-10-29: "
+            "the LLM proposer is the only candidate source "
+            "(the GLiNER+spaCy pipeline source is removed). "
+            "Set candidate_source to 'llm'.")
     # Preflight (before the try, so a refusal leaves the batch
     # un-failed and un-started): pending stages' seats must have
     # their keys, or the run refuses with BindingKeyError here.
