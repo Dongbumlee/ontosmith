@@ -281,7 +281,7 @@ def ontology_judge(
     b: str,
     model: str = JUDGE_MODEL,
     timeout: int = 60,
-) -> tuple[float, float, dict]:
+) -> tuple[float, dict]:
     """noul gate: should this axiom be admitted to the ontology?
 
     axiom: subclass | disjoint | domain | range.

@@ -98,15 +98,12 @@ INSTALL_ANCHORS: tuple[str, ...] = (
 # master text must occur EXACTLY once in the master.
 SUBSTITUTIONS: tuple[tuple[str, str], ...] = (
     (
-        "Optional surfaces install as extras: `pip install .[nlp]`\n"
-        "(the pipeline candidate path's local NER), `.[viz]`.\n"
+        "Optional surfaces install as extras: `pip install .[viz]`.\n"
         "(The `.[neo4j]` extra installs the official driver the\n"
         "export utilities use; the build itself talks to Neo4j\n"
         "over HTTP and needs the server, not the extra.)",
         "Optional surfaces install as extras:\n"
-        '`pip install "ontosmith[nlp]"`\n'
-        "(the pipeline candidate path's local NER),\n"
-        '`"ontosmith[viz]"`.\n'
+        '`pip install "ontosmith[viz]"`.\n'
         '(The `"ontosmith[neo4j]"` extra installs the official\n'
         "driver the export utilities use; the build itself talks\n"
         "to Neo4j over HTTP and needs the server, not the extra.)",

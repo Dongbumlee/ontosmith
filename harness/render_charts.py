@@ -314,8 +314,8 @@ def render_pipeline_flow(out: Path) -> Path:
 
     stages = [
         ("INGEST", "documents +\nprofile frozen"),
-        ("NER", "entity roster\n(mentions)"),
-        ("CANDIDATES", "pairs enumerated\nmax_dist=1 + REC"),
+        ("NER", "contract rows only\n(local NER retired)"),
+        ("CANDIDATES", "LLM proposer\n(the only source)"),
         ("GATES", "Jev gates + judge\np_true score"),
         ("ROUTE", "tier by p_true\n(branches below)"),
         ("WRITE", "Tier-1 → registry\nsource of truth"),

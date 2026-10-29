@@ -107,6 +107,68 @@ def load_records(args) -> list[dict]:
     return [r for r in recs if args.p_lo <= r.get("p_true", -1) <= args.p_hi]
 
 
+def case_key(rec: dict) -> tuple:
+    """A review case's identity: the triple, not just its
+    document. Two band cases from one document are distinct
+    triples; keying resume/undo on doc_id alone silently
+    retired a document's second case (never shown, never
+    recorded) and made undo jump to the first case sharing
+    the doc_id, possibly a different triple."""
+    return (rec.get("doc_id", ""), rec.get("subject", ""),
+            rec.get("relation", ""), rec.get("object", ""))
+
+
+def load_seen(out_path: str) -> tuple[set, set, int]:
+    """(case keys, legacy doc_ids, row count) from an
+    existing labels file. Rows written before case keys
+    existed carry only doc_id: they still suppress their
+    whole document (the data cannot say which of its cases
+    they covered). Rows written now carry the full key and
+    suppress exactly one case."""
+    keys: set = set()
+    legacy_docs: set = set()
+    n = 0
+    if os.path.exists(out_path):
+        for line in open(out_path, encoding="utf-8"):
+            if not line.strip():
+                continue
+            row = json.loads(line)
+            n += 1
+            if "subject" in row:
+                keys.add(case_key(row))
+            else:
+                legacy_docs.add(row.get("doc_id", ""))
+    return keys, legacy_docs, n
+
+
+def is_labeled(rec: dict, keys: set, legacy_docs: set) -> bool:
+    """True when a case is already labeled: by its full
+    case key, or by a legacy doc_id-only row for its
+    document."""
+    return case_key(rec) in keys \
+        or rec.get("doc_id", "") in legacy_docs
+
+
+def find_case_index(cases: list[dict], label: dict) -> int | None:
+    """Index of the case a label belongs to (undo target):
+    the exact triple, never just the first case sharing
+    its doc_id."""
+    key = case_key(label)
+    for j, t in enumerate(cases):
+        if case_key(t) == key:
+            return j
+    return None
+
+
+def _label_row(r: dict, label, pass_no: int, **extra) -> dict:
+    """One written label row: carries the full case key so
+    resume and undo can tell same-document cases apart."""
+    return {"doc_id": r["doc_id"], "subject": r.get("subject"),
+            "relation": r.get("relation"),
+            "object": r.get("object"), "label": label,
+            "p_true": r.get("p_true"), "pass": pass_no, **extra}
+
+
 def main() -> None:
     ap = argparse.ArgumentParser(prog="ontosmith review")
     ap.add_argument("--input", required=True, help="scored run JSON")
@@ -123,15 +185,13 @@ def main() -> None:
         print("No review-band cases found.")
         return
 
-    # resume: skip already-labeled doc_ids
-    seen: set[str] = set()
-    if os.path.exists(args.out):
-        for line in open(args.out, encoding="utf-8"):
-            if line.strip():
-                seen.add(json.loads(line)["doc_id"])
-        print(f"{DIM}Resuming: {len(seen)} already labeled.{RESET}")
+    # resume: skip already-labeled cases — by full case key;
+    # legacy doc_id-only rows suppress their whole document
+    seen_keys, seen_docs, n_seen = load_seen(args.out)
+    if n_seen:
+        print(f"{DIM}Resuming: {n_seen} already labeled.{RESET}")
 
-    todo = [r for r in recs if r["doc_id"] not in seen]
+    todo = [r for r in recs if not is_labeled(r, seen_keys, seen_docs)]
     labels: list[dict] = []
     skipped: list[dict] = []
     quit_early = False
@@ -164,19 +224,16 @@ def main() -> None:
                     ans = "q"
                     print()
                 if ans in ("y", "yes"):
-                    labels.append({"doc_id": r["doc_id"], "label": 1,
-                                   "p_true": r.get("p_true"), "pass": pass_no})
+                    labels.append(_label_row(r, 1, pass_no))
                     idx += 1
                     break
                 elif ans in ("n", "no"):
-                    labels.append({"doc_id": r["doc_id"], "label": 0,
-                                   "p_true": r.get("p_true"), "pass": pass_no})
+                    labels.append(_label_row(r, 0, pass_no))
                     idx += 1
                     break
                 elif ans in ("a", "abstain"):
-                    labels.append({"doc_id": r["doc_id"], "label": None,
-                                   "p_true": r.get("p_true"), "pass": pass_no,
-                                   "abstained": True})
+                    labels.append(_label_row(r, None, pass_no,
+                                             abstained=True))
                     print(f"  {YELLOW}Marked as unjudgeable → separate queue.{RESET}")
                     idx += 1
                     break
@@ -188,10 +245,9 @@ def main() -> None:
                     if labels:
                         undone = labels.pop()
                         print(f"  {DIM}Undid label for {undone['doc_id']}.{RESET}")
-                        for j, t in enumerate(cases):
-                            if t["doc_id"] == undone["doc_id"]:
-                                idx = j
-                                break
+                        j = find_case_index(cases, undone)
+                        if j is not None:
+                            idx = j
                     else:
                         print(f"  {DIM}Nothing to undo.{RESET}")
                     break
@@ -210,13 +266,11 @@ def main() -> None:
             print(f"{DIM}Skipped again → recorded as abstained (not silently dropped).{RESET}")
             skipped2 = run_pass(skipped, pass_no=2)
             for r in skipped2:
-                labels.append({"doc_id": r["doc_id"], "label": None,
-                               "p_true": r.get("p_true"), "pass": 2,
-                               "abstained": True})
+                labels.append(_label_row(r, None, 2, abstained=True))
     finally:
         if labels:
             os.makedirs(os.path.dirname(os.path.abspath(args.out)), exist_ok=True)
-            mode = "a" if seen else "w"
+            mode = "a" if n_seen else "w"
             with open(args.out, mode, encoding="utf-8") as f:
                 for lab in labels:
                     f.write(json.dumps(lab, ensure_ascii=False) + "\n")

@@ -94,6 +94,53 @@ and the project adheres to
 
 ### Fixed
 
+- **The cost-cap preflight checked the wrong stage set.**
+  `_preflight_cost_cap` selected its seats by testing
+  `stage in stages` (completed stages) where its own
+  docstring and both sibling preflights use pending-stage
+  semantics (`not in`). On a fresh run under a USD cap with
+  an unmetered proposer binding, the preflight therefore
+  examined nothing, and the refusal arrived only from
+  `_record_cost` — after CANDIDATES had already spent.
+  The three conditions now use pending semantics, with
+  regression tests pinning which seats a fresh run, a
+  live-decide run, and a resumed run must check. Found in
+  the 2026-10-29 implementation audit.
+- **Review-band cases were keyed by document alone.**
+  The interactive reviewer's resume set and undo jump
+  used doc_id as a case's identity, so a document's
+  second band case was silently retired by its first
+  case's label (never shown, never recorded) and undo
+  could land on a different triple from the same
+  document. Cases are now keyed by the full triple
+  (doc_id, subject, relation, object); label rows carry
+  the key, and legacy doc_id-only rows still suppress
+  their whole document (the data cannot say which case
+  they covered).
+- **Stale install and diagram text after the pipeline
+  retirement.** The README's install section still
+  offered the removed `[nlp]` extra ("the pipeline
+  candidate path's local NER") in the present tense —
+  inherited by the PyPI variant, whose generator anchor
+  pinned the stale paragraph, which is why the doc
+  guards stayed green. The paragraph and the anchor now
+  name only the surviving extras ([viz], [neo4j]). The
+  pipeline-flow diagram's NER subtitle ("entity roster
+  (mentions)") and CANDIDATES subtitle ("pairs
+  enumerated") likewise described retired mechanics;
+  they now read "contract rows only (local NER
+  retired)" and "LLM proposer (the only source)", and
+  the figure is re-rendered.
+- **Queue claim success read a connection cumulative.**
+  `Queue.claim` tested `total_changes` (cumulative for
+  the connection, effectively always true) instead of
+  the statement's rowcount; the UPDATE was correctly
+  guarded, so no duplicate processing was observed, but
+  a racing second claimer could have double-processed
+  an item. Now `cursor.rowcount`. Also from the audit:
+  the `ontology_judge` return annotation claimed a
+  3-tuple; it returns (and callers unpack) two values.
+
 - **Fragment endpoints became separate graph nodes.**
   The proposer types endpoints in the surface the local
   text uses — a first name alone, a nickname, a surname

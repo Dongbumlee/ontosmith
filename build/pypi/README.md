@@ -196,9 +196,7 @@ refuses before any stage starts, with the error naming
 the seat and the variable to set.
 
 Optional surfaces install as extras:
-`pip install "ontosmith[nlp]"`
-(the pipeline candidate path's local NER),
-`"ontosmith[viz]"`.
+`pip install "ontosmith[viz]"`.
 (The `"ontosmith[neo4j]"` extra installs the official
 driver the export utilities use; the build itself talks
 to Neo4j over HTTP and needs the server, not the extra.)

@@ -152,7 +152,7 @@ class WorkQueue:
             rows = cur.fetchall()
             items = []
             for item_id, payload, attempts in rows:
-                self._conn.execute(
+                cur = self._conn.execute(
                     """UPDATE queue_items
                        SET status='claimed', claimed_by=?, claimed_at=?,
                            updated_at=?
@@ -160,7 +160,7 @@ class WorkQueue:
                          AND stage=? AND status='pending'""",
                     (worker_id, now, now, item_id,
                      batch_id, run_id, stage))
-                if self._conn.total_changes:
+                if cur.rowcount:
                     items.append(QueueItem(
                         item_id=item_id, stage=stage,
                         payload=json.loads(payload),

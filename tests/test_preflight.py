@@ -74,6 +74,43 @@ class TestPreflightHelper(TmpRoot):
                 ["INGEST", "NER", "CANDIDATES", "GATES"], True)
 
 
+class TestCostCapPreflightSeats(TmpRoot):
+    """_preflight_cost_cap selects seats by PENDING stage
+    (stages = the completed-stage list, as in
+    _preflight_bindings). Regression: the conditions once
+    tested `in` instead of `not in`, so a fresh run checked
+    no seats at all and the cap refusal arrived only after
+    CANDIDATES had already spent."""
+
+    def _seats_for(self, stages, live_decide=False):
+        b = _batch()
+        b.config = BatchConfig(max_cost_usd=10.0)
+        seen = {}
+
+        def record(bindings, cap, seats):
+            seen["seats"] = list(seats)
+
+        with mock.patch(
+                "pipeline.connections.require_metered", record):
+            batch_run._preflight_cost_cap(b, stages, live_decide)
+        return seen["seats"]
+
+    def test_fresh_run_checks_proposer_and_embedder(self):
+        seats = self._seats_for([])
+        self.assertIn("proposer", seats)
+        self.assertIn("embedder", seats)
+        self.assertNotIn("judge", seats)
+
+    def test_live_decide_adds_judge(self):
+        self.assertIn("judge", self._seats_for([], True))
+
+    def test_completed_stages_drop_their_seats(self):
+        seats = self._seats_for(
+            ["INGEST", "NER", "CANDIDATES", "GATES", "ROUTE",
+             "WRITE", "INDEX"], True)
+        self.assertEqual(seats, [])
+
+
 class TestRunBatchRefusesBeforeStages(TmpRoot):
     def test_retired_sources_refused_by_name(self):
         # The candidate_source setting was removed with the

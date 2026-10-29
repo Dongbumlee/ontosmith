@@ -2517,11 +2517,12 @@ def _preflight_cost_cap(b: Batch, stages: list[str],
         return
     from . import connections as _conn
     seats = []
-    if "CANDIDATES" in stages:
+    if "CANDIDATES" not in stages:
         seats.append("proposer")
-    if live_decide and ("GATES" in stages or "WRITE" in stages):
+    if live_decide and ("GATES" not in stages
+                        or "WRITE" not in stages):
         seats.append("judge")
-    if "INDEX" in stages:
+    if "INDEX" not in stages:
         seats.append("embedder")
     _conn.require_metered(_conn.resolve_bindings(),
                           b.config.max_cost_usd, seats)
