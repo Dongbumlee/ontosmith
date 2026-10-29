@@ -710,7 +710,7 @@ def census_entities(text: str) -> dict:
         # transparent to the look-back).
         boundary: list[bool] = []
         last_raw: str | None = None
-        for idx, rt in enumerate(raw_tokens):
+        for rt in raw_tokens:
             boundary.append(
                 last_raw is None or _sentence_final(last_raw))
             if not _is_quote_token(rt):
@@ -816,7 +816,7 @@ def census_entities(text: str) -> dict:
             ctoks = canon.split()
             if len(ctoks) != len(toks):
                 continue
-            cand = toks[:pos] + [ctoks[pos]] + toks[pos + 1:]
+            cand = [*toks[:pos], ctoks[pos], *toks[pos + 1:]]
             if " ".join(cand) == canon:
                 by_norm[canon]["aliases"] = sorted(set(
                     by_norm[canon]["aliases"])
@@ -946,7 +946,7 @@ def anchor_contexts(text: str, anchor: str,
     truncated mid-run. Returns {context, mention_sentences,
     windows, windows_dropped}."""
     sents = split_sentences(text)
-    forms = [norm_ws(anchor)] + list(aliases or [])
+    forms = [norm_ws(anchor), *list(aliases or [])]
     hits = [i for i, s in enumerate(sents)
             if any(f in norm_ws(s) for f in forms)]
     keep: set[int] = set()
@@ -1516,7 +1516,8 @@ def guard_triples(items: list[dict], doc_text: str,
                     ent is not None or ep in canon)
 
         def _attested(ep: str, hay: str,
-                      bridged: bool = False) -> bool:
+                      bridged: bool = False,
+                      _forms=forms, _base=base) -> bool:
             # The bridged-document fallback belongs to
             # L0 alone: it answers "does this entity
             # occur in the document at all". The quote
@@ -1524,9 +1525,10 @@ def guard_triples(items: list[dict], doc_text: str,
             # it — that would widen a quote-level test
             # into a document-level one and invent the
             # attestation the theme guard exists to
-            # refuse.
-            fs, bridged_ok = forms.get(
-                ep, ([norm_ws(base[ep])], False))
+            # refuse. (_forms/_base bind this item's
+            # structures at definition time.)
+            fs, bridged_ok = _forms.get(
+                ep, ([norm_ws(_base[ep])], False))
             return any(f in hay for f in fs) or (
                 bridged and bridged_ok
                 and doc_bridged is not None
