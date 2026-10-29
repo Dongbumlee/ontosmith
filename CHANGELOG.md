@@ -351,6 +351,17 @@ and the project adheres to
 
 ### Removed
 
+- **The legacy scale1k graph writer
+  (`pipeline/graph_write.py`) is removed.** It wrote
+  name-keyed entities with per-relation edge types
+  directly from a gate-results file — the pre-product
+  identity discipline the shipped store contract
+  replaced (entity_id keys, one REL type, a
+  batch-stamped single graph, replace-at-WRITE) — and
+  derived its model/gate provenance from the results
+  filename. Nothing referenced it: no import, test,
+  doc, or CLI dispatch. The batch WRITE stage through
+  the graph store is the only write path.
 - **The GLiNER+spaCy pipeline candidate source is
   retired, and the `candidate_source` setting is
   removed with it; the LLM proposer is the only

@@ -68,8 +68,8 @@ Issues = "https://github.com/Dongbumlee/ontosmith/issues"
 Changelog = "https://github.com/Dongbumlee/ontosmith/blob/main/CHANGELOG.md"
 
 [project.optional-dependencies]
-# Graph write / Neo4j-backed store surface
-# (pipeline.graph_write, neo4j_store, retrieval paths).
+# Neo4j-backed store and export/retrieval utilities
+# (neo4j_store, retrieval paths).
 neo4j = ["neo4j"]
 # (The nlp extra — GLiNER + spaCy — was removed
 # 2026-10-29 with the pipeline candidate source's
