@@ -39,13 +39,29 @@ def load_jsonl(path) -> list[dict]:
 
 
 def load_table(path) -> NormalizationTable | None:
-    """Load a TN normalization table from JSON, or None."""
+    """Load a TN normalization table from JSON, or None.
+
+    Keys: ``symmetric`` (TN-1 list), ``inverses`` (TN-2 map),
+    and the opt-in layers ``relation_groups`` (TN-3, written
+    group label -> member labels), ``inverse_expansions``
+    (TN-4, gold relation -> additional inverse labels) and
+    ``subsumptions`` (TN-5, gold relation -> stronger labels).
+    """
     if not path:
         return None
     d = json.loads(Path(path).read_text())
+    groups = {}
+    for group, labels in (d.get("relation_groups") or {}).items():
+        for label in labels:
+            groups[label] = group
     return NormalizationTable(
         symmetric=frozenset(d.get("symmetric", [])),
-        inverses=dict(d.get("inverses", {})))
+        inverses=dict(d.get("inverses", {})),
+        relation_groups=groups,
+        inverse_expansions={k: tuple(v) for k, v in
+                            (d.get("inverse_expansions") or {}).items()},
+        subsumptions={k: tuple(v) for k, v in
+                      (d.get("subsumptions") or {}).items()})
 
 
 def _kv_pairs(text: str) -> dict[str, float]:

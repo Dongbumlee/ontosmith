@@ -96,6 +96,110 @@ class TestMatching(unittest.TestCase):
         m = match_records(pred, gold, table)
         self.assertEqual(m.matched_gold, 1)
 
+    def test_alias_surfaces_match(self):
+        # The guard canonicalized the subject to the fuller
+        # name and recorded both attested surfaces; the gold
+        # cluster knows only the shorter one.
+        pred = [{"doc_id": "d", "subject": "Wilfried Schneider",
+                 "relation": "place of birth", "object": "Mediaș",
+                 "canonicalized": {"subject": ["Willi Schneider",
+                                               "Wilfried Schneider"]}}]
+        gold = [{"doc_id": "d", "head_names": ["Willi Schneider"],
+                 "tail_names": ["Mediaș"],
+                 "relation": "place of birth"}]
+        m = match_records(pred, gold)
+        self.assertEqual(m.matched_gold, 1)
+        bare = [{"doc_id": "d", "subject": "Wilfried Schneider",
+                 "relation": "place of birth", "object": "Mediaș"}]
+        self.assertEqual(match_records(bare, gold).matched_gold, 0)
+
+    def test_alias_both_endpoints_match(self):
+        # BOTH endpoints canonicalized (the guard rewrote the
+        # subject and the object): gold knows only the short
+        # surface of each, so matching needs the alias cross
+        # product, not single-endpoint substitution.
+        pred = [{"doc_id": "d", "subject": "Digital Bangladesh",
+                 "relation": "head of government",
+                 "object": "Prime Minister Sheikh Hasina",
+                 "canonicalized": {
+                     "subject": ["Bangladesh", "Digital Bangladesh"],
+                     "object": ["Sheikh Hasina",
+                                "Prime Minister Sheikh Hasina"]}}]
+        gold = [{"doc_id": "d", "head_names": ["Bangladesh"],
+                 "tail_names": ["Sheikh Hasina"],
+                 "relation": "head of government"}]
+        self.assertEqual(match_records(pred, gold).matched_gold, 1)
+        # A crossed pair that was never attested as one entity
+        # still cannot match: aliases widen surfaces per
+        # endpoint, they do not invent pairings with other
+        # records' endpoints.
+        gold_other = [{"doc_id": "d", "head_names": ["Bangladesh"],
+                       "tail_names": ["Mediaș"],
+                       "relation": "head of government"}]
+        self.assertEqual(
+            match_records(pred, gold_other).matched_gold, 0)
+
+    def test_tn3_relation_group(self):
+        table = NormalizationTable(
+            relation_groups={"country": "CONTAINMENT",
+                             "located in": "CONTAINMENT"})
+        pred = [{"doc_id": "d", "subject": "Vienna",
+                 "relation": "located in", "object": "Austria"}]
+        gold = [{"doc_id": "d", "head_names": ["Vienna"],
+                 "tail_names": ["Austria"], "relation": "country"}]
+        self.assertEqual(match_records(pred, gold, table).matched_gold, 1)
+        self.assertEqual(match_records(pred, gold).matched_gold, 0)
+
+    def test_tn3_group_keeps_tn2_pairing(self):
+        # Grouping the TN-2 primary must not break matching
+        # against a record stated under its inverse label.
+        table = NormalizationTable(
+            inverses={"subsidiary": "parent organization"},
+            relation_groups={"parent organization": "OWNERSHIP",
+                             "owned by": "OWNERSHIP"})
+        gold = [{"doc_id": "d", "head_names": ["HoldCo"],
+                 "tail_names": ["SubCo"],
+                 "relation": "parent organization"}]
+        pred_inv = [{"doc_id": "d", "subject": "SubCo",
+                     "relation": "subsidiary", "object": "HoldCo"}]
+        self.assertEqual(
+            match_records(pred_inv, gold, table).matched_gold, 1)
+        pred_grp = [{"doc_id": "d", "subject": "SubCo",
+                     "relation": "owned by", "object": "HoldCo"}]
+        gold_inv = [{"doc_id": "d", "head_names": ["SubCo"],
+                     "tail_names": ["HoldCo"], "relation": "owned by"}]
+        self.assertEqual(
+            match_records(pred_grp, gold_inv, table).matched_gold, 1)
+
+    def test_tn4_inverse_expansion(self):
+        table = NormalizationTable(
+            inverse_expansions={"father": ("child",),
+                                "mother": ("child",),
+                                "child": ("father", "mother")})
+        pred = [{"doc_id": "d", "subject": "Paul Jr.",
+                 "relation": "child", "object": "Paul Sr."}]
+        gold = [{"doc_id": "d", "head_names": ["Paul Sr."],
+                 "tail_names": ["Paul Jr."], "relation": "father"}]
+        self.assertEqual(match_records(pred, gold, table).matched_gold, 1)
+        self.assertEqual(match_records(pred, gold).matched_gold, 0)
+
+    def test_tn5_subsumption(self):
+        table = NormalizationTable(
+            inverses={"capital of": "capital"},
+            subsumptions={"located in": ("capital of",)})
+        pred = [{"doc_id": "d", "subject": "Phnom Penh",
+                 "relation": "capital of", "object": "Cambodia"}]
+        gold = [{"doc_id": "d", "head_names": ["Phnom Penh"],
+                 "tail_names": ["Cambodia"], "relation": "located in"}]
+        self.assertEqual(match_records(pred, gold, table).matched_gold, 1)
+        # No reverse entailment: a merely-located city does not
+        # satisfy a capital-of gold item.
+        gold2 = [{"doc_id": "d", "head_names": ["Phnom Penh"],
+                  "tail_names": ["Cambodia"], "relation": "capital of"}]
+        pred2 = [{"doc_id": "d", "subject": "Phnom Penh",
+                  "relation": "located in", "object": "Cambodia"}]
+        self.assertEqual(match_records(pred2, gold2, table).matched_gold, 0)
+
 
 class TestCorrections(unittest.TestCase):
     def test_corrected_precision_formula(self):
