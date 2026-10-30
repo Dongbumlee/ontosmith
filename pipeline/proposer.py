@@ -985,15 +985,18 @@ _ABSORB_VETO = frozenset({
 }) | _INITIAL_DROP
 
 
-def _identity_index(doc_text: str) -> tuple[dict, dict, set]:
+def _identity_index(doc_text: str) -> tuple[dict, dict, set, str]:
     """The identity index guard_triples resolves against:
-    (by_norm, alias_of, maximals) from the document's
-    census. by_norm maps a census norm to its entity;
-    alias_of maps an alias norm (nickname, bridged full
-    form, folded alias form) to the canonical entity
-    norm; maximals are the entity norms whose token set
-    is not a proper subset of another entity's — the
-    only surfaces a fragment may resolve INTO."""
+    (by_norm, alias_of, maximals, bridged) from the
+    document's census. by_norm maps a census norm to its
+    entity; alias_of maps an alias norm (nickname,
+    bridged full form, folded alias form) to the
+    canonical entity norm; maximals are the entity norms
+    whose token set is not a proper subset of another
+    entity's — the only surfaces a fragment may resolve
+    INTO. bridged is the document's bridged form, kept
+    so absorption can check where mentions actually
+    occur (see _resolve_endpoint rule 4)."""
     cen = census_entities(doc_text)
     by_norm = {e["norm"]: e for e in cen["entities"]}
     alias_of: dict[str, str] = {}
@@ -1004,7 +1007,94 @@ def _identity_index(doc_text: str) -> tuple[dict, dict, set]:
     maximals = {n for n in by_norm
                 if not any(n != m and toks[n] < toks[m]
                            for m in by_norm)}
-    return by_norm, alias_of, maximals
+    # A surface made entirely of words the document
+    # itself uses as ordinary lowercase prose, and
+    # occurring only inside title-case paragraphs
+    # (headings), is a prose run, not a name: headings
+    # mint them wholesale ('Rectal Cancer Patients
+    # Treated' — every content word a common word the
+    # body uses lowercase). A name keeps at least one
+    # token the document never uses as prose
+    # ('Malagasy', 'Bosáková', 'Angeles'), or recurs in
+    # ordinary paragraphs. Such surfaces stay in the
+    # census but are demoted from maximals: never
+    # absorption targets.
+    prose = {c.lower() for raw in doc_text.split()
+             if (c := _token_core(raw)).isalpha()
+             and c.islower() and len(c) >= 2}
+    paragraphs = re.split(r"\n\s*\n", doc_text)
+
+    def _title_case(par: str) -> bool:
+        # Title case capitalizes content words; function
+        # words stay lowercase ('Analysis of INT 0144
+        # Trial: Association of Polymorphisms with
+        # Survival...').
+        caps = [c for c in (_token_core(t)
+                            for t in par.split())
+                if c.isalpha()
+                and c.lower() not in _ABSORB_VETO
+                and c.lower() not in ("the", "a", "an")]
+        return len(caps) >= 3 and all(
+            c[:1].isupper() for c in caps)
+
+    title_pars = [p for p in paragraphs if _title_case(p)]
+    body_pars = [p for p in paragraphs if not _title_case(p)]
+
+    def _is_prose_surface(norm: str) -> bool:
+        content = [t for t in re.split(r"[\s-]+", norm)
+                   if t and t not in _ABSORB_VETO
+                   and t not in ("the", "a", "an")]
+        if not content or not all(t in prose
+                                  for t in content):
+            return False
+        surface = by_norm[norm]["surface"]
+        return (any(surface in p for p in title_pars)
+                and not any(surface in p
+                            for p in body_pars))
+
+    maximals = {n for n in maximals
+                if not _is_prose_surface(n)}
+    return by_norm, alias_of, maximals, _bridged_form(doc_text)
+
+
+def _phrase_spans(bridged: str, phrase: str) -> list:
+    """Token-boundary occurrences of a norm phrase in
+    the bridged document text."""
+    pat = re.compile(r"(?<![a-z0-9])" + re.escape(phrase)
+                     + r"(?![a-z0-9])")
+    return [(m.start(), m.end()) for m in pat.finditer(bridged)]
+
+
+def _outside_count(bridged: str, ep_norm: str,
+                   cand_norm: str) -> int:
+    """How often the fragment occurs in the document at
+    a position no occurrence of the candidate surface
+    covers: its independent textual life — the document
+    referring with the fragment on its own, outside the
+    longer surface that contains it."""
+    cand_spans = _phrase_spans(bridged, cand_norm)
+    return sum(1 for s, e in _phrase_spans(bridged, ep_norm)
+               if not any(cs <= s and e <= ce
+                          for cs, ce in cand_spans))
+
+
+def _occurs_outside(bridged: str, ep_norm: str,
+                    cand_norm: str) -> bool:
+    """True when the fragment has any independent
+    textual life (see _outside_count)."""
+    return _outside_count(bridged, ep_norm, cand_norm) >= 1
+
+
+def _is_code_fragment(tok: str) -> bool:
+    """True for a token that is a designation code, not
+    name material: it starts with a digit ('251a/a') or
+    is a slash pair of single characters ('q/q', a
+    genotype zygosity code). A name completing with
+    such a token is a designation phrase, not a longer
+    name."""
+    if tok[:1].isdigit():
+        return True
+    return bool(re.fullmatch(r".?/.?", tok))
 
 
 def _name_tokens(norm: str) -> set:
@@ -1073,9 +1163,18 @@ def _resolve_endpoint(ep_norm: str, index: tuple,
        function word, a prose opener, or a role/title
        word (_ABSORB_VETO) merely CONTAINS the fragment
        (a title phrase, a work title, a coordination, a
-       prose-glued surface) and is never a target.
+       prose-glued surface) and is never a target. A
+       fragment that occurs in the document outside the
+       candidate's own occurrences has independent
+       textual life and is not absorbed either, and a
+       candidate completed by a designation code
+       ('251a/a', 'q/q') is a designation phrase, not a
+       longer name. The completions absorption exists
+       for — a middle name supplied ('Jared Allen' for
+       'Jared Scot Allen') — pass every rule: the
+       fragment occurs nowhere but inside the full name.
     """
-    by_norm, alias_of, maximals = index
+    by_norm, alias_of, maximals, bridged = index
     if ep_norm in by_norm:
         ep_seq = [t for t in re.split(r"[\s-]+", ep_norm) if t]
 
@@ -1122,11 +1221,38 @@ def _resolve_endpoint(ep_norm: str, index: tuple,
     # not an entity and never a resolution target: a
     # fragment naming one side of it must not be
     # rewritten into the pair (the pair asserts a fact
-    # about both sides).
+    # about both sides). One further eligibility rule,
+    # from the BioRED pilot's damage classes: a
+    # candidate whose extra tokens include a
+    # designation code ('251a/a', 'q/q') is a
+    # designation phrase ('VEGFR2 H472Q Q/Q'), not a
+    # longer name. (The title-case prose runs that
+    # pilot also produced — 'Rectal Cancer Patients
+    # Treated' — never become targets at all: see the
+    # prose-surface demotion in _identity_index.)
+    def _article_variant(ep: str, cand: str) -> bool:
+        # Same identity under two surface forms (a
+        # leading article is the usual difference):
+        # the form the document actually refers with
+        # wins. An endpoint used independently at least
+        # twice stands as proposed ('SRY', referred to
+        # bare throughout, does not become 'The SRY');
+        # a form occurring only inside the longer
+        # surface, or once at its own definition,
+        # still resolves to the census canonical
+        # ('Seller' -> 'The Seller', the defined-term
+        # convention; 'The Hague').
+        if etoks != toks[cand] or ep == cand:
+            return False
+        return _outside_count(bridged, ep, cand) >= 2
+
     cands = sorted(by_norm[m]["surface"] for m in maximals
                    if (etoks < toks[m]
                        or (etoks == toks[m] and ep_norm != m))
                    and not (toks[m] - etoks) & _ABSORB_VETO
+                   and not any(_is_code_fragment(t)
+                               for t in toks[m] - etoks)
+                   and not _article_variant(ep_norm, m)
                    and not re.search(
                        r"[A-Z][\w.]*\s+and\s+[A-Z]",
                        by_norm[m]["surface"]))

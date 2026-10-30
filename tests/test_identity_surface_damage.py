@@ -271,3 +271,96 @@ class TestNicknameHeadedEndpoint(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+TITLECASE_DOC = (
+    "Pharmacogenetic Analysis of Polymorphisms with "
+    "Survival and Toxicity in Rectal Cancer Patients "
+    "Treated with Drugex.\n\n"
+    "We tested whether polymorphisms would predict "
+    "survival in rectal cancer. We enrolled patients "
+    "with rectal cancer, and all patients were treated "
+    "with Drugex after surgery.")
+
+GENOTYPE_DOC = (
+    "We analyzed the genes GSTP1, COX2, IL10, IL8 and "
+    "MMP3 in patients. The IL8-251A/A genotype (rs4073) "
+    "was associated with a lower risk of toxicities. "
+    "The VEGFR2 H472Q Q/Q genotype (rs1870377) was "
+    "associated with a higher risk of mucositis. "
+    "VEGFR2 variants were genotyped in all patients.")
+
+SRY_DOC = (
+    "Two novel mutations in the SRY gene in patients.\n\n"
+    "The SRY gene acts as a transcription factor. "
+    "Deletion and inactivating mutations of SRY are "
+    "among the known causes of XY sex reversal. "
+    "Mutations in SRY were screened in the cohort.")
+
+JARED_DOC = (
+    "Jared Scot Allen (born April 3, 1982) is a former "
+    "football defensive end. He played for the "
+    "Minnesota Vikings for six seasons. Allen was "
+    "born in Dallas.")
+
+
+class TestIndependentLifeProtection(unittest.TestCase):
+    # BioRED pilot (S5) damage classes: absorption into
+    # surfaces that merely contain the fragment.
+    def test_titlecase_line_surface_not_absorbed(self):
+        kept, blocked = proposer.guard_triples(
+            [{"subject": "Drugex", "subject_type": "Chemical",
+              "relation": "treats", "object": "rectal cancer",
+              "object_type": " Disease",
+              "quote": "all patients were treated with "
+                     "Drugex after surgery"}],
+            TITLECASE_DOC)
+        self.assertEqual(kept[0]["object"], "rectal cancer")
+
+    def test_gene_not_absorbed_into_variant_designation(self):
+        kept, _ = proposer.guard_triples(
+            [{"subject": "rs4073", "subject_type": "Variant",
+              "relation": "in gene", "object": "IL8",
+              "object_type": "Gene",
+              "quote": "IL8-251A/A genotype (rs4073) was "
+                     "associated with a lower risk"}],
+            GENOTYPE_DOC)
+        self.assertEqual(kept[0]["object"], "IL8")
+
+    def test_variant_not_absorbed_into_genotype_phrase(self):
+        kept, _ = proposer.guard_triples(
+            [{"subject": "H472Q", "subject_type": "Variant",
+              "relation": "in gene", "object": "VEGFR2",
+              "object_type": "Gene",
+              "quote": "The VEGFR2 H472Q Q/Q genotype "
+                     "(rs1870377) was associated with a "
+                     "higher risk"}],
+            GENOTYPE_DOC)
+        self.assertEqual(kept[0]["subject"], "H472Q")
+        self.assertEqual(kept[0]["object"], "VEGFR2")
+
+    def test_article_prepend_is_not_a_completion(self):
+        kept, _ = proposer.guard_triples(
+            [{"subject": "SRY", "subject_type": "Gene",
+              "relation": "causes", "object": "sex reversal",
+              "object_type": "Disease",
+              "quote": "mutations of SRY are among the "
+                     "known causes of XY sex reversal"}],
+            SRY_DOC)
+        self.assertEqual(kept[0]["subject"], "SRY")
+
+    def test_middle_name_completion_still_absorbs(self):
+        # Positive control: the completion absorption
+        # exists for — the fragment occurs nowhere but
+        # inside the full name.
+        kept, _ = proposer.guard_triples(
+            [{"subject": "Jared Allen",
+              "subject_type": "Person",
+              "relation": "played for",
+              "object": "Minnesota Vikings",
+              "object_type": "Organization",
+              "quote": "He played for the Minnesota "
+                     "Vikings for six seasons"}],
+            JARED_DOC)
+        self.assertEqual(kept[0]["subject"],
+                         "Jared Scot Allen")
