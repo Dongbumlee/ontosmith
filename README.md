@@ -34,11 +34,10 @@ prices itself before it spends.
 
 ![OntoSmith build loop: models propose, Jev judges, only judged facts are written](docs/assets/build-loop.webp)
 
-*The method in one loop, on a real build's neighborhood:
-cheap models propose candidate facts, the Jev decision
-model judges each against its evidence, and only judged
-facts are written — every one traceable back to its
-span. (Illustration: proposed and rejected candidates
+*The method in one loop: cheap models propose candidate
+facts, the Jev decision model judges each against its
+evidence, and only judged facts are written, every one
+traceable to its span. (Proposed and rejected candidates
 are shown schematically; the written graph is the
 flagship build's.)*
 
@@ -311,39 +310,35 @@ when the graph has to be audited.
 ## Three documents, three edges
 
 A chunk store returns text and leaves the connections
-in it implicit. A graph makes each connection an edge:
-typed, directed, and carrying the sentence that
-supports it. Three real items from this project's own
-records:
+implicit. A graph makes each one an edge: typed,
+directed, carrying its evidence sentence. Three real
+items from this project's own records:
 
 **News — a head of government named inside somebody
 else's article.** The article is about Abdul Jabar
-Sabet, an Afghan politician; one sentence in it
-carries a fact whose subject is a country:
+Sabet; one sentence in it carries a fact whose
+subject is a country:
 
 > Sabet was a long time aide to former Afghan Prime
 > Minister Gulbuddin Hekmatyar.
 
 As an edge — Afghanistan — *head of government* →
 Gulbuddin Hekmatyar — the fact answers to its own
-subject: a question about Afghanistan's former prime
-minister traverses straight to the name, with the
-sentence attached as evidence. (Adjudication appendix
-item B-193, judged *supported*.)
+subject, evidence attached. (Appendix item B-193,
+judged *supported*.)
 
 **A novel — a character who enters by relation, not
-by cast list.** Zola's *Le Ventre de Paris* never
-lists its cast; Quenu arrives through the plot:
+by cast list.** *Le Ventre de Paris* never lists its
+cast; Quenu arrives through the plot:
 
 > He returns to his step-brother Quenu, a charcutier
 > and his wife Lisa Quenu (formerly Macquart), with
 > whom he finds refuge.
 
 As an edge — *Le Ventre de Paris* — *characters* →
-Quenu — the character becomes a node: reachable,
-countable, and linked onward through the relations
-the sentence states (step-brother to Florent, husband
-to Lisa). (Appendix item B-151, judged *supported*.)
+Quenu — the character becomes a node, linked onward
+through the relations the sentence states.
+(Appendix item B-151, judged *supported*.)
 
 **A contract — a defined term is an identity, not a
 string.** A CUAD agreement stipulates its vocabulary
@@ -354,19 +349,16 @@ as it goes:
 > which the Company delivers to Distributor the last
 > Sample, as defined hereinafter.
 
-"Term", "the Company", "Distributor" are defined
-names inside this document. The build collects the
-terms a document stipulates into a per-document
-registry and resolves defined terms to their stated
-referents, so every later clause that runs "during
-the Term" or "the Company shall" attaches to the same
-nodes: the definition and its uses are one entity,
+The build collects stipulated terms into a
+per-document registry and resolves them to their
+referents, so every later "during the Term" attaches
+to the same node: definition and uses are one entity,
 not a scatter of string matches. (Corpus-profile
-example in the Legal Contract pack,
+example, Legal Contract pack,
 `packs/legal-contract/profile/profile.json`; CUAD,
 CC BY 4.0.)
 
-The two appendix items are machine-adjudicated
+The appendix items are machine-adjudicated
 *supported* under the published contract (the
 [appendix](benchmarks/appendix/)); quote spacing is
 normalized from the tokenized record.

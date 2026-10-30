@@ -68,7 +68,6 @@ header nav a.cta:hover{background:var(--amber-2); text-decoration:none}
 .gnode text{fill:var(--cream); font-family:var(--font-body); font-size:13px}
 .gedge{stroke:var(--clay-2); stroke-width:1.6; fill:none; stroke-dasharray:340; stroke-dashoffset:0}
 .glabel{fill:var(--amber-2); font-family:var(--font-body); font-size:12px}
-.gnote{fill:var(--caption); font-family:var(--font-body); font-size:12px}
 @keyframes draw{from{stroke-dashoffset:340} to{stroke-dashoffset:0}}
 @keyframes fadein{from{opacity:0} to{opacity:1}}
 @keyframes pop{from{opacity:0; transform:scale(.92)} to{opacity:1; transform:scale(1)}}
@@ -80,7 +79,7 @@ header nav a.cta:hover{background:var(--amber-2); text-decoration:none}
 .gnode.n3{animation-delay:.6s}
 .gnode.n4{animation-delay:1s}
 .gnode.n5{animation-delay:1.25s}
-.glabel, .gnote{animation:fadein .6s ease-out both; animation-delay:1.35s}
+.glabel{animation:fadein .6s ease-out both; animation-delay:1.35s}
 
 .strip{background:var(--cream); border-bottom:1px solid var(--line); padding:28px 0}
 .strip .flow{display:flex; align-items:center; justify-content:space-between; gap:4px; flex-wrap:wrap}
@@ -160,7 +159,7 @@ footer a{color:var(--cream)}
 @media (prefers-reduced-motion: reduce){
   html{scroll-behavior:auto}
   .js .reveal{opacity:1; transform:none; transition:none}
-  .gedge, .gnode, .glabel, .gnote{animation:none}
+  .gedge, .gnode, .glabel{animation:none}
   .card{transition:none}
   .card:hover{transform:none}
 }
@@ -187,8 +186,7 @@ footer a{color:var(--cream)}
         <h1 class="serif">Ontology-based GraphRAG,<span class="line2">judged triple by triple.</span></h1>
         <p>OntoSmith builds knowledge graphs under an ontology a human approves first.</p>
         <p>The schema is a flat extraction contract: entity and relation types with definitions and
-           boundary examples, drafted or imported. No class hierarchy, no inheritance, no logical
-           axioms. The flatness is deliberate, because per-type decisions are what make the quality
+           boundary examples. No hierarchy, no axioms: the flatness is what makes per-type quality
            measurable.</p>
         <div class="chiprow">
           <span class="chip solid">Powered by Jev</span>
@@ -201,7 +199,7 @@ footer a{color:var(--cream)}
            <a href="https://github.com/Dongbumlee/ontosmith#try-it--step-1-needs-no-api-key">start with step 1</a>.</p>
       </div>
       <div class="panel">
-        <svg viewBox="0 0 520 344" role="img" aria-label="A small graph drawn from two record items: Afghanistan linked to Gulbuddin Hekmatyar by a head of government edge, and Le Ventre de Paris linked to Quenu by a characters edge">
+        <svg viewBox="0 0 520 296" role="img" aria-label="A small graph drawn from two record items: Afghanistan linked to Gulbuddin Hekmatyar by a head of government edge, and Le Ventre de Paris linked to Quenu by a characters edge">
           <line class="gedge e1" x1="180" y1="52" x2="316" y2="52"></line>
           <line class="gedge e2" x1="404" y1="76" x2="404" y2="128"></line>
           <line class="gedge e3" x1="196" y1="256" x2="316" y2="256"></line>
@@ -213,10 +211,8 @@ footer a{color:var(--cream)}
           <text class="glabel" x="204" y="44">aide to</text>
           <text class="glabel" x="410" y="104">head of government</text>
           <text class="glabel" x="212" y="248">characters</text>
-          <text class="gnote" x="28" y="200">Two items from the adjudication record, drawn as the graph holds them:</text>
-          <text class="gnote" x="28" y="316">typed, directed, and each carrying its evidence sentence.</text>
         </svg>
-        <div class="cap">The connection is the data, not a paragraph to re-read.</div>
+        <div class="cap">Two items from the adjudication record, drawn as the graph holds them.</div>
       </div>
     </div>
   </div>
@@ -240,10 +236,9 @@ footer a{color:var(--cream)}
 <section id="how">
   <div class="wrap reveal">
     <h2 class="serif">Three seats, three kinds of work</h2>
-    <p class="lede">The pipeline never asks one model to do everything. The measured seats are filled
-       by the models that won their jobs in measurement, and judgment sits apart from proposing:
-       a fitted pair judge converts the candidates, and the Jev gates decide what is written.
-       The judge seat is the exception to the bake-off rule: Jev is a pinned component.</p>
+    <p class="lede">The pipeline never asks one model to do everything. Measured seats are filled by
+       the models that won their jobs in measurement, and judgment sits apart from proposing:
+       the judge seat is the exception, because Jev is a pinned component, not a bake-off winner.</p>
     <div class="seats">
       <div class="seat">
         <h3>The Proposer</h3>
@@ -268,10 +263,8 @@ footer a{color:var(--cream)}
     </div>
     <p class="seatline">Plus a drafting seat you bind yourself, and an embedder
        (<code>text-embedding-3-large</code>) for the vector arm of search. Every seat is
-       configuration, never code.</p>
-    <p class="seatline">The stack underneath: <strong>Jev</strong> judges, and <strong>Neo4j</strong>
-       stores, with native graph, vector index, and full-text search in one store. A build requires
-       both; setup is a first-class step in
+       configuration, never code. Underneath, <strong>Jev</strong> judges and <strong>Neo4j</strong>
+       stores, and a build requires both; setup is a first-class step in
        <a href="https://github.com/Dongbumlee/ontosmith/blob/main/docs/connections.md">Connections</a>.</p>
   </div>
 </section>
@@ -288,8 +281,7 @@ footer a{color:var(--cream)}
         <div class="triple serif">Afghanistan <span class="rel">head of government</span> Gulbuddin Hekmatyar</div>
         <blockquote>&ldquo;Sabet was a long time aide to former Afghan Prime Minister Gulbuddin Hekmatyar.&rdquo;</blockquote>
         <p class="why">The fact sits inside an article about Sabet. As an edge, it answers to its
-           own subject: ask about Afghanistan&rsquo;s former prime minister and the traversal
-           lands on the name, with the sentence attached.</p>
+           own subject, with the sentence attached as evidence.</p>
         <p class="src">Adjudication appendix item B-193, judged supported. The article is the
            Wikipedia entry on Abdul Jabar Sabet, via Re-DocRED.</p>
       </div>
@@ -298,8 +290,7 @@ footer a{color:var(--cream)}
         <div class="triple serif">Le Ventre de Paris <span class="rel">characters</span> Quenu</div>
         <blockquote>&ldquo;He returns to his step-brother Quenu, a charcutier and his wife Lisa Quenu (formerly Macquart), with whom he finds refuge.&rdquo;</blockquote>
         <p class="why">Zola never lists his cast. Quenu enters through a family relation in the
-           plot, and the edge makes him a node: reachable, countable, and linked onward to
-           Florent and Lisa.</p>
+           plot, and the edge makes him a node, linked onward to Florent and Lisa.</p>
         <p class="src">Adjudication appendix item B-151, judged supported. Quote spacing is
            normalized from the tokenized record.</p>
       </div>
@@ -307,9 +298,8 @@ footer a{color:var(--cream)}
         <div class="genre">Contract</div>
         <div class="triple serif">&ldquo;Term&rdquo; <span class="rel">defined term</span> the ten-year period</div>
         <blockquote>&ldquo;The term of this Agreement shall be ten (10) years (the &ldquo;Term&rdquo;) which shall commence on the date upon which the Company delivers to Distributor the last Sample, as defined hereinafter.&rdquo;</blockquote>
-        <p class="why">Defined names are identities inside the document. The build collects the
-           terms a document stipulates into a registry and resolves them to their referents, so
-           every later clause that runs &ldquo;during the Term&rdquo; attaches to the same node.</p>
+        <p class="why">Defined names are identities inside the document. The build resolves them
+           to their referents, so every later &ldquo;during the Term&rdquo; attaches to the same node.</p>
         <p class="src">Corpus-profile example in the Legal Contract pack. Corpus: CUAD (The Atticus
            Project), CC BY 4.0.</p>
       </div>
@@ -377,9 +367,9 @@ footer a{color:var(--cream)}
 <section>
   <div class="wrap reveal">
     <h2 class="serif">Build, then ask</h2>
-    <p class="lede">The graph lives in Neo4j: the store holds one graph, the current build&rsquo;s,
-       and a build under a changed ontology replaces it, named in the run, never silent. Search
-       fuses lexical, graph, and vector arms, and a graph with no embeddings still answers on two.</p>
+    <p class="lede">The graph lives in Neo4j: one graph, the current build&rsquo;s, and a build
+       under a changed ontology replaces it, named in the run, never silent. Search fuses lexical,
+       graph, and vector arms; a graph with no embeddings still answers on two.</p>
     <div class="term">
 <span class="c"># declare the connection first: the wizard walks the seats and writes your bindings</span><br>
 <span class="p">$</span> ontosmith configure<br>
@@ -397,12 +387,10 @@ footer a{color:var(--cream)}
 <section>
   <div class="wrap reveal">
     <h2 class="serif">No ontology for your documents? It drafts one.</h2>
-    <p class="lede">A new document type rarely arrives with an ontology ready. The builder drafts one
-       from your corpus profile and a short brief: by default a skeleton, your type names with the
-       definitions left as a work list for you. Bind a drafting model and pass <code>--llm</code>,
-       and that seat reads the profile and proposes full definitions and boundary examples instead.
-       Either way you review the draft, adjust what your domain demands, and pin it as a domain
-       pack of your own.</p>
+    <p class="lede">A new document type rarely arrives with an ontology ready. The builder drafts
+       one from your corpus profile and a short brief: by default a skeleton of type names, or,
+       with a drafting model bound and <code>--llm</code> passed, full definitions and boundary
+       examples. You review the draft and pin it as a domain pack of your own.</p>
     <div class="term">
 <span class="c"># profile the corpus, then draft an ontology from the profile and a short brief</span><br>
 <span class="p">$</span> ontosmith profile ./samples --family my-domain<br>
