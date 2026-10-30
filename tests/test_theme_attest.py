@@ -51,11 +51,16 @@ class TestThemePresenceGuard(unittest.TestCase):
     """The quote-only default: object inside the chunk but
     outside the shortest quote blocks by name."""
 
-    def test_default_blocks_object_outside_quote(self):
+    def test_object_outside_quote_kept_with_grade(self):
+        # Theme grading (upstream program, decision test
+        # 2026-10-29): an object attested in the chunk but
+        # not inside the quote no longer blocks — the item
+        # is kept and carries its evidence grade for the
+        # judge. (Supersedes the pre-grading block spec.)
         kept, blocked = guard_triples([_item()], DOC)
-        self.assertEqual(kept, [])
-        self.assertEqual([b["reason"] for b in blocked],
-                         ["theme_presence"])
+        self.assertEqual(blocked, [])
+        self.assertEqual(len(kept), 1)
+        self.assertEqual(kept[0]["theme_grade"], "chunk")
 
     def test_lever_accepts_object_attested_in_chunk(self):
         kept, blocked = guard_triples(
@@ -64,17 +69,27 @@ class TestThemePresenceGuard(unittest.TestCase):
         self.assertEqual(len(kept), 1)
         self.assertEqual(kept[0]["attest"], "chunk")
 
-    def test_lever_never_invents_attestation(self):
+    def test_document_grade_when_object_only_in_document(self):
         # The object is in the document (L0 passes) but NOT
-        # in this proposal's chunk: still blocked — the lever
-        # widens the span to the chunk, not to the document.
+        # in this proposal's chunk: kept at the document
+        # grade — the weakest evidence, named as such.
         it = _item(object="Northbeam Coffee",
                    quote="Marta Ellison is the head barista")
         kept, blocked = guard_triples(
             [it], DOC, theme_attest_chunk=True)
+        self.assertEqual(blocked, [])
+        self.assertEqual(len(kept), 1)
+        self.assertEqual(kept[0]["theme_grade"], "document")
+
+    def test_object_nowhere_in_document_still_blocks(self):
+        # Grading never invents attestation: an object the
+        # document does not contain at all still fails L0.
+        it = _item(object="Nonexistent Roasters",
+                   quote="Marta Ellison is the head barista")
+        kept, blocked = guard_triples([it], DOC)
         self.assertEqual(kept, [])
         self.assertEqual([b["reason"] for b in blocked],
-                         ["theme_presence"])
+                         ["l0_attest"])
 
     def test_quote_attested_needs_no_lever(self):
         it = _item(quote="Marta Ellison is the head barista "

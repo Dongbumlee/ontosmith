@@ -7,6 +7,40 @@ and the project adheres to
 
 ## [Unreleased]
 
+### Changed
+
+- **Upstream attestation program** — the candidate
+  guard now reads a document the way a reader does:
+  against the entities the document itself establishes,
+  not raw strings alone. Attestation is tiered
+  (verbatim; the document's stipulated aliases —
+  defined terms and acronym pairs collected into a
+  per-document registry; punctuation-spacing collapse
+  for tokenized corpora; a proposer-declared derivation
+  surface, behind the profile-gated declared-surface
+  prompt variant). A defined term is an identity
+  inside its document: the role-word guard fires only
+  for undefined role nouns, and a defined term with a
+  stated referent canonicalizes to it. The
+  theme-presence block is retired in favor of grading:
+  a verb+preposition proposal whose object attests in
+  the document but not in its quote is kept with a
+  `theme_grade` for the judge instead of being blocked
+  wholesale (`theme_attest_chunk` declarations remain
+  accepted and are subsumed). Identity resolution no
+  longer rewrites a complete attested name into a
+  longer name that merely contains it (a city is not
+  its city council), never resolves into a coordination
+  surface, and still completes surnames and generational
+  suffixes. Duplicates are recorded in the blocked
+  sidecar (`duplicate`) instead of vanishing uncounted.
+  Measured on recorded corpora replayed offline
+  (current guard vs fixed guard, identical inputs):
+  contract-slice role-word blocks 89 → 19, kept
+  candidates 4,965 → 5,193; novels theme blocks 626 → 0
+  (491 graded, the rest attesting in their evidence
+  window); wiki seat kept-stage recall 0.186 → 0.210.
+
 ### Added
 
 - **Mention layer, first cut (issue #54)** — profile-gated

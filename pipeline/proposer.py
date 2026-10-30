@@ -23,15 +23,28 @@ proposals for G-04/G-05):
                  (the §5 attestation window is the document; the
                  level actually reached — quote / chunk / document —
                  is recorded on the candidate as `attest`).
-  l0_role_word   an endpoint is a bare role word (the corpus
-                 profile's rule: role nouns are not identities);
-                 only when the profile declares role-word rules.
+  l0_role_word   an endpoint is a bare role word the document
+                 leaves undefined (the corpus profile's rule:
+                 role nouns are not identities); only when the
+                 profile declares role-word rules. A term the
+                 document itself defines is an identity inside
+                 it and passes (upstream program, 2026-10-29).
   theme_missing  the relation is a bare prepositional phrase —
                  no predicate, hence no theme.
-  theme_presence a verb+preposition relation whose object is not
-                 attested in the quote itself — the C2 substitution
-                 pattern (a prepositional object standing in the
-                 evidence span for an unstated theme).
+  duplicate      the item's (subject, relation, object) key —
+                 after identity resolution — equals an
+                 already-kept item's; recorded, never silently
+                 dropped.
+
+Attestation is tiered (upstream program): verbatim, through
+the document's own stipulated aliases (defined terms,
+acronym pairs — the registry), under punctuation-spacing
+collapse, or through a proposer-declared derivation surface;
+the tier that carried an endpoint is recorded as
+`attest_kind`. A verb+preposition relation whose object
+attests in the document but not in the quote no longer
+blocks (the former theme_presence): the item is kept with
+its evidence grade recorded as `theme_grade` for the judge.
 
 Blocked items land in candidates_blocked.jsonl with the reason code,
 the same sidecar the Arm B structural constraints use. Slot fills
@@ -243,6 +256,49 @@ Excerpt:
 {text}
 ---"""
 
+# The declared-surface variant of the triple prompt
+# (upstream attestation program, 2026-10-29): identical
+# rules for the triple itself, plus per-endpoint
+# `*_attested` fields — the exact words in the excerpt
+# the endpoint was derived FROM when the endpoint itself
+# is stated in a normalized form (a country name for a
+# nationality adjective: "Germany" from "German"). The
+# guard checks the declared surface's attestation
+# (tier T3); whether the derivation is RIGHT is the
+# judge's call under the R1 seam. Used only when the
+# profile declares the layer; the base template above
+# is untouched so undeclared profiles build
+# byte-identical prompts.
+TRIPLE_PROMPT_DECLARED = """{framing}
+
+Return ONLY a JSON array of at most {maxn} objects:
+{{"subject": ..., "relation": ..., "object": ..., "quote": ...,
+  "subject_attested": ..., "object_attested": ...}}
+
+Rules:
+- subject / object: named entities only — parties, companies,
+  people, defined terms, documents, dates, amounts, jurisdictions.
+  Never pronouns, never bare role words alone ("the party").
+- relation: the short verb phrase as stated in the text
+  (e.g. "grants", "shall pay", "is located in", "terminates").
+- quote: the SHORTEST verbatim phrase from the excerpt that states
+  the fact (a clause, not a whole paragraph). Character-for-
+  character; never paraphrase.
+- subject_attested / object_attested: when the subject /
+  object is stated in a normalized form that does NOT
+  itself appear in the excerpt (a country named for a
+  nationality adjective — "Germany" for "German"; a full
+  name expanded from an abbreviation), copy here the
+  exact words from the excerpt it was derived from,
+  character-for-character. When the endpoint appears in
+  the excerpt as stated, use "".
+- Only facts the excerpt states. If none, return [].
+
+Excerpt:
+---
+{text}
+---"""
+
 SLOT_FRAMING_DEFAULT = \
     "You extract clause facts from the excerpt below."
 # Neutral core rules: value/quote discipline only. Category
@@ -360,7 +416,8 @@ def _parse_array(content: str, salvage: bool) -> list:
 def _build_triple_prompt(chunk: str, guidance: str = "",
                          framing: str | None = None,
                          maxn: int | None = None,
-                         mentions: bool = False) -> str:
+                         mentions: bool = False,
+                         declared: bool = False) -> str:
     """The proposer prompt for one chunk .
 
     The base is the domain-neutral TRIPLE_PROMPT template filled
@@ -380,7 +437,8 @@ def _build_triple_prompt(chunk: str, guidance: str = "",
     issue #54) selects TRIPLE_PROMPT_MENTION instead of the
     base template; the default path is untouched.
     """
-    template = TRIPLE_PROMPT_MENTION if mentions else TRIPLE_PROMPT
+    template = TRIPLE_PROMPT_MENTION if mentions else \
+        TRIPLE_PROMPT_DECLARED if declared else TRIPLE_PROMPT
     base = template.format(
         framing=framing or TRIPLE_FRAMING_DEFAULT,
         maxn=MAX_PER_CHUNK if maxn is None else maxn, text=chunk)
@@ -417,7 +475,8 @@ def propose_triples_for_doc(doc_id: str, text: str, key: str,
                             guidance: str = "",
                             framing: str | None = None,
                             max_per_chunk: int | None = None,
-                            mentions: bool = False) -> dict:
+                            mentions: bool = False,
+                            declared: bool = False) -> dict:
     """Raw triple proposals for one document (unguarded).
 
     Returns {items, cost, calls, errors, chunks, chunks_at_cap};
@@ -451,7 +510,8 @@ def propose_triples_for_doc(doc_id: str, text: str, key: str,
         try:
             content, u = _chat(
                 _build_triple_prompt(chunk, guidance, framing,
-                                     maxn=cap, mentions=mentions),
+                                     maxn=cap, mentions=mentions,
+                                     declared=declared),
                 model, 12000 if _is_haiku55(model) else 6000, key)
             items = _parse_array(content, salvage=True)
             err = None
@@ -480,6 +540,17 @@ def propose_triples_for_doc(doc_id: str, text: str, key: str,
                     rec["mentions"] = {
                         ep: _mention_from_item(it, ep)
                         for ep in ("subject", "object")}
+                if declared:
+                    # Declared derivation surfaces (tier T3):
+                    # carried verbatim; guard_triples checks
+                    # their attestation, the judge decides
+                    # the derivation. Absent/empty stays
+                    # absent — the parse layer invents
+                    # nothing.
+                    for ep in ("subject", "object"):
+                        av = it.get(f"{ep}_attested")
+                        if isinstance(av, str) and av.strip():
+                            rec[f"{ep}_attested"] = av.strip()
                 out.append(rec)
         return out, u, err
 
@@ -886,8 +957,19 @@ def _resolve_endpoint(ep_norm: str, index: tuple,
     guessed.
 
     Resolution order (deterministic, code-only):
-    1. an exact census entity that is maximal, or not
-       contained in any other entity, stands as-is;
+    1. an exact census entity stands as-is, UNLESS a
+       longer census name completes it in one of the two
+       citation directions: prepending (given names
+       complete a surname — "Schneider" for "Wilfried
+       Schneider"; a trailing part is how a person is
+       partially cited) or a generational suffix
+       ("Paul Desmarais" → "Paul Desmarais Jr"). Those
+       fall through to the fragment rules below. Any
+       OTHER trailing extension names a derived, distinct
+       entity ("Calgary" → "Calgary City Council": the
+       city is not the council, and rewriting merged two
+       entities onto one node), so the complete name
+       stands;
     2. a recorded alias (nickname / bridged form /
        folded alias form) resolves to its entity;
     3. a fragment of the item's own anchor (the sweep
@@ -899,8 +981,23 @@ def _resolve_endpoint(ep_norm: str, index: tuple,
        absence from the roster is not proof of error).
     """
     by_norm, alias_of, maximals = index
-    if ep_norm in by_norm and ep_norm in maximals:
-        return None, []
+    if ep_norm in by_norm:
+        ep_seq = [t for t in re.split(r"[\s-]+", ep_norm) if t]
+
+        def _completion(longer: str) -> bool:
+            seq = [t for t in re.split(r"[\s-]+", longer)
+                   if t]
+            if len(ep_seq) >= len(seq):
+                return False
+            if seq[-len(ep_seq):] == ep_seq:
+                return True  # prepended completion
+            return seq[:len(ep_seq)] == ep_seq and all(
+                t in ("jr", "sr", "ii", "iii", "iv", "esq")
+                for t in seq[len(ep_seq):])
+
+        if not any(n != ep_norm and _completion(n)
+                   for n in by_norm):
+            return None, []
     if ep_norm in alias_of:
         return by_norm[alias_of[ep_norm]]["surface"], []
     etoks = _identity_tokens(ep_norm)
@@ -908,9 +1005,17 @@ def _resolve_endpoint(ep_norm: str, index: tuple,
             and etoks < _identity_tokens(anchor_norm):
         return by_norm[anchor_norm]["surface"], []
     toks = {n: _identity_tokens(n) for n in by_norm}
+    # A coordination surface ("Vietnam and Cambodia") is
+    # not an entity and never a resolution target: a
+    # fragment naming one side of it must not be
+    # rewritten into the pair (the pair asserts a fact
+    # about both sides).
     cands = sorted(by_norm[m]["surface"] for m in maximals
-                   if etoks < toks[m]
-                   or (etoks == toks[m] and ep_norm != m))
+                   if (etoks < toks[m]
+                       or (etoks == toks[m] and ep_norm != m))
+                   and not re.search(
+                       r"[A-Z][\w.]*\s+and\s+[A-Z]",
+                       by_norm[m]["surface"]))
     if len(cands) == 1:
         return cands[0], []
     if len(cands) > 1:
@@ -1328,6 +1433,166 @@ def punct_collapse(s: str) -> str:
     return _PUNCT_SPACE_RX.sub(r"\1", s)
 
 
+# ------------------------------------------------------------------
+# Document registry (upstream attestation program, 2026-10-29)
+# ------------------------------------------------------------------
+# A document stipulates its own aliases: defined terms in
+# contracts ("X (the "Term")", ""Term" means …",
+# hereinafter), acronym pairs in technical text, Korean
+# 이하 "갑" forms. The registry collects those stipulations
+# deterministically at guard time. It is genre-blind by
+# construction — it reacts to what THIS document stipulates,
+# never to a genre label — and document-scoped: nothing in
+# it carries into another document.
+#
+# Measured motivation (provenance audit, 2026-10-29): of 89
+# role-word blocks in the CUAD slice, 77 (87%) had their
+# endpoint term defined in the very document that proposed
+# them — the guard was killing the contract's own defined
+# parties. Methods borrowed (never their numbers): DEFT
+# definition patterns; Schwartz-Hearst acronym pairing.
+
+_DEF_PAREN_RX = re.compile(
+    r"([A-Z][\w&.,'\u2019\-]+(?:\s+(?:[A-Z][\w&.,'\u2019\-]+|of|the|and|&))*)"
+    r"\s*\(\s*(?:the\s+)?[\"“]([^\"”]{1,60})[\"”]\s*\)")
+_DEF_HEREINAFTER_RX = re.compile(
+    r"([A-Z][\w&.,'\u2019\-]+(?:\s+(?:[A-Z][\w&.,'\u2019\-]+|of|the|and|&))*)"
+    r"\s*,?\s*hereinafter\s+(?:referred\s+to\s+as\s+)?"
+    r"(?:the\s+)?[\"“]([^\"”]{1,60})[\"”]")
+_DEF_MEANS_RX = re.compile(
+    r"[\"“]([^\"”]{1,60})[\"”]\s+"
+    r"(?:means|shall\s+mean|has\s+the\s+meaning)")
+_DEF_MEANS_BARE_RX = re.compile(
+    r"(?<![\w.])([A-Z][\w'\u2019\-]*(?:\s+[A-Z][\w'\u2019\-]*){0,3})"
+    r"\s+(?:means|shall\s+mean|will\s+mean)\b")
+_DEF_PAREN_ANY_RX = re.compile(
+    r"\(([^()]{0,40}?)"
+    r"[\"“]([^\"”]{1,60})[\"”]\s*\)")
+_DEF_REFERRED_RX = re.compile(
+    r"referred\s+to\s+(?:collectively\s+|individually\s+)?"
+    r"(?:herein\s+)?as\s+(?:the\s+|a\s+|an\s+)?"
+    r"[\"“]([^\"”]{1,60})[\"”]")
+_NAME_RUN_RX = re.compile(
+    r"[A-Z][\w&.'\u2019\-]*(?:\s+(?:[A-Z][\w&.'\u2019\-]+|of|the|and|&))*")
+_KO_DEF_PAREN_RX = re.compile(
+    r"\(이하\s*[\"'“]([^\"'”]{1,20})[\"'”]\)")
+_KO_DEF_SAY_RX = re.compile(
+    r"이하\s*[\"'“]([^\"'”]{1,20})[\"'”]\s*(?:이라|이라고)")
+_ACRONYM_RX = re.compile(
+    r"([A-Z][\w&\-]+(?:\s+(?:[A-Z][\w&\-]+|of|the|and|for|&)){1,6})"
+    r"\s*\(\s*([A-Z][A-Z0-9]{1,9})\s*\)")
+
+
+def _document_registry(doc_text: str) -> tuple[dict, set]:
+    """The document's stipulated aliases: (canonical_of,
+    defined). canonical_of maps an alias's norm_ws form to
+    the referent surface the document binds it to (defined
+    terms whose referent run is a clean name — no comma,
+    no digit, at most six tokens; comma/digit runs are
+    addresses and descriptions, not names, and bind
+    nothing). defined holds every norm the document
+    stipulates as a term, referent or not: a defined term
+    IS an identity inside this document (the contract
+    rule), even when no clean referent surface exists to
+    canonicalize to."""
+    canonical_of: dict[str, str] = {}
+    defined: set[str] = set()
+    for rx in (_DEF_PAREN_RX, _DEF_HEREINAFTER_RX):
+        for m in rx.finditer(doc_text):
+            referent = m.group(1).strip().rstrip(",")
+            term = m.group(2).strip()
+            if not term:
+                continue
+            defined.add(norm_ws(term))
+            if (referent and "," not in referent
+                    and not any(c.isdigit() for c in referent)
+                    and len(referent.split()) <= 6):
+                canonical_of.setdefault(norm_ws(term), referent)
+    # Any quoted term inside parentheses is stipulated,
+    # including forms the adjacent pattern cannot reach:
+    # a descriptor clause between the name and the
+    # parenthesis ('Audible Inc. a Delaware corporation
+    # ("Company")'), or a collective marker ('(collectively
+    # the "Parties")'). The referent, when one is wanted,
+    # is recovered by looking back from the parenthesis —
+    # under tight discipline, because a loose lookback
+    # binds terms to whatever name happens to precede
+    # them (measured on the CUAD slice: ("ACSI") bound
+    # to a lone 'Inc.', ("Vyera") to a lone 'LLC', and
+    # ("Development IP") to the previous sentence's
+    # 'Development Plan'):
+    # - the run has at least two tokens (a lone suffix
+    #   token — 'Inc.', 'LLC' — is not a name);
+    # - the run ENDS within 90 characters of the
+    #   parenthesis, and the gap between run and
+    #   parenthesis crosses no sentence boundary and
+    #   no other parenthesis.
+    for m in _DEF_PAREN_ANY_RX.finditer(doc_text):
+        term = m.group(2).strip()
+        if not term:
+            continue
+        defined.add(norm_ws(term))
+        if norm_ws(term) in canonical_of:
+            continue
+        window = doc_text[max(0, m.start() - 200):m.start()]
+        best = None
+        for r in _NAME_RUN_RX.finditer(window):
+            run = r.group(0).strip().rstrip(",")
+            if not run or "," in run \
+                    or any(c.isdigit() for c in run) \
+                    or len(run.split()) < 2:
+                continue
+            gap = window[r.end():]
+            if len(gap) > 90 or "(" in gap \
+                    or re.search(r"[.!?]\s", gap):
+                continue
+            best = run
+        if best is not None:
+            canonical_of[norm_ws(term)] = best
+    for m in _DEF_REFERRED_RX.finditer(doc_text):
+        defined.add(norm_ws(m.group(1).strip()))
+    for m in _DEF_MEANS_RX.finditer(doc_text):
+        defined.add(norm_ws(m.group(1).strip()))
+    for m in _DEF_MEANS_BARE_RX.finditer(doc_text):
+        phrase = m.group(1).strip()
+        if phrase.split()[0] not in (
+                "The", "This", "It", "There", "A", "An"):
+            defined.add(norm_ws(phrase))
+    for rx in (_KO_DEF_PAREN_RX, _KO_DEF_SAY_RX):
+        for m in rx.finditer(doc_text):
+            defined.add(norm_ws(m.group(1).strip()))
+    for m in _ACRONYM_RX.finditer(doc_text):
+        long_form, short = m.group(1).strip(), m.group(2).strip()
+        if long_form.startswith("The "):
+            long_form = long_form[4:]
+        initials = "".join(
+            w[0] for w in re.findall(r"[A-Z][\w&\-]*", long_form))
+        letters = re.sub(r"[^A-Z]", "", short)
+        it = iter(initials)
+        if letters and all(c in it for c in letters):
+            canonical_of.setdefault(norm_ws(short), long_form)
+    # Shared-modifier fence, applied to every binding:
+    # a clause-defined term that shares the referent's
+    # first token but is not that name extended names a
+    # NEW, related concept, not the referent — '...
+    # resulting from activities under the Development
+    # Plan ("Development IP")': the IP is defined by the
+    # clause; the Plan is a different entity. The term
+    # stays defined (an identity in this document); it
+    # just does not canonicalize. A term that extends
+    # the FULL referent ('Smith Barney' -> 'Smith Barney
+    # Holdings') or a one-token short form (("Vyera")
+    # for Vyera Pharmaceuticals) is untouched.
+    for tnorm in list(canonical_of):
+        ttoks = tnorm.split()
+        rtoks = norm_ws(canonical_of[tnorm]).split()
+        if len(ttoks) >= 2 and rtoks \
+                and ttoks[0] == rtoks[0] \
+                and ttoks[:len(rtoks)] != rtoks:
+            del canonical_of[tnorm]
+    return canonical_of, defined
+
+
 def guard_triples(items: list[dict], doc_text: str,
                   role_words: Iterable[str] | None = None,
                   entity_types: set[str] | None = None,
@@ -1393,6 +1658,39 @@ def guard_triples(items: list[dict], doc_text: str,
       hand-authored pack). The relaxation is weaker than
       the quote test — the object need only co-occur in the
       chunk — so it is a declared opt-in, never a default.
+      (Subsumed by theme grading below: the grade is
+      recorded either way; the flags remain accepted for
+      signature compatibility and are no longer consulted.)
+
+    Upstream attestation program (2026-10-29; design and
+    decision tests in the launch notes):
+
+    - Attestation is tiered. An endpoint attests verbatim
+      (the legacy path), through the document's stipulated
+      aliases (the registry: defined terms and acronym
+      pairs the document itself binds), under punctuation-
+      spacing collapse on both sides (tokenized corpora
+      space quotes, apostrophes and hyphens), or — when
+      the item carries a declared derivation surface
+      (`subject_attested` / `object_attested`, the
+      declared-surface proposer layer) — through that
+      surface's attestation. The non-legacy tier that
+      carried an endpoint is recorded in the kept record's
+      `attest_kind`; the derivation's validity is the
+      judge's call, not the guard's.
+    - A stipulated alias with an attested referent is
+      canonicalized to the referent (recorded in
+      `canonicalized`, as identity resolutions are).
+    - The role-word guard fires only for endpoints the
+      document leaves undefined: a term the document
+      defines is an identity inside it.
+    - theme_presence no longer blocks. An item whose
+      object attests in the document but not in its quote
+      is kept with `theme_grade` (its `attest` level:
+      chunk | document) for the judge.
+    - A duplicate of an already-kept item is recorded in
+      the blocked sidecar with reason `duplicate` instead
+      of vanishing uncounted.
     Identity resolution (always on, no profile switch):
     after the quote gate, each endpoint is resolved
     against the document's census roster
@@ -1438,6 +1736,12 @@ def guard_triples(items: list[dict], doc_text: str,
         t for t in doc_text.split()
         if not _is_quote_token(t))) \
         if identity is not None else None
+    # The document's stipulated aliases (defined terms,
+    # acronym pairs) and its punctuation-collapsed form
+    # for the normalized attestation tier.
+    registry, defined_terms = _document_registry(doc_text) \
+        if items else ({}, set())
+    doc_rep = punct_collapse(doc_norm)
     kept, blocked, seen = [], [], set()
     for it in items:
         s, r, o, q = (it["subject"], it["relation"], it["object"],
@@ -1514,67 +1818,171 @@ def guard_triples(items: list[dict], doc_text: str,
                     [effn] + (list(ent["aliases"])
                               if ent else []),
                     ent is not None or ep in canon)
+        # Registry canonicalization: an endpoint stated
+        # as a stipulated alias (a defined term with a
+        # clean referent, an acronym short form) whose
+        # referent the document attests resolves to the
+        # referent surface — recorded in `canonicalized`
+        # exactly like an identity resolution, since the
+        # graph keys nodes by name string and "Company"
+        # the defined term IS that party inside this
+        # document. An alias whose referent does not
+        # attest keeps its proposed surface and is
+        # attested through the alias form itself
+        # (reg_forms), which the document stipulates.
+        reg_forms: dict[str, list[str]] = {}
+        for ep in ("subject", "object"):
+            pnorm = norm_ws(base[ep])
+            target = registry.get(pnorm)
+            if target is None:
+                continue
+            tnorm = norm_ws(target)
+            if tnorm == norm_ws(eff[ep]):
+                reg_forms[ep] = [pnorm]
+            elif tnorm in doc_norm \
+                    or punct_collapse(tnorm) in doc_rep:
+                # The stipulated binding is the strongest
+                # signal in the document: the record shows
+                # proposed -> stipulated referent, even
+                # when identity resolution also rewrote
+                # the endpoint on the way.
+                canon[ep] = [base[ep], target]
+                eff[ep] = target
+                reg_forms[ep] = [pnorm, tnorm]
+                fs = forms.get(ep, ([], False))[0]
+                forms[ep] = ([tnorm, *fs], True)
+            else:
+                reg_forms[ep] = [pnorm]
 
-        def _attested(ep: str, hay: str,
+        def _attested(ep: str, hay: str, hay_rep: str,
                       bridged: bool = False,
-                      _forms=forms, _base=base) -> bool:
-            # The bridged-document fallback belongs to
-            # L0 alone: it answers "does this entity
-            # occur in the document at all". The quote
-            # and chunk haystacks must NOT fall back to
-            # it — that would widen a quote-level test
-            # into a document-level one and invent the
-            # attestation the theme guard exists to
-            # refuse. (_forms/_base bind this item's
-            # structures at definition time.)
+                      _forms=forms, _reg=reg_forms,
+                      _base=base) -> bool:
+            # Attestation is tiered (upstream program):
+            # the endpoint's forms verbatim in the
+            # haystack, the document's stipulated alias
+            # forms, or any form under punctuation-
+            # spacing collapse on both sides (the T1
+            # repair — tokenized corpora space their
+            # quotes, apostrophes and hyphens:
+            # 'Healey 's', 'Won - yong'). The bridged-
+            # document fallback belongs to L0 alone: it
+            # answers "does this entity occur in the
+            # document at all". The quote and chunk
+            # haystacks must NOT fall back to it — that
+            # would widen a quote-level test into a
+            # document-level one. (_forms/_reg/_base
+            # bind this item's structures at definition
+            # time.)
             fs, bridged_ok = _forms.get(
                 ep, ([norm_ws(_base[ep])], False))
-            return any(f in hay for f in fs) or (
-                bridged and bridged_ok
-                and doc_bridged is not None
-                and any(f in doc_bridged for f in fs))
+            rs = _reg.get(ep, [])
+            return any(f in hay for f in fs) \
+                or any(f in hay for f in rs) \
+                or any(punct_collapse(f) in hay_rep
+                       for f in fs) \
+                or any(punct_collapse(f) in hay_rep
+                       for f in rs) \
+                or (bridged and bridged_ok
+                    and doc_bridged is not None
+                    and any(f in doc_bridged for f in fs))
 
         prop_sn, prop_on = sn, on
         sn, on = norm_ws(eff["subject"]), \
             norm_ws(eff["object"])
-        # L0: attested somewhere in the document at all?
-        if not _attested("subject", doc_norm, bridged=True) \
-                or not _attested("object", doc_norm,
-                                 bridged=True):
+        qn_rep = punct_collapse(qn)
+        chunk_n = it.get("chunk_norm", "")
+        chunk_rep = punct_collapse(chunk_n)
+        # L0: attested somewhere in the document at
+        # all? The tier that carried each endpoint is
+        # recorded in `attest_kind` when it is not the
+        # legacy verbatim/alias path: "registered" (a
+        # stipulated alias form), "normalized" (the
+        # spacing repair), "declared" (the proposer's
+        # declared derivation surface attests — the
+        # derivation itself is the judge's call, R1).
+        kinds: dict[str, str] = {}
+        unattested = False
+        for ep in ("subject", "object"):
+            fs, bridged_ok = forms.get(
+                ep, ([norm_ws(base[ep])], False))
+            rs = reg_forms.get(ep, [])
+            effn = norm_ws(eff[ep])
+            if effn in doc_norm or any(
+                    f in doc_norm for f in fs) or (
+                    bridged_ok and doc_bridged is not None
+                    and any(f in doc_bridged for f in fs)):
+                continue
+            if any(f in doc_norm for f in rs):
+                kinds[ep] = "registered"
+            elif punct_collapse(effn) in doc_rep or any(
+                    punct_collapse(f) in doc_rep
+                    for f in fs + rs):
+                kinds[ep] = "normalized"
+            else:
+                decl = it.get(f"{ep}_attested")
+                dn = norm_ws(decl) \
+                    if isinstance(decl, str) else ""
+                if dn and (dn in doc_norm
+                           or punct_collapse(dn) in doc_rep):
+                    kinds[ep] = "declared"
+                else:
+                    unattested = True
+        if unattested:
             blocked.append({**base, "reason": "l0_attest"})
             continue
-        chunk_n = it.get("chunk_norm", "")
-        if _attested("subject", qn) \
-                and _attested("object", qn):
+        if _attested("subject", qn, qn_rep) \
+                and _attested("object", qn, qn_rep):
             attest = "quote"
-        elif _attested("subject", chunk_n) \
-                and _attested("object", chunk_n):
+        elif _attested("subject", chunk_n, chunk_rep) \
+                and _attested("object", chunk_n, chunk_rep):
             attest = "chunk"
         else:
             attest = "document"
-        if role_words and (sn in role_words
-                           or on in role_words
-                           or prop_sn in role_words
-                           or prop_on in role_words):
-            blocked.append({**base, "reason": "l0_role_word"})
-            continue
+        if role_words:
+            # A term THIS document defines is an
+            # identity here, not a bare role word:
+            # the guard fires only for endpoints the
+            # document leaves undefined (provenance
+            # audit: 77 of 89 role blocks in the CUAD
+            # slice were the contract's own defined
+            # parties).
+            def _role_blocked(effn_: str, propn_: str) -> bool:
+                if effn_ not in role_words \
+                        and propn_ not in role_words:
+                    return False
+                return effn_ not in defined_terms \
+                    and propn_ not in defined_terms \
+                    and effn_ not in registry \
+                    and propn_ not in registry
+            if _role_blocked(sn, prop_sn) \
+                    or _role_blocked(on, prop_on):
+                blocked.append({**base,
+                                "reason": "l0_role_word"})
+                continue
         toks = [t for t in re.split(r"[^a-z]+", norm_ws(r)) if t]
         if toks and all(t in PREPS for t in toks):
             blocked.append({**base, "reason": "theme_missing"})
             continue
         if toks and toks[-1] in PREPS \
-                and not _attested("object", qn):
-            span = it.get(theme_attest_key) \
-                if theme_attest_key else None
-            if not (isinstance(span, str)
-                    and _attested("object",
-                                  norm_ws(span))) \
-                    and not (theme_attest_chunk
-                             and _attested("object",
-                                           chunk_n)):
-                blocked.append({**base,
-                                "reason": "theme_presence"})
-                continue
+                and not _attested("object", qn, qn_rep):
+            # Theme grading (decision test 1,
+            # 2026-10-29): the object is attested in
+            # the document (L0 passed) but not inside
+            # the quote. The old guard blocked the
+            # whole class; a judged sample of the
+            # blocked class was overwhelmingly
+            # text-true (the parse path states the
+            # object across the passage, not inside
+            # the minimal quote). The item is KEPT and
+            # its evidence grade goes to the judge,
+            # whose seams already weigh evidence
+            # strength; fabrication control stays
+            # with G1 (the quote is verbatim) plus
+            # the judge. `theme_attest_key` /
+            # `theme_attest_chunk` are subsumed by
+            # the grade and no longer consulted.
+            base["theme_grade"] = attest
         # The resolution lands on the record only
         # here, once the item is kept: blocked records
         # carry the item exactly as proposed.
@@ -1584,8 +1992,15 @@ def guard_triples(items: list[dict], doc_text: str,
             base["canonicalized"] = canon
         if amb:
             base["identity_ambiguous"] = amb
+        if kinds:
+            base["attest_kind"] = kinds
         k = (sn, norm_ws(r), on)
         if k in seen:
+            # A duplicate is a loss like any other and
+            # is accounted, never silent: it lands in
+            # the blocked sidecar under its own reason,
+            # as the record it would have kept.
+            blocked.append({**base, "reason": "duplicate"})
             continue
         seen.add(k)
         kept.append({**base, "attest": attest})
