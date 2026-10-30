@@ -665,6 +665,11 @@ def _starts_capital(core: str) -> bool:
 
 _QUOTE_CHARS = frozenset("\"'\u201c\u201d\u2018\u2019\u00ab\u00bb")
 
+# The double-quote family: the marks that open and
+# close a quoted span. Single quotes are apostrophes
+# as often as quotes and never move span state.
+_DQUOTE_CHARS = frozenset("\"\u201c\u201d\u00ab\u00bb")
+
 # Sentence-initial words that are not name material: at a
 # sentence or paragraph boundary a capitalised token from
 # this set is prose syntax, not the start of a name
@@ -681,6 +686,21 @@ def _is_quote_token(raw: str) -> bool:
     'Wilfried " Willi " Schneider')."""
     return bool(raw) and all(ch in _QUOTE_CHARS
                              for ch in raw)
+
+
+def _bridged_form(text: str) -> str:
+    """The document's bridged form, for attesting a name
+    a nickname's quotes interrupt: built from token
+    CORES, not raw tokens. Dropping only standalone
+    quote tokens left the marks embedded whenever the
+    text attaches them to the words they wrap — raw
+    text's convention ('Michael John "Mike" Padden') —
+    and the bridged form of exactly the names it exists
+    for never matched, so the nickname branch could not
+    fire and the full name censused nowhere."""
+    return norm_ws(" ".join(
+        c for c in (_token_core(t) for t in text.split())
+        if c))
 
 
 def census_entities(text: str) -> dict:
@@ -712,7 +732,10 @@ def census_entities(text: str) -> dict:
       remain, and its normalized form is recorded as an
       alias of the surface. The entity is attested by
       its full bridged form, which the alias list also
-      carries.
+      carries. The wrapped token must be interior: a
+      quote that opens the sequence marks a quoted
+      title ("Suffer the Children"), whose first token
+      is part of the name and is never excluded.
     - a surface that differs from another roster
       surface only by one token, where that token is a
       recorded nickname alias of the other surface
@@ -740,8 +763,7 @@ def census_entities(text: str) -> dict:
     forms) — mention forms, never separate entities.
     """
     doc_norm = norm_ws(text)
-    doc_bridged = norm_ws(" ".join(
-        t for t in text.split() if not _is_quote_token(t)))
+    doc_bridged = _bridged_form(text)
     surfaces: list[tuple[str, list[str], bool]] = []
     for par in re.split(r"\n\s*\n", text):
         raw_tokens = par.split()
@@ -772,9 +794,24 @@ def census_entities(text: str) -> dict:
             if _is_quote_token(rt):
                 quote_open = not quote_open
                 quoted.append(False)
-            else:
-                quoted.append(
-                    quote_open or rt[:1] in _QUOTE_CHARS)
+                continue
+            # Attached quote marks: raw text glues them
+            # to the words they wrap ('"Mike" Padden'),
+            # and tokenized-then-joined text can glue a
+            # closing mark to the NEXT word ('"Mike
+            # "Padden'). A token is quoted when its
+            # first letter sits inside a double-quote
+            # span: a head mark opens the span when it
+            # is closed and closes it when it is open,
+            # and the state flips on every double-quote
+            # mark the token carries.
+            marks = sum(1 for ch in rt
+                        if ch in _DQUOTE_CHARS)
+            head_mark = bool(rt) and rt[0] in _DQUOTE_CHARS
+            quoted.append(not quote_open if head_mark
+                          else quote_open)
+            if marks % 2 == 1:
+                quote_open = not quote_open
         # Sentence-boundary map: a token starts at a
         # boundary at the paragraph start or right after
         # a sentence-final raw token (quote tokens are
@@ -835,7 +872,20 @@ def census_entities(text: str) -> dict:
                 plain = [x for x in seq if not quoted[x]]
                 aliases: list[str] = []
                 attested = False
-                if 2 <= len(plain) < len(seq):
+                # The nickname exclusion requires a plain
+                # name token BEFORE the quoted token: the
+                # nickname pattern is Name "Nick" Name. A
+                # quote that OPENs the sequence marks a
+                # quoted title ("Suffer the Children",
+                # "El Regalo Más Grande"), whose first
+                # token is part of the name — excluding it
+                # censused the title as a fragment ("the
+                # Children") and demoted the full title to
+                # an alias, and resolution then rewrote
+                # correct endpoints down to the fragment
+                # (scale-test pilot, 2026-10-29).
+                if 2 <= len(plain) < len(seq) \
+                        and not quoted[seq[0]]:
                     aliases = [norm_ws(tokens[x])
                                for x in seq if quoted[x]]
                     full = " ".join(cores)
@@ -901,15 +951,247 @@ def census_entities(text: str) -> dict:
             "unattested": unattested}
 
 
-def _identity_index(doc_text: str) -> tuple[dict, dict, set]:
+# Absorption may complete a name with name material
+# only. An extra token that is a function word, a prose
+# opener, or a role/title word marks the longer surface
+# as a phrase that merely CONTAINS the fragment — a
+# title phrase ("Attorney General of Afghanistan"), a
+# work title containing a place ("Battle of Los
+# Angeles"), a coordination ("South Plainfield and the
+# Cedar Brook"), a prose-glued surface ("Similarly
+# Amdír", "... Education To") — never the fragment's
+# own entity under a fuller name. Every measured
+# absorption whose extra tokens contained such a word
+# was damage (scale-test pilot, 2026-10-29); the
+# completions that survive the veto — given names,
+# compound parts, generational suffixes — carry none.
+_ABSORB_VETO = frozenset({
+    # function words
+    "the", "a", "an", "and", "or", "to", "of", "in",
+    "on", "at", "by", "for", "with", "from", "as",
+    "into", "upon", "per", "via",
+    # prose openers / connectives
+    "similarly", "through", "however", "meanwhile",
+    "thus", "hence", "then", "also", "once",
+    # role / title words
+    "attorney", "general", "prime", "minister",
+    "president", "king", "queen", "prince", "princess",
+    "secretary", "director", "chairman", "chairwoman",
+    "governor", "mayor", "chief", "justice", "captain",
+    "professor", "doctor", "bishop", "pope", "emperor",
+    "empress", "duke", "duchess", "lord", "lady",
+    "judge", "senator", "ambassador", "chancellor",
+    "premier",
+}) | _INITIAL_DROP
+
+
+# --- Structural absorption vetoes -------------------
+# Rule 4 below rewrites a mention to a longer census
+# surface that merely CONTAINS it. Containment alone
+# does not make the longer surface the same entity:
+# it may be a typed entity built around the mention
+# (a university in Chicago, a country's senate), two
+# mentions glued across a lost boundary (an ALL-CAPS
+# contract title fused to its subtitle, a verse line's
+# first word), a designation phrase, or a distinct
+# entity sharing a name token (the company 'Cimatti'
+# is not its founder). The vetoes in _absorption_veto
+# refuse such targets on structural and evidentiary
+# grounds — the shape of the completion, and whether
+# the document itself supplies identity evidence for
+# the rewrite — never on a list of known-bad surfaces
+# or of type-denoting words: a hand-written word list
+# is a per-language artifact, and this layer's rules
+# must be statements about names, not about English.
+
+_GEN_SUFFIXES = frozenset(
+    {"jr", "sr", "ii", "iii", "iv", "esq"})
+
+
+def _seq_of(norm: str) -> list:
+    seq = [t for t in re.split(r"[\s-]+", norm) if t]
+    if seq and seq[0] in ("the", "a", "an"):
+        seq = seq[1:]
+    return seq
+
+
+def _align(ep_seq: list, cand_seq: list):
+    """Subsequence alignment of the fragment's tokens
+    in the candidate's: returns (prepend, infix,
+    trailing) extra tokens, or None when the fragment's
+    tokens do not appear in order."""
+    idx: list[int] = []
+    i = 0
+    for j, t in enumerate(cand_seq):
+        if i < len(ep_seq) and t == ep_seq[i]:
+            idx.append(j)
+            i += 1
+    if i < len(ep_seq) or not idx:
+        return None
+    first, last = idx[0], idx[-1]
+    matched = set(idx)
+    return (cand_seq[:first],
+            [cand_seq[k] for k in range(first + 1, last)
+             if k not in matched],
+            cand_seq[last + 1:])
+
+
+def _contains_seq(hay: list, needle: list) -> int:
+    """Contiguous occurrences of needle in hay."""
+    if not needle or len(needle) > len(hay):
+        return 0
+    return sum(1 for i in range(len(hay) - len(needle) + 1)
+               if hay[i:i + len(needle)] == needle)
+
+
+def _absorption_veto(ep_norm: str, cand: str,
+                     index: tuple,
+                     ep_initialism: bool) -> bool:
+    """True when a structural veto refuses the candidate
+    as an absorption target for the fragment. Each veto
+    reads the SHAPE of the completion, not the identity
+    of the names involved."""
+    by_norm = index[0]
+    # An initialism is a complete referring expression,
+    # not a fragment of a longer name: 'ASCAP' does not
+    # absorb into a phrase that happens to contain it
+    # ('Joining ASCAP').
+    if ep_initialism:
+        return True
+    ep_seq = _seq_of(ep_norm)
+    cand_seq = _seq_of(cand)
+    extras = set(cand_seq) - set(ep_seq)
+    # An extra token the document writes in all caps is
+    # a designator (an initialism or a defined-term
+    # shout), not name material: 'FK Fyllingsdalen' is
+    # the club designation, and an ALL-CAPS contract
+    # heading fused to its own first line
+    # ('THIS COOPERATION AGREEMENT' above 'Cooperation
+    # Agreement') is a layout artifact, not a party.
+    raw_toks = [t for t in re.split(
+        r"[\s-]+", by_norm[cand]["surface"]) if t]
+    for raw in raw_toks:
+        if raw.lower() in extras and len(raw) >= 2 \
+                and raw.isupper():
+            return True
+    # A second, complete entity name sitting in the
+    # candidate's infix/trailing region means the
+    # surface is two mentions glued across a lost
+    # boundary ('United States Husain Haqqani' — the
+    # country and its ambassador), and a candidate that
+    # contains the fragment twice is a coordination or
+    # list surface, not a name.
+    if _contains_seq(cand_seq, ep_seq) >= 2:
+        return True
+    al = _align(ep_seq, cand_seq)
+    if al is not None:
+        first = len(al[0])
+        last = len(cand_seq) - len(al[2])
+        for other in by_norm:
+            if other in (cand, ep_norm):
+                continue
+            o_seq = _seq_of(other)
+            if len(o_seq) < 2:
+                continue
+            for i in range(
+                    len(cand_seq) - len(o_seq) + 1):
+                if cand_seq[i:i + len(o_seq)] == o_seq \
+                        and i >= first \
+                        and i + len(o_seq) > last:
+                    return True
+    # A mention may be rewritten to a longer name only
+    # on document-supplied identity evidence. Bare
+    # containment is not evidence — the longer surface
+    # may be a typed entity built around the mention
+    # (a university in Chicago, a country's senate, a
+    # park around a river), a distinct entity sharing
+    # a name token (the company 'Cimatti' is not its
+    # founder 'Marco Cimatti'), or prose glued to the
+    # name at a lost boundary (a verse line's
+    # 'Methinks Ulysses', a show's name around a
+    # country in 'Voice Romania'). The one exception
+    # is the mention's only anchor (see _anchored):
+    # an infix completion of a mention that occurs
+    # nowhere outside the candidate, where refusing
+    # would protect nothing and cost the fact.
+    if len(cand_seq) > len(ep_seq) \
+            and not _rewrite_evidence(
+                ep_seq, cand, index) \
+            and not _anchored(
+                ep_norm, ep_seq, cand, cand_seq, index):
+        return True
+    return False
+
+
+def _anchored(ep_norm: str, ep_seq: list, cand: str,
+              cand_seq: list, index: tuple) -> bool:
+    """The mention's only anchor: the fragment never
+    occurs in the document outside the candidate, and
+    the completion is INFIX only — the extra tokens
+    sit strictly between the fragment's own first and
+    last tokens (a seat-written 'Jared Allen' for
+    'Jared Scot Allen': the middle name is the name's
+    own material). Leading completions are where glue
+    and specifiers live ('Voice Romania' is a show,
+    not the country; 'Joining SC Freiburg' is a verb
+    phrase), and trailing completions are where
+    derived entities live (a country's senate) — those
+    always need evidence. Refusing an infix rewrite
+    of an anchorless mention would not protect a
+    competing attested name — there is none — it
+    would only leave the mention unattested and cost
+    the fact."""
+    al = _align(ep_seq, cand_seq)
+    if al is None or al[0] or al[2] or not al[1]:
+        return False
+    return _outside_count(index[3], ep_norm, cand) == 0
+
+
+def _rewrite_evidence(ep_seq: list, cand: str,
+                      index: tuple) -> bool:
+    """Document-supplied evidence that the longer
+    candidate is the mention's own fuller name: the
+    completion is a bare generational suffix, the
+    fragment is a hyphen component of the target, the
+    target's entity records a longer alias form
+    containing the fragment (a nickname-bridged full
+    form), or the document attests the longer name
+    more than once."""
+    by_norm, alias_of, bridged = index[0], index[1], \
+        index[3]
+    cand_seq = _seq_of(cand)
+    al = _align(ep_seq, cand_seq)
+    if al is not None and al[0] == [] and al[1] == [] \
+            and al[2] and all(
+                t in _GEN_SUFFIXES for t in al[2]):
+        return True
+    surf = by_norm[cand]["surface"]
+    if any(len(tok.split("-")) >= 2
+           and ep_seq[-1] in tok.split("-")
+           for tok in surf.lower().split()):
+        return True
+    for a, canon in alias_of.items():
+        if canon != cand:
+            continue
+        a_seq = _seq_of(a)
+        if len(a_seq) > len(ep_seq) and _contains_seq(
+                a_seq, ep_seq):
+            return True
+    return len(_phrase_spans(bridged, cand)) >= 2
+
+
+def _identity_index(doc_text: str) -> tuple[dict, dict, set, str]:
     """The identity index guard_triples resolves against:
-    (by_norm, alias_of, maximals) from the document's
-    census. by_norm maps a census norm to its entity;
-    alias_of maps an alias norm (nickname, bridged full
-    form, folded alias form) to the canonical entity
-    norm; maximals are the entity norms whose token set
-    is not a proper subset of another entity's — the
-    only surfaces a fragment may resolve INTO."""
+    (by_norm, alias_of, maximals, bridged) from the
+    document's census. by_norm maps a census norm to its
+    entity; alias_of maps an alias norm (nickname,
+    bridged full form, folded alias form) to the
+    canonical entity norm; maximals are the entity norms
+    whose token set is not a proper subset of another
+    entity's — the only surfaces a fragment may resolve
+    INTO. bridged is the document's bridged form, kept
+    so absorption can check where mentions actually
+    occur (see _resolve_endpoint rule 4)."""
     cen = census_entities(doc_text)
     by_norm = {e["norm"]: e for e in cen["entities"]}
     alias_of: dict[str, str] = {}
@@ -920,7 +1202,87 @@ def _identity_index(doc_text: str) -> tuple[dict, dict, set]:
     maximals = {n for n in by_norm
                 if not any(n != m and toks[n] < toks[m]
                            for m in by_norm)}
-    return by_norm, alias_of, maximals
+    # A surface made entirely of words the document
+    # itself uses as ordinary lowercase prose, and
+    # occurring only inside title-case paragraphs
+    # (headings), is a prose run, not a name: headings
+    # mint them wholesale ('Rectal Cancer Patients
+    # Treated' — every content word a common word the
+    # body uses lowercase). A name keeps at least one
+    # token the document never uses as prose
+    # ('Malagasy', 'Bosáková', 'Angeles'), or recurs in
+    # ordinary paragraphs. Such surfaces stay in the
+    # census but are demoted from maximals: never
+    # absorption targets.
+    prose = {c.lower() for raw in doc_text.split()
+             if (c := _token_core(raw)).isalpha()
+             and c.islower() and len(c) >= 2}
+    paragraphs = re.split(r"\n\s*\n", doc_text)
+
+    def _title_case(par: str) -> bool:
+        # Title case capitalizes content words; function
+        # words stay lowercase ('Analysis of INT 0144
+        # Trial: Association of Polymorphisms with
+        # Survival...').
+        caps = [c for c in (_token_core(t)
+                            for t in par.split())
+                if c.isalpha()
+                and c.lower() not in _ABSORB_VETO
+                and c.lower() not in ("the", "a", "an")]
+        return len(caps) >= 3 and all(
+            c[:1].isupper() for c in caps)
+
+    title_pars = [p for p in paragraphs if _title_case(p)]
+    body_pars = [p for p in paragraphs if not _title_case(p)]
+
+    def _is_prose_surface(norm: str) -> bool:
+        content = [t for t in re.split(r"[\s-]+", norm)
+                   if t and t not in _ABSORB_VETO
+                   and t not in ("the", "a", "an")]
+        if not content or not all(t in prose
+                                  for t in content):
+            return False
+        surface = by_norm[norm]["surface"]
+        return (any(surface in p for p in title_pars)
+                and not any(surface in p
+                            for p in body_pars))
+
+    maximals = {n for n in maximals
+                if not _is_prose_surface(n)}
+    return by_norm, alias_of, maximals, _bridged_form(doc_text)
+
+
+def _phrase_spans(bridged: str, phrase: str) -> list:
+    """Token-boundary occurrences of a norm phrase in
+    the bridged document text."""
+    pat = re.compile(r"(?<![a-z0-9])" + re.escape(phrase)
+                     + r"(?![a-z0-9])")
+    return [(m.start(), m.end()) for m in pat.finditer(bridged)]
+
+
+def _outside_count(bridged: str, ep_norm: str,
+                   cand_norm: str) -> int:
+    """How often the fragment occurs in the document at
+    a position no occurrence of the candidate surface
+    covers: its independent textual life — the document
+    referring with the fragment on its own, outside the
+    longer surface that contains it."""
+    cand_spans = _phrase_spans(bridged, cand_norm)
+    return sum(1 for s, e in _phrase_spans(bridged, ep_norm)
+               if not any(cs <= s and e <= ce
+                          for cs, ce in cand_spans))
+
+
+def _is_code_fragment(tok: str) -> bool:
+    """True for a token that is a designation code, not
+    name material: it starts with a digit ('251a/a') or
+    is a slash pair of single characters ('q/q', a
+    genotype zygosity code). A name completing with
+    such a token is a designation phrase, not a longer
+    name."""
+    if tok[:1].isdigit():
+        return True
+    return bool(re.fullmatch(r".?/.?", tok))
 
 
 def _name_tokens(norm: str) -> set:
@@ -945,7 +1307,8 @@ def _identity_tokens(norm: str) -> set:
 
 
 def _resolve_endpoint(ep_norm: str, index: tuple,
-                      anchor_norm: str | None = None
+                      anchor_norm: str | None = None,
+                      ep_initialism: bool = False
                       ) -> tuple[str | None, list[str]]:
     """Resolve one proposed endpoint (norm_ws form) to
     the document's canonical surface for the entity it
@@ -972,6 +1335,11 @@ def _resolve_endpoint(ep_norm: str, index: tuple,
        stands;
     2. a recorded alias (nickname / bridged form /
        folded alias form) resolves to its entity;
+    2b. a nickname-headed form — the entity's recorded
+       nickname heading the entity's name tail (Mike
+       Padden for Michael John Padden) — resolves to
+       its entity, the same fold the census applies
+       among its own surfaces;
     3. a fragment of the item's own anchor (the sweep
        asked about that entity) resolves to the anchor;
     4. a proper token-subset of exactly ONE maximal
@@ -979,8 +1347,31 @@ def _resolve_endpoint(ep_norm: str, index: tuple,
        ambiguous; of none, it stands as proposed (the
        proposer may name entities the census missed —
        absence from the roster is not proof of error).
+       Absorption completes a name with name material
+       only: a candidate whose extra tokens contain a
+       function word, a prose opener, or a role/title
+       word (_ABSORB_VETO) merely CONTAINS the fragment
+       (a title phrase, a work title, a coordination, a
+       prose-glued surface) and is never a target, and a
+       candidate completed by a designation code
+       ('251a/a', 'q/q') is a designation phrase, not a
+       longer name. A surviving candidate must then
+       pass the structural vetoes (_absorption_veto):
+       an initialism never absorbs, an all-caps extra
+       token is a designator, a second complete entity
+       name inside the candidate marks a glued surface,
+       and — the general rule — a rewrite needs
+       document-supplied identity evidence (a recorded
+       longer alias form, a generational suffix, a
+       hyphen compound, or a second attestation of the
+       longer name), unless it is the mention's only
+       anchor (an infix completion of a mention that
+       occurs nowhere outside the candidate — the
+       middle name case: 'Jared Allen' for 'Jared Scot
+       Allen'). The vetoes refuse only a UNIQUE
+       candidate; a contested field stays ambiguous.
     """
-    by_norm, alias_of, maximals = index
+    by_norm, alias_of, maximals, bridged = index
     if ep_norm in by_norm:
         ep_seq = [t for t in re.split(r"[\s-]+", ep_norm) if t]
 
@@ -1000,6 +1391,24 @@ def _resolve_endpoint(ep_norm: str, index: tuple,
             return None, []
     if ep_norm in alias_of:
         return by_norm[alias_of[ep_norm]]["surface"], []
+    # 2b. a nickname-headed form: the endpoint heads the
+    # entity's name tail with the entity's recorded
+    # nickname (Mike Padden for Michael John Padden) —
+    # the same fold the census applies among its own
+    # surfaces, extended to endpoints, which otherwise
+    # attested nowhere and blocked. The nickname must be
+    # this entity's recorded alias and the remaining
+    # tokens exactly the entity's tail; anything else
+    # falls through untouched.
+    ep_seq = [t for t in re.split(r"[\s-]+", ep_norm) if t]
+    if len(ep_seq) >= 2 and ep_seq[0] in alias_of:
+        target = alias_of[ep_seq[0]]
+        t_seq = [t for t in re.split(r"[\s-]+", target)
+                 if t]
+        if len(t_seq) > len(ep_seq) and \
+                t_seq[len(t_seq) - len(ep_seq) + 1:] \
+                == ep_seq[1:]:
+            return by_norm[target]["surface"], []
     etoks = _identity_tokens(ep_norm)
     if anchor_norm and anchor_norm in by_norm \
             and etoks < _identity_tokens(anchor_norm):
@@ -1009,17 +1418,62 @@ def _resolve_endpoint(ep_norm: str, index: tuple,
     # not an entity and never a resolution target: a
     # fragment naming one side of it must not be
     # rewritten into the pair (the pair asserts a fact
-    # about both sides).
-    cands = sorted(by_norm[m]["surface"] for m in maximals
-                   if (etoks < toks[m]
-                       or (etoks == toks[m] and ep_norm != m))
-                   and not re.search(
-                       r"[A-Z][\w.]*\s+and\s+[A-Z]",
-                       by_norm[m]["surface"]))
-    if len(cands) == 1:
-        return cands[0], []
-    if len(cands) > 1:
-        return None, cands
+    # about both sides). One further eligibility rule,
+    # from the BioRED pilot's damage classes: a
+    # candidate whose extra tokens include a
+    # designation code ('251a/a', 'q/q') is a
+    # designation phrase ('VEGFR2 H472Q Q/Q'), not a
+    # longer name. (The title-case prose runs that
+    # pilot also produced — 'Rectal Cancer Patients
+    # Treated' — never become targets at all: see the
+    # prose-surface demotion in _identity_index.)
+    def _article_variant(ep: str, cand: str) -> bool:
+        # Same identity under two surface forms (a
+        # leading article is the usual difference):
+        # the form the document actually refers with
+        # wins. An endpoint used independently at least
+        # twice stands as proposed ('SRY', referred to
+        # bare throughout, does not become 'The SRY');
+        # a form occurring only inside the longer
+        # surface, or once at its own definition,
+        # still resolves to the census canonical
+        # ('Seller' -> 'The Seller', the defined-term
+        # convention; 'The Hague').
+        if etoks != toks[cand] or ep == cand:
+            return False
+        return _outside_count(bridged, ep, cand) >= 2
+
+    cand_norms = []
+    for m in maximals:
+        if not (etoks < toks[m]
+                or (etoks == toks[m] and ep_norm != m)):
+            continue
+        if (toks[m] - etoks) & _ABSORB_VETO:
+            continue
+        if any(_is_code_fragment(t)
+               for t in toks[m] - etoks):
+            continue
+        if _article_variant(ep_norm, m):
+            continue
+        if re.search(r"[A-Z][\w.]*\s+and\s+[A-Z]",
+                     by_norm[m]["surface"]):
+            continue
+        cand_norms.append(m)
+    if len(cand_norms) > 1:
+        # Ambiguity is a property of the document, not
+        # of the veto set: the structural gates may only
+        # refuse a UNIQUE candidate, never prune a
+        # contested field into a false unique answer —
+        # a vetoed rival must not hand the endpoint to
+        # the one bad candidate that remains.
+        return None, sorted(
+            by_norm[m]["surface"] for m in cand_norms)
+    if len(cand_norms) == 1:
+        m = cand_norms[0]
+        if _absorption_veto(ep_norm, m, index,
+                            ep_initialism):
+            return None, []
+        return by_norm[m]["surface"], []
     return None, []
 
 
@@ -1732,9 +2186,7 @@ def guard_triples(items: list[dict], doc_text: str,
         if quote_punct_insensitive else None
     identity = _identity_index(doc_text) if items \
         else None
-    doc_bridged = norm_ws(" ".join(
-        t for t in doc_text.split()
-        if not _is_quote_token(t))) \
+    doc_bridged = _bridged_form(doc_text) \
         if identity is not None else None
     # The document's stipulated aliases (defined terms,
     # acronym pairs) and its punctuation-collapsed form
@@ -1801,12 +2253,17 @@ def guard_triples(items: list[dict], doc_text: str,
                "object": base["object"]}
         canon: dict[str, list[str]] = {}
         amb: dict[str, list[str]] = {}
+        pre_eff = dict(eff)
+        pre_canon = dict(canon)
         if identity is not None:
             by_norm = identity[0]
             for ep in ("subject", "object"):
                 res, cands = _resolve_endpoint(
                     norm_ws(base[ep]), identity,
-                    anchor_norm=it.get("anchor_norm"))
+                    anchor_norm=it.get("anchor_norm"),
+                    ep_initialism=bool(re.fullmatch(
+                        r"[A-Z][A-Z0-9]{1,5}",
+                        base[ep].strip())))
                 if res is not None and res != base[ep]:
                     canon[ep] = [base[ep], res]
                     eff[ep] = res
@@ -1853,6 +2310,33 @@ def guard_triples(items: list[dict], doc_text: str,
                 forms[ep] = ([tnorm, *fs], True)
             else:
                 reg_forms[ep] = [pnorm]
+
+        if norm_ws(eff["subject"]) \
+                == norm_ws(eff["object"]) \
+                and norm_ws(base["subject"]) \
+                != norm_ws(base["object"]):
+            # Endpoint-merge invariant: canonicalisation
+            # exists to give one entity one node; it may
+            # never make a triple reflexive. When two
+            # distinct proposed endpoints resolve to one
+            # surface, the merge itself is the error — a
+            # company is not its founder though they share
+            # a name token, and a place is not the resort
+            # named after it — so both endpoints fall back
+            # to their pre-resolution forms.
+            eff = pre_eff
+            canon = pre_canon
+            reg_forms = {}
+            forms = {}
+            if identity is not None:
+                by_norm = identity[0]
+                for ep in ("subject", "object"):
+                    effn = norm_ws(eff[ep])
+                    ent = by_norm.get(effn)
+                    forms[ep] = (
+                        [effn] + (list(ent["aliases"])
+                                  if ent else []),
+                        ent is not None)
 
         def _attested(ep: str, hay: str, hay_rep: str,
                       bridged: bool = False,

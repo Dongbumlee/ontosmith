@@ -116,10 +116,13 @@ class TestVariant(unittest.TestCase):
         # targets: the hands-on links in the start
         # table's ontology-import row and in the FIBO
         # Contracts row of the corpus-packs table
-        # (Track 4).
+        # (Track 4). One more tree target followed: the
+        # benchmarks/appendix/ directory link in the
+        # worked-examples section (Three documents,
+        # three edges).
         self.assertEqual(self.counts,
-                         {"blob": 28, "tree": 2, "raw": 6})
-        self.assertEqual(len(_relative(self.master)), 36)
+                         {"blob": 28, "tree": 3, "raw": 6})
+        self.assertEqual(len(_relative(self.master)), 37)
 
     def test_no_relative_target_survives(self):
         self.assertEqual(_relative(self.variant), [])
