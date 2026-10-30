@@ -6,6 +6,13 @@
       "path": "packs/open-domain/direction_declarations.json",
       "sha256": "33f46b54bef4ff895f6d013d00a6a033db63804868a51c00a18d356aee2599b8",
       "status": "in_force_emission_data_only"
+    },
+    {
+      "kind": "normalization_table",
+      "note": "The scoring instrument's TN declarations (table docred-tn, version 2): TN-1 symmetric types and TN-2 inverse pairs frozen at v1; TN-3 relation groups, TN-4 inverse expansions and TN-5 subsumptions adopted 2026-10-29 under registered evaluation RE-TN-1 (conformance DC-6) for the EXTENDED figure only — the frozen v1 figure is always reported beside it. Consumed as DATA by the verification path: harness.verification.verify_cli.load_table reads this file directly. Not a prompt surface; never emitted as relations.",
+      "path": "packs/open-domain/tn_table.json",
+      "sha256": "8cd5aa1c2691ca3894a00dbddc3269d6328409e8126726829ccd1fea5babfe6b",
+      "status": "in_force"
     }
   ],
   "assembled": "2026-10-21",
@@ -25,7 +32,8 @@
     "merge_prohibitions": "MP-1: never merge entities of different schema types (carried from v1).",
     "metadata_declarations": "Per-run parameter declarations mirrored in the payload (triple_threshold 0.25, review_band 0.25-0.50, er_threshold 0.40, er_cross_doc_min_p_same 0.85, embed_model, batch_cost_cap_usd, provider_sort). Declarations, not live values — BatchConfig governs the run (docs/PACK_DESIGN.md §3).",
     "relation_directionality": "schema_front declares 'directed': DocRED relations hold in the annotated direction. 3 of 96 types are declared symmetric per type (spouse, sister city, sibling); 7 inverse pairs (14 entries) are declared via inverse_of. The declarations are materialized as direction_declarations.json and are IN FORCE as emission data: the JF-F1 pair judge's symmetric set is read from that artefact (pack 0.2.0). father / mother / child carry no inverse_of — a recorded gap in the artefact, not filled by invention. The guidance RENDERING of directionality remains candidate (the renderer's fixed undirected line is a registered defect until the rendering is fitted).",
-    "relation_inventory": "All 96 DocRED relations. Each entry: an authored definition (anchored on the Wikidata property the label denotes — rel_info.json P-id — and on train-gold usage), a train-derived modal endpoint signature with its coverage share and other attested patterns (signature_note), a direction declaration, an inverse_of pointer where the inventory contains the inverse, and an extraction_intent for the confusable clusters (inverse pairs, containment cluster, date cluster, creator cluster, whole/part non-transfer)."
+    "relation_inventory": "All 96 DocRED relations. Each entry: an authored definition (anchored on the Wikidata property the label denotes — rel_info.json P-id — and on train-gold usage), a train-derived modal endpoint signature with its coverage share and other attested patterns (signature_note), a direction declaration, an inverse_of pointer where the inventory contains the inverse, and an extraction_intent for the confusable clusters (inverse pairs, containment cluster, date cluster, creator cluster, whole/part non-transfer).",
+    "scoring_normalization": "The TN matching-normalization table (tn_table.json, docred-tn v2) ships as a pinned artefact: TN-1/TN-2 frozen; TN-3 relation groups, TN-4 inverse expansions, TN-5 subsumptions adopted under registered evaluation RE-TN-1 (conformance DC-6) for the extended figure only, with the frozen figure always reported beside it."
   },
   "convention_notes": [
     {
@@ -58,7 +66,7 @@
   "display_name": "Open Domain",
   "pack_format": 1,
   "pack_id": "open-domain",
-  "pack_version": "0.4.0",
+  "pack_version": "0.5.0",
   "payload": {
     "kind": "setup_config",
     "note": "In force. The fitted production configuration (stages 4c-12) runs on the v1 payload: the full v1 guidance is the extraction surface the fitting line adopted (J5s0/J3F/J3F2 all rejected; the v2 payload's cost ceilings sit below v1's, so v2 was never priced in the corrected configuration). Promotion binds the v1 bytes by this pin, per the main-run design (section 6).",

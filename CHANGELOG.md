@@ -43,6 +43,24 @@ and the project adheres to
 
 ### Added
 
+- **Open Domain pack 0.5.0: TN-3/4/5 data adopted (RE-TN-1)** —
+  `packs/open-domain/tn_table.json` goes to version 2: the
+  TN-3 relation groups, TN-4 inverse expansions and TN-5
+  subsumptions whose code support landed with the scorer
+  change below are now adopted as data, under registered
+  evaluation RE-TN-1 (conformance entry DC-6), for the
+  EXTENDED figure only. Dual reporting is mandatory: the
+  frozen TN-1/TN-2 figure is always reported beside the
+  extended one, and the delta is labeled an instrument
+  change, never a quality gain (on the frozen cap-b records
+  against gold v1.1.0: kept predictions 273 → 335, proposal
+  union 301 → 364; baseline hits lost 0, unverified new
+  hits 0). The pack manifest pins the table as an
+  `in_force` artefact, and `verify_cli.load_table` now
+  reads the pack-native tn_table format directly, so the
+  shipped file works with `--normalization` as-is. The
+  extraction payload is unchanged (same sha256 pin).
+
 - **Scorer: alias-aware matching + opt-in TN-3/4/5 layers** —
   `match_records` now also matches a predicted record under
   the attested alias surfaces in its guard-emitted

@@ -397,7 +397,7 @@ $ ontosmith batch create --source demo --collection redocred-dev-subset \
     --docs "demo-data/doc_*.txt" --profile profiles/redocred/profile.json \
     --pack open-domain --max-cost-usd 2
 profile: redocred sha256:aceac6fb15f59e38
-pack: open-domain 0.4.0 (payload sha256:ee9a1960f01d44ae…)
+pack: open-domain 0.5.0 (payload sha256:ee9a1960f01d44ae…)
 binding: reference
 setup_config: resolved (core baseline + open-domain, 34 keys) -> setup_config.resolved.json
 created batch redocred-dev-subset-40docs with 40 docs
