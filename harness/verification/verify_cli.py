@@ -17,7 +17,9 @@ over JSONL inputs in the documented record shapes
 
 A normalization table file is JSON:
 ``{"symmetric": [...], "inverses": {"inv": "primary"}}`` —
-the domain pack's TN declarations, supplied as data.
+the domain pack's TN declarations, supplied as data. The
+pack's own tn_table.json (tn1_…tn5_ declaration keys) loads
+through the same entry point.
 """
 from __future__ import annotations
 
@@ -46,22 +48,38 @@ def load_table(path) -> NormalizationTable | None:
     group label -> member labels), ``inverse_expansions``
     (TN-4, gold relation -> additional inverse labels) and
     ``subsumptions`` (TN-5, gold relation -> stronger labels).
+
+    The domain pack's own tn_table.json (declaration format:
+    ``tn1_symmetric_types``, ``tn2_inverse_pairs``,
+    ``tn3_relation_groups``, ``tn4_inverse_expansions``,
+    ``tn5_subsumptions``) loads through here as well, so the
+    shipped pack file is directly usable with ``--normalization``.
     """
     if not path:
         return None
     d = json.loads(Path(path).read_text())
     groups = {}
-    for group, labels in (d.get("relation_groups") or {}).items():
+    for group, labels in (d.get("relation_groups")
+                          or d.get("tn3_relation_groups")
+                          or {}).items():
         for label in labels:
             groups[label] = group
+    inverses = dict(d.get("inverses") or {})
+    if not inverses:
+        inverses = {p["inverse"]: p["primary"]
+                    for p in d.get("tn2_inverse_pairs") or []}
     return NormalizationTable(
-        symmetric=frozenset(d.get("symmetric", [])),
-        inverses=dict(d.get("inverses", {})),
+        symmetric=frozenset(d.get("symmetric")
+                            or d.get("tn1_symmetric_types") or []),
+        inverses=inverses,
         relation_groups=groups,
         inverse_expansions={k: tuple(v) for k, v in
-                            (d.get("inverse_expansions") or {}).items()},
+                            (d.get("inverse_expansions")
+                             or d.get("tn4_inverse_expansions")
+                             or {}).items()},
         subsumptions={k: tuple(v) for k, v in
-                      (d.get("subsumptions") or {}).items()})
+                      (d.get("subsumptions")
+                       or d.get("tn5_subsumptions") or {}).items()})
 
 
 def _kv_pairs(text: str) -> dict[str, float]:

@@ -1,7 +1,7 @@
 {
  "table_id": "docred-tn",
- "version": 1,
- "status": "FROZEN before the stage-4 pilot (precondition P-3); any change re-opens its measurement as a new registered evaluation (docs/REDOCRED_MAIN_RUN_DESIGN.md §3.1)",
+ "version": 2,
+ "status": "TN-1/TN-2 FROZEN before the stage-4 pilot (precondition P-3); any change re-opens its measurement as a new registered evaluation (docs/REDOCRED_MAIN_RUN_DESIGN.md §3.1). TN-3/TN-4/TN-5 ADOPTED 2026-10-29 as version 2 under registered evaluation RE-TN-1 (conformance entry DC-6): the extended layers apply to the EXTENDED figure only, the v1 figure is always computed under TN-1/TN-2 alone and reported beside it (see effect_reporting).",
  "design": "docs/REDOCRED_MAIN_RUN_DESIGN.md §3.1 (G-AUD-2 consequence)",
  "source_payload": {
   "pack_id": "docred",
@@ -48,6 +48,104 @@
   }
  ],
  "tn2_primary_rule": "primary = the alphabetically first label of the pair, frozen here as the pair's canonical representative; a triple stated under the inverse label is canonicalized to (object, primary, subject) before matching, on BOTH the extracted and the gold side",
+ "tn3_relation_groups": {
+  "CONTAINMENT": [
+   "country",
+   "located in the administrative territorial entity",
+   "location",
+   "headquarters location"
+  ],
+  "MEMBERSHIP": [
+   "member of",
+   "member of sports team",
+   "military branch"
+  ],
+  "CREATORSHIP": [
+   "creator",
+   "composer",
+   "author"
+  ],
+  "DATETIME": [
+   "publication date",
+   "inception",
+   "point in time",
+   "start time"
+  ],
+  "OWNERSHIP": [
+   "owned by",
+   "parent organization"
+  ]
+ },
+ "tn3_rule": "RE-TN-1 (extended figure only): a record or gold triple stated under any member label also matches under the group label. Keys are ADDITIVE — the verbatim label's keys are always retained, so grouping can never break a TN-2 pairing. Group labels are scorer-side only and are never emitted, stored, or claimed as relations. For the extended figure this supersedes the never_map refusals covering the member-of family, the located/location family, and capital-vs-headquarters proximity; the frozen figure still applies never_map in full.",
+ "tn4_inverse_expansions": {
+  "father": [
+   "child"
+  ],
+  "mother": [
+   "child"
+  ],
+  "child": [
+   "father",
+   "mother"
+  ],
+  "manufacturer": [
+   "product or material produced"
+  ],
+  "product or material produced": [
+   "manufacturer"
+  ],
+  "characters": [
+   "present in work"
+  ],
+  "present in work": [
+   "characters"
+  ],
+  "notable work": [
+   "composer",
+   "creator",
+   "author"
+  ],
+  "subsidiary": [
+   "part of",
+   "parent organization"
+  ],
+  "followed by": [
+   "replaced by",
+   "follows"
+  ],
+  "follows": [
+   "followed by",
+   "replaced by"
+  ],
+  "employer": [
+   "employee"
+  ],
+  "founded by": [
+   "creator"
+  ],
+  "participant": [
+   "participant of"
+  ],
+  "participant of": [
+   "participant"
+  ]
+ },
+ "tn4_rule": "RE-TN-1 (extended figure only): a GOLD relation also matches predicted records stated under each listed additional inverse label, with endpoints swapped. These pairs carry no inverse_of declaration in the schema (the direction_declarations artefact records that gap for father/mother/child); TN-4 fills it as scoring data for the extended figure only — it does not amend the artefact, and the frozen figure never expands direction this way (see the never_map direction rule).",
+ "tn5_subsumptions": {
+  "country": [
+   "capital of"
+  ],
+  "located in the administrative territorial entity": [
+   "capital of"
+  ],
+  "location": [
+   "capital of"
+  ],
+  "headquarters location": [
+   "capital of"
+  ]
+ },
+ "tn5_rule": "RE-TN-1 (extended figure only): a GOLD containment relation also matches a predicted record stated as 'capital of' (a capital stated for a place is evidence of the containment the gold records), same direction, endpoints unswapped. One-way only: a gold 'capital of' gains no containment keys.",
  "never_map": [
   {
    "labels": [
