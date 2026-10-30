@@ -40,6 +40,16 @@ and the project adheres to
   candidates 4,965 → 5,193; novels theme blocks 626 → 0
   (491 graded, the rest attesting in their evidence
   window); wiki seat kept-stage recall 0.186 → 0.210.
+- **Documentation polish** — the README gains a
+  worked-examples section (three edges from the
+  project's own records: a head of government named
+  inside another article, a novel's character entering
+  by relation, a contract's defined term as an
+  identity), and the project site is rebuilt around
+  the same examples, with the hero graph drawn as an
+  animated SVG. The Connections recommended-models
+  table no longer lists the retired GLiNER spotter as
+  a current seat. No measured claim changes.
 
 ### Added
 

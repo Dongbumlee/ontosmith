@@ -309,6 +309,69 @@ want emergent structure and a working demo fast, the
 GraphRAG family gets you there sooner; this one is for
 when the graph has to be audited.
 
+## Three documents, three edges
+
+A chunk store returns text and leaves the connections
+in it implicit. A graph makes each connection an edge:
+typed, directed, and carrying the sentence that
+supports it. Three real items from this project's own
+records:
+
+**News — a head of government named inside somebody
+else's article.** The article is about Abdul Jabar
+Sabet, an Afghan politician; one sentence in it
+carries a fact whose subject is a country:
+
+> Sabet was a long time aide to former Afghan Prime
+> Minister Gulbuddin Hekmatyar.
+
+As an edge — Afghanistan — *head of government* →
+Gulbuddin Hekmatyar — the fact answers to its own
+subject: a question about Afghanistan's former prime
+minister traverses straight to the name, with the
+sentence attached as evidence. (Adjudication appendix
+item B-193, judged *supported*.)
+
+**A novel — a character who enters by relation, not
+by cast list.** Zola's *Le Ventre de Paris* never
+lists its cast; Quenu arrives through the plot:
+
+> He returns to his step-brother Quenu, a charcutier
+> and his wife Lisa Quenu (formerly Macquart), with
+> whom he finds refuge.
+
+As an edge — *Le Ventre de Paris* — *characters* →
+Quenu — the character becomes a node: reachable,
+countable, and linked onward through the relations
+the sentence states (step-brother to Florent, husband
+to Lisa). (Appendix item B-151, judged *supported*.)
+
+**A contract — a defined term is an identity, not a
+string.** A CUAD agreement stipulates its vocabulary
+as it goes:
+
+> The term of this Agreement shall be ten (10) years
+> (the "Term") which shall commence on the date upon
+> which the Company delivers to Distributor the last
+> Sample, as defined hereinafter.
+
+"Term", "the Company", "Distributor" are defined
+names inside this document. The build collects the
+terms a document stipulates into a per-document
+registry and resolves defined terms to their stated
+referents, so every later clause that runs "during
+the Term" or "the Company shall" attaches to the same
+nodes: the definition and its uses are one entity,
+not a scatter of string matches. (Corpus-profile
+example in the Legal Contract pack,
+`packs/legal-contract/profile/profile.json`; CUAD,
+CC BY 4.0.)
+
+The two appendix items are machine-adjudicated
+*supported* under the published contract (the
+[appendix](https://github.com/Dongbumlee/ontosmith/tree/main/benchmarks/appendix)); quote spacing is
+normalized from the tokenized record.
+
 ## Corpus packs
 
 A pack is a domain's ontology as data: schema, definitions,
