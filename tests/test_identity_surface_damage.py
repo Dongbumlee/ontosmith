@@ -308,7 +308,7 @@ class TestIndependentLifeProtection(unittest.TestCase):
     # BioRED pilot (S5) damage classes: absorption into
     # surfaces that merely contain the fragment.
     def test_titlecase_line_surface_not_absorbed(self):
-        kept, blocked = proposer.guard_triples(
+        kept, _ = proposer.guard_triples(
             [{"subject": "Drugex", "subject_type": "Chemical",
               "relation": "treats", "object": "rectal cancer",
               "object_type": " Disease",
@@ -364,3 +364,245 @@ class TestIndependentLifeProtection(unittest.TestCase):
             JARED_DOC)
         self.assertEqual(kept[0]["subject"],
                          "Jared Scot Allen")
+
+
+# --- Round 3 (2026-10-30): structural absorption vetoes --
+# The genre sweep (S5-S8) and the held-out build (S4)
+# showed the remaining damage was one mechanism in many
+# costumes: subset absorption rewrote a mention to ANY
+# longer surface containing it — a typed entity built
+# around it (a university in the city, the country's
+# senate, a park around the river), a designation
+# ('FK Fyllingsdalen'), two mentions glued across a lost
+# boundary (an ALL-CAPS contract heading fused to its
+# subtitle, a verse line's first word, a country fused
+# to its ambassador), or a distinct entity sharing a
+# name token (the company 'Cimatti', its founder). The
+# vetoes in _absorption_veto read the SHAPE of the
+# completion, never a list of known-bad surfaces; two
+# guard-level rules complete the set — vetoes never
+# prune a contested candidate field into a false unique
+# answer, and canonicalisation never merges a triple's
+# two distinct endpoints into one surface.
+
+FINNEGAN_DOC = (
+    "Edward Rowan Finnegan was born in Chicago. He "
+    "studied at Loyola University Chicago and later "
+    "served in the United States Senate.")
+
+ASCAP_DOC = (
+    "Ramey Idriss was a songwriter. Joining ASCAP in "
+    "1952, Idriss registered his songs with ASCAP. He "
+    "remained a member of ASCAP for decades.")
+
+FOIX_DOC = (
+    "The Foix is a river in Catalonia. The Parc del "
+    "Foix is a park around its reservoir. The Foix "
+    "flows into the Mediterranean Sea.")
+
+FYLLING_DOC = (
+    "Fyllingen Fotball merged with Løv-Ham to create "
+    "FK Fyllingsdalen, and the two clubs ceased to "
+    "exist as separate entities. The new club is "
+    "based in Fyllingsdalen.")
+
+COOP_DOC = (
+    "THIS COOPERATION AGREEMENT\n\n"
+    "HPIL Energytech Inc. signed the Cooperation "
+    "Agreement with Ginares Group AG in 2019.")
+
+VERSE_DOC = (
+    "Thence to the bath, a beauteous pile, descend;\n"
+    "Methinks Ulysses, homeward bound, had rest.\n"
+    "Ulysses is the parent of Telemachus, and "
+    "Telemachus honoured him.")
+
+CIMATTI_DOC = (
+    "Cimatti is an Italian motorcycle company. The "
+    "company was founded by Marco Cimatti in Bologna. "
+    "Cimatti is based in Bologna.")
+
+AVALON_DOC = (
+    "The Toyota Avalon is a full-size car. The Toyota "
+    "Avalon was named after Avalon, the legendary "
+    "island of Arthurian myth.")
+
+HAQQANI_DOC = (
+    "Husain Haqqani served as ambassador. United "
+    "States Husain Haqqani talks were held in "
+    "Washington. Husain Haqqani returned to "
+    "Washington.")
+
+MADHYA_DOC = (
+    "Following Madhya Pradesh, the committee took up "
+    "the next state. The Madhya Pradesh Legislative "
+    "Assembly passed the bill. Bhopal is the capital "
+    "of Madhya Pradesh.")
+
+SMITH_DOC = (
+    "John Smith (born 1960) is an engineer. John Smith "
+    "joined Acme in 1990. Smith led the platform team "
+    "at Acme for a decade.")
+
+NEVADA_DOC = (
+    "Novo Integrated Sciences Inc. filed as a Nevada "
+    "Corporation in 2019. Its shares trade in "
+    "New York.")
+
+COLBURN_DOC = (
+    "Ronald Leonard conducted the Colburn School "
+    "Chamber Orchestra for years.")
+
+
+class TestStructuralAbsorptionVetoes(unittest.TestCase):
+    def test_place_not_absorbed_into_university(self):
+        kept, _ = proposer.guard_triples(
+            [{"subject": "Edward Rowan Finnegan",
+              "relation": "born in", "object": "Chicago",
+              "quote": "Edward Rowan Finnegan was born "
+                     "in Chicago"}],
+            FINNEGAN_DOC)
+        self.assertEqual(kept[0]["object"], "Chicago")
+
+    def test_country_not_absorbed_into_its_senate(self):
+        kept, _ = proposer.guard_triples(
+            [{"subject": "Edward Rowan Finnegan",
+              "relation": "served in",
+              "object": "United States",
+              "quote": "later served in the United "
+                     "States Senate"}],
+            FINNEGAN_DOC)
+        self.assertEqual(kept[0]["object"], "United States")
+
+    def test_initialism_not_absorbed_into_phrase(self):
+        kept, _ = proposer.guard_triples(
+            [{"subject": "Ramey Idriss",
+              "relation": "member of", "object": "ASCAP",
+              "quote": "Joining ASCAP in 1952, Idriss "
+                     "registered his songs with ASCAP"}],
+            ASCAP_DOC)
+        self.assertEqual(kept[0]["object"], "ASCAP")
+
+    def test_river_not_absorbed_into_its_park(self):
+        kept, _ = proposer.guard_triples(
+            [{"subject": "Foix", "relation": "flows into",
+              "object": "Mediterranean Sea",
+              "quote": "The Foix flows into the "
+                     "Mediterranean Sea"}],
+            FOIX_DOC)
+        self.assertEqual(kept[0]["subject"], "Foix")
+
+    def test_place_not_absorbed_into_club_designation(self):
+        kept, _ = proposer.guard_triples(
+            [{"subject": "Fyllingen Fotball",
+              "relation": "located in",
+              "object": "Fyllingsdalen",
+              "quote": "The new club is based in "
+                     "Fyllingsdalen"}],
+            FYLLING_DOC)
+        self.assertEqual(kept[0]["object"], "Fyllingsdalen")
+
+    def test_caps_heading_glue_not_absorbed(self):
+        kept, _ = proposer.guard_triples(
+            [{"subject": "HPIL Energytech Inc.",
+              "relation": "party to",
+              "object": "Cooperation Agreement",
+              "quote": "HPIL Energytech Inc. signed the "
+                     "Cooperation Agreement with Ginares "
+                     "Group AG in 2019"}],
+            COOP_DOC)
+        self.assertEqual(kept[0]["object"],
+                         "Cooperation Agreement")
+
+    def test_verse_line_glue_not_absorbed(self):
+        kept, _ = proposer.guard_triples(
+            [{"subject": "Ulysses",
+              "relation": "is the parent of",
+              "object": "Telemachus",
+              "quote": "Ulysses is the parent of "
+                     "Telemachus"}],
+            VERSE_DOC)
+        self.assertEqual(kept[0]["subject"], "Ulysses")
+
+    def test_company_not_absorbed_into_its_founder(self):
+        kept, _ = proposer.guard_triples(
+            [{"subject": "Cimatti",
+              "relation": "founded by",
+              "object": "Marco Cimatti",
+              "quote": "The company was founded by "
+                     "Marco Cimatti in Bologna"}],
+            CIMATTI_DOC)
+        self.assertEqual(kept[0]["subject"], "Cimatti")
+        self.assertEqual(kept[0]["object"], "Marco Cimatti")
+
+    def test_glued_second_mention_not_absorbed(self):
+        kept, _ = proposer.guard_triples(
+            [{"subject": "Husain Haqqani",
+              "relation": "ambassador to",
+              "object": "United States",
+              "quote": "Husain Haqqani served as "
+                     "ambassador"}],
+            HAQQANI_DOC)
+        self.assertEqual(kept[0]["object"], "United States")
+
+    def test_state_not_absorbed_into_corporation(self):
+        kept, _ = proposer.guard_triples(
+            [{"subject": "Novo Integrated Sciences Inc.",
+              "relation": "incorporated in",
+              "object": "Nevada",
+              "quote": "filed as a Nevada Corporation "
+                     "in 2019"}],
+            NEVADA_DOC)
+        self.assertEqual(kept[0]["object"], "Nevada")
+
+    def test_school_not_absorbed_into_its_orchestra(self):
+        kept, _ = proposer.guard_triples(
+            [{"subject": "Ronald Leonard",
+              "relation": "employed by",
+              "object": "Colburn School",
+              "quote": "Ronald Leonard conducted the "
+                     "Colburn School Chamber Orchestra "
+                     "for years"}],
+            COLBURN_DOC)
+        self.assertEqual(kept[0]["object"], "Colburn School")
+
+    def test_contested_field_stays_ambiguous(self):
+        # Both longer surfaces are veto-shaped (a prose
+        # glue and a typed assembly); the vetoes must
+        # not prune the field into handing the endpoint
+        # to either — it stands, recorded ambiguous.
+        kept, _ = proposer.guard_triples(
+            [{"subject": "Bhopal",
+              "relation": "capital of",
+              "object": "Madhya Pradesh",
+              "quote": "Bhopal is the capital of "
+                     "Madhya Pradesh"}],
+            MADHYA_DOC)
+        self.assertEqual(kept[0]["object"], "Madhya Pradesh")
+        self.assertIn("object",
+                      kept[0].get("identity_ambiguous", {}))
+
+    def test_resolution_never_merges_endpoints(self):
+        # The car is named after the island; absorbing
+        # the island into the car would make the triple
+        # reflexive. The merge is reverted instead.
+        kept, _ = proposer.guard_triples(
+            [{"subject": "Toyota Avalon",
+              "relation": "named after", "object": "Avalon",
+              "quote": "The Toyota Avalon was named after "
+                     "Avalon"}],
+            AVALON_DOC)
+        self.assertEqual(kept[0]["subject"], "Toyota Avalon")
+        self.assertEqual(kept[0]["object"], "Avalon")
+
+    def test_surname_completion_with_attested_full_name(self):
+        # Positive control for the evidence rule: the
+        # full name is attested twice, so the surname
+        # completion proceeds as before.
+        kept, _ = proposer.guard_triples(
+            [{"subject": "Smith", "relation": "works for",
+              "object": "Acme",
+              "quote": "Smith led the platform team at "
+                     "Acme for a decade"}],
+            SMITH_DOC)
+        self.assertEqual(kept[0]["subject"], "John Smith")

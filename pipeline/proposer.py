@@ -985,6 +985,208 @@ _ABSORB_VETO = frozenset({
 }) | _INITIAL_DROP
 
 
+# --- Structural absorption vetoes -------------------
+# Rule 4 below rewrites a mention to a longer census
+# surface that merely CONTAINS it. Containment alone
+# does not make the longer surface the same entity:
+# it may be a typed entity built around the mention
+# (a university in Chicago, a country's senate), two
+# mentions glued across a lost boundary (an ALL-CAPS
+# contract title fused to its subtitle, a verse line's
+# first word), a designation phrase, or a distinct
+# entity sharing a name token (the company 'Cimatti'
+# is not its founder). The vetoes in _absorption_veto
+# refuse such targets on structural grounds — what
+# KIND of material the extra tokens are, and whether
+# the document itself supplies identity evidence for
+# the rewrite — never on a list of known-bad surfaces.
+
+# Generic elements: the type-denoting common nouns of
+# proper names (the "generic term" of toponymy, as in
+# UNGEGN / GeoNames feature designators) — the part of
+# a name that says WHAT KIND of thing it is. An extra
+# token from this class in an absorption target means
+# the longer surface is a typed entity built around
+# the fragment (a university in Chicago, the senate of
+# a country), not the fragment's own fuller name.
+_GENERIC_ELEMENTS = frozenset({
+    "university", "college", "school", "institute",
+    "institution", "academy", "seminary", "senate",
+    "parliament", "assembly", "council", "committee",
+    "commission", "congress", "court", "bank",
+    "company", "corporation", "corp", "inc", "ltd",
+    "llc", "club", "association", "society",
+    "federation", "union", "league", "party", "church",
+    "cathedral", "mosque", "temple", "museum",
+    "library", "hospital", "hotel", "park", "parc",
+    "river", "lake", "mount", "mountain", "island",
+    "isle", "city", "town", "village", "county",
+    "district", "province", "region", "state",
+    "department", "ministry", "agency", "bureau",
+    "office", "army", "navy", "regiment", "battalion",
+    "airport", "station", "bridge", "castle", "palace",
+    "monastery", "abbey", "theater", "theatre",
+    "stadium", "arena", "foundation", "fund", "group",
+    "holdings", "systems", "technologies",
+    "laboratories", "labs", "networks", "studios",
+    "productions", "records", "press", "government",
+    "administration", "authority", "service", "center",
+    "centre", "number", "orchestra", "ensemble",
+    "choir", "stage", "formation",
+})
+
+_GEN_SUFFIXES = frozenset(
+    {"jr", "sr", "ii", "iii", "iv", "esq"})
+
+
+def _seq_of(norm: str) -> list:
+    seq = [t for t in re.split(r"[\s-]+", norm) if t]
+    if seq and seq[0] in ("the", "a", "an"):
+        seq = seq[1:]
+    return seq
+
+
+def _align(ep_seq: list, cand_seq: list):
+    """Subsequence alignment of the fragment's tokens
+    in the candidate's: returns (prepend, infix,
+    trailing) extra tokens, or None when the fragment's
+    tokens do not appear in order."""
+    idx: list[int] = []
+    i = 0
+    for j, t in enumerate(cand_seq):
+        if i < len(ep_seq) and t == ep_seq[i]:
+            idx.append(j)
+            i += 1
+    if i < len(ep_seq) or not idx:
+        return None
+    first, last = idx[0], idx[-1]
+    matched = set(idx)
+    return (cand_seq[:first],
+            [cand_seq[k] for k in range(first + 1, last)
+             if k not in matched],
+            cand_seq[last + 1:])
+
+
+def _contains_seq(hay: list, needle: list) -> int:
+    """Contiguous occurrences of needle in hay."""
+    if not needle or len(needle) > len(hay):
+        return 0
+    return sum(1 for i in range(len(hay) - len(needle) + 1)
+               if hay[i:i + len(needle)] == needle)
+
+
+def _absorption_veto(ep_norm: str, cand: str,
+                     index: tuple,
+                     ep_initialism: bool) -> bool:
+    """True when a structural veto refuses the candidate
+    as an absorption target for the fragment. Each veto
+    reads the SHAPE of the completion, not the identity
+    of the names involved."""
+    by_norm = index[0]
+    # An initialism is a complete referring expression,
+    # not a fragment of a longer name: 'ASCAP' does not
+    # absorb into a phrase that happens to contain it
+    # ('Joining ASCAP').
+    if ep_initialism:
+        return True
+    ep_seq = _seq_of(ep_norm)
+    cand_seq = _seq_of(cand)
+    extras = set(cand_seq) - set(ep_seq)
+    # A generic element among the extra tokens means
+    # the longer surface is a TYPED entity built around
+    # the mention — the senate of a country, a
+    # university in a city, a numbered agreement — not
+    # the mention's own fuller name. Position does not
+    # matter: a completion may only add name material.
+    if extras & _GENERIC_ELEMENTS:
+        return True
+    # An extra token the document writes in all caps is
+    # a designator (an initialism or a defined-term
+    # shout), not name material: 'FK Fyllingsdalen' is
+    # the club designation, and an ALL-CAPS contract
+    # heading fused to its own first line
+    # ('THIS COOPERATION AGREEMENT' above 'Cooperation
+    # Agreement') is a layout artifact, not a party.
+    raw_toks = [t for t in re.split(
+        r"[\s-]+", by_norm[cand]["surface"]) if t]
+    for raw in raw_toks:
+        if raw.lower() in extras and len(raw) >= 2 \
+                and raw.isupper():
+            return True
+    # A second, complete entity name sitting in the
+    # candidate's infix/trailing region means the
+    # surface is two mentions glued across a lost
+    # boundary ('United States Husain Haqqani' — the
+    # country and its ambassador), and a candidate that
+    # contains the fragment twice is a coordination or
+    # list surface, not a name.
+    if _contains_seq(cand_seq, ep_seq) >= 2:
+        return True
+    al = _align(ep_seq, cand_seq)
+    if al is not None:
+        first = len(al[0])
+        last = len(cand_seq) - len(al[2])
+        for other in by_norm:
+            if other in (cand, ep_norm):
+                continue
+            o_seq = _seq_of(other)
+            if len(o_seq) < 2:
+                continue
+            for i in range(
+                    len(cand_seq) - len(o_seq) + 1):
+                if cand_seq[i:i + len(o_seq)] == o_seq \
+                        and i >= first \
+                        and i + len(o_seq) > last:
+                    return True
+    # A complete single-token name may be rewritten to
+    # a longer name only on document-supplied identity
+    # evidence. Bare containment is not evidence — the
+    # token may name a distinct entity of its own (the
+    # company 'Cimatti' is not its founder
+    # 'Marco Cimatti'), or the longer surface may be a
+    # prose word glued to the name at a lost boundary
+    # (a verse line's 'Methinks Ulysses').
+    if len(ep_seq) == 1 and len(cand_seq) > 1 \
+            and ep_norm in by_norm \
+            and not _rewrite_evidence(
+                ep_seq, cand, index):
+        return True
+    return False
+
+
+def _rewrite_evidence(ep_seq: list, cand: str,
+                      index: tuple) -> bool:
+    """Document-supplied evidence that the longer
+    candidate is the mention's own fuller name: the
+    completion is a bare generational suffix, the
+    fragment is a hyphen component of the target, the
+    target's entity records a longer alias form
+    containing the fragment (a nickname-bridged full
+    form), or the document attests the longer name
+    more than once."""
+    by_norm, alias_of, bridged = index[0], index[1], \
+        index[3]
+    cand_seq = _seq_of(cand)
+    al = _align(ep_seq, cand_seq)
+    if al is not None and al[0] == [] and al[1] == [] \
+            and al[2] and all(
+                t in _GEN_SUFFIXES for t in al[2]):
+        return True
+    surf = by_norm[cand]["surface"]
+    if any(len(tok.split("-")) >= 2
+           and ep_seq[-1] in tok.split("-")
+           for tok in surf.lower().split()):
+        return True
+    for a, canon in alias_of.items():
+        if canon != cand:
+            continue
+        a_seq = _seq_of(a)
+        if len(a_seq) > len(ep_seq) and _contains_seq(
+                a_seq, ep_seq):
+            return True
+    return len(_phrase_spans(bridged, cand)) >= 2
+
+
 def _identity_index(doc_text: str) -> tuple[dict, dict, set, str]:
     """The identity index guard_triples resolves against:
     (by_norm, alias_of, maximals, bridged) from the
@@ -1078,13 +1280,6 @@ def _outside_count(bridged: str, ep_norm: str,
                           for cs, ce in cand_spans))
 
 
-def _occurs_outside(bridged: str, ep_norm: str,
-                    cand_norm: str) -> bool:
-    """True when the fragment has any independent
-    textual life (see _outside_count)."""
-    return _outside_count(bridged, ep_norm, cand_norm) >= 1
-
-
 def _is_code_fragment(tok: str) -> bool:
     """True for a token that is a designation code, not
     name material: it starts with a digit ('251a/a') or
@@ -1119,7 +1314,8 @@ def _identity_tokens(norm: str) -> set:
 
 
 def _resolve_endpoint(ep_norm: str, index: tuple,
-                      anchor_norm: str | None = None
+                      anchor_norm: str | None = None,
+                      ep_initialism: bool = False
                       ) -> tuple[str | None, list[str]]:
     """Resolve one proposed endpoint (norm_ws form) to
     the document's canonical surface for the entity it
@@ -1246,20 +1442,37 @@ def _resolve_endpoint(ep_norm: str, index: tuple,
             return False
         return _outside_count(bridged, ep, cand) >= 2
 
-    cands = sorted(by_norm[m]["surface"] for m in maximals
-                   if (etoks < toks[m]
-                       or (etoks == toks[m] and ep_norm != m))
-                   and not (toks[m] - etoks) & _ABSORB_VETO
-                   and not any(_is_code_fragment(t)
-                               for t in toks[m] - etoks)
-                   and not _article_variant(ep_norm, m)
-                   and not re.search(
-                       r"[A-Z][\w.]*\s+and\s+[A-Z]",
-                       by_norm[m]["surface"]))
-    if len(cands) == 1:
-        return cands[0], []
-    if len(cands) > 1:
-        return None, cands
+    cand_norms = []
+    for m in maximals:
+        if not (etoks < toks[m]
+                or (etoks == toks[m] and ep_norm != m)):
+            continue
+        if (toks[m] - etoks) & _ABSORB_VETO:
+            continue
+        if any(_is_code_fragment(t)
+               for t in toks[m] - etoks):
+            continue
+        if _article_variant(ep_norm, m):
+            continue
+        if re.search(r"[A-Z][\w.]*\s+and\s+[A-Z]",
+                     by_norm[m]["surface"]):
+            continue
+        cand_norms.append(m)
+    if len(cand_norms) > 1:
+        # Ambiguity is a property of the document, not
+        # of the veto set: the structural gates may only
+        # refuse a UNIQUE candidate, never prune a
+        # contested field into a false unique answer —
+        # a vetoed rival must not hand the endpoint to
+        # the one bad candidate that remains.
+        return None, sorted(
+            by_norm[m]["surface"] for m in cand_norms)
+    if len(cand_norms) == 1:
+        m = cand_norms[0]
+        if _absorption_veto(ep_norm, m, index,
+                            ep_initialism):
+            return None, []
+        return by_norm[m]["surface"], []
     return None, []
 
 
@@ -2039,12 +2252,17 @@ def guard_triples(items: list[dict], doc_text: str,
                "object": base["object"]}
         canon: dict[str, list[str]] = {}
         amb: dict[str, list[str]] = {}
+        pre_eff = dict(eff)
+        pre_canon = dict(canon)
         if identity is not None:
             by_norm = identity[0]
             for ep in ("subject", "object"):
                 res, cands = _resolve_endpoint(
                     norm_ws(base[ep]), identity,
-                    anchor_norm=it.get("anchor_norm"))
+                    anchor_norm=it.get("anchor_norm"),
+                    ep_initialism=bool(re.fullmatch(
+                        r"[A-Z][A-Z0-9]{1,5}",
+                        base[ep].strip())))
                 if res is not None and res != base[ep]:
                     canon[ep] = [base[ep], res]
                     eff[ep] = res
@@ -2091,6 +2309,33 @@ def guard_triples(items: list[dict], doc_text: str,
                 forms[ep] = ([tnorm, *fs], True)
             else:
                 reg_forms[ep] = [pnorm]
+
+        if norm_ws(eff["subject"]) \
+                == norm_ws(eff["object"]) \
+                and norm_ws(base["subject"]) \
+                != norm_ws(base["object"]):
+            # Endpoint-merge invariant: canonicalisation
+            # exists to give one entity one node; it may
+            # never make a triple reflexive. When two
+            # distinct proposed endpoints resolve to one
+            # surface, the merge itself is the error — a
+            # company is not its founder though they share
+            # a name token, and a place is not the resort
+            # named after it — so both endpoints fall back
+            # to their pre-resolution forms.
+            eff = pre_eff
+            canon = pre_canon
+            reg_forms = {}
+            forms = {}
+            if identity is not None:
+                by_norm = identity[0]
+                for ep in ("subject", "object"):
+                    effn = norm_ws(eff[ep])
+                    ent = by_norm.get(effn)
+                    forms[ep] = (
+                        [effn] + (list(ent["aliases"])
+                                  if ent else []),
+                        ent is not None)
 
         def _attested(ep: str, hay: str, hay_rep: str,
                       bridged: bool = False,
