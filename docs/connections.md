@@ -269,7 +269,10 @@ record was measured with:
 | Escalation | `anthropic/claude-sonnet-5.5` | The escalation seat of the measured record: the adjudication confirmations behind the merge record and the judge-fitting work ran on it. It is also the gate-evaluation judges' default model — an evaluation instrument, never a second decider in a build |
 | Drafting | — (bind your own) | An authoring aid behind the human approve gate: its output is a draft a human approves, never a judgment. The preset names no default — drafting was exercised once in the lab and is not part of the measured pipeline, so the seat ships unbound. Declare `ONTOSMITH_DRAFTING_MODEL` or the command's `--model` to use it |
 | Embedder | `openai/text-embedding-3-large` | Candidate search was validated on this model. A local model was measured against it and missed candidates it catches, so no local embedding ships — this seat needs a hosted binding |
-| NER | `urchade/gliner_medium-v2.1` | Local model; the candidate path's measured spotting seat |
+
+NER is not a seat (see the seat table above): the
+local GLiNER spotter was retired on 2026-10-29, and
+the LLM proposer is the only candidate source.
 
 Two honest qualifiers:
 
