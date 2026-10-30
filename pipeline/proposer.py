@@ -665,6 +665,11 @@ def _starts_capital(core: str) -> bool:
 
 _QUOTE_CHARS = frozenset("\"'\u201c\u201d\u2018\u2019\u00ab\u00bb")
 
+# The double-quote family: the marks that open and
+# close a quoted span. Single quotes are apostrophes
+# as often as quotes and never move span state.
+_DQUOTE_CHARS = frozenset("\"\u201c\u201d\u00ab\u00bb")
+
 # Sentence-initial words that are not name material: at a
 # sentence or paragraph boundary a capitalised token from
 # this set is prose syntax, not the start of a name
@@ -681,6 +686,21 @@ def _is_quote_token(raw: str) -> bool:
     'Wilfried " Willi " Schneider')."""
     return bool(raw) and all(ch in _QUOTE_CHARS
                              for ch in raw)
+
+
+def _bridged_form(text: str) -> str:
+    """The document's bridged form, for attesting a name
+    a nickname's quotes interrupt: built from token
+    CORES, not raw tokens. Dropping only standalone
+    quote tokens left the marks embedded whenever the
+    text attaches them to the words they wrap — raw
+    text's convention ('Michael John "Mike" Padden') —
+    and the bridged form of exactly the names it exists
+    for never matched, so the nickname branch could not
+    fire and the full name censused nowhere."""
+    return norm_ws(" ".join(
+        c for c in (_token_core(t) for t in text.split())
+        if c))
 
 
 def census_entities(text: str) -> dict:
@@ -712,7 +732,10 @@ def census_entities(text: str) -> dict:
       remain, and its normalized form is recorded as an
       alias of the surface. The entity is attested by
       its full bridged form, which the alias list also
-      carries.
+      carries. The wrapped token must be interior: a
+      quote that opens the sequence marks a quoted
+      title ("Suffer the Children"), whose first token
+      is part of the name and is never excluded.
     - a surface that differs from another roster
       surface only by one token, where that token is a
       recorded nickname alias of the other surface
@@ -740,8 +763,7 @@ def census_entities(text: str) -> dict:
     forms) — mention forms, never separate entities.
     """
     doc_norm = norm_ws(text)
-    doc_bridged = norm_ws(" ".join(
-        t for t in text.split() if not _is_quote_token(t)))
+    doc_bridged = _bridged_form(text)
     surfaces: list[tuple[str, list[str], bool]] = []
     for par in re.split(r"\n\s*\n", text):
         raw_tokens = par.split()
@@ -772,9 +794,24 @@ def census_entities(text: str) -> dict:
             if _is_quote_token(rt):
                 quote_open = not quote_open
                 quoted.append(False)
-            else:
-                quoted.append(
-                    quote_open or rt[:1] in _QUOTE_CHARS)
+                continue
+            # Attached quote marks: raw text glues them
+            # to the words they wrap ('"Mike" Padden'),
+            # and tokenized-then-joined text can glue a
+            # closing mark to the NEXT word ('"Mike
+            # "Padden'). A token is quoted when its
+            # first letter sits inside a double-quote
+            # span: a head mark opens the span when it
+            # is closed and closes it when it is open,
+            # and the state flips on every double-quote
+            # mark the token carries.
+            marks = sum(1 for ch in rt
+                        if ch in _DQUOTE_CHARS)
+            head_mark = bool(rt) and rt[0] in _DQUOTE_CHARS
+            quoted.append(not quote_open if head_mark
+                          else quote_open)
+            if marks % 2 == 1:
+                quote_open = not quote_open
         # Sentence-boundary map: a token starts at a
         # boundary at the paragraph start or right after
         # a sentence-final raw token (quote tokens are
@@ -835,7 +872,20 @@ def census_entities(text: str) -> dict:
                 plain = [x for x in seq if not quoted[x]]
                 aliases: list[str] = []
                 attested = False
-                if 2 <= len(plain) < len(seq):
+                # The nickname exclusion requires a plain
+                # name token BEFORE the quoted token: the
+                # nickname pattern is Name "Nick" Name. A
+                # quote that OPENs the sequence marks a
+                # quoted title ("Suffer the Children",
+                # "El Regalo Más Grande"), whose first
+                # token is part of the name — excluding it
+                # censused the title as a fragment ("the
+                # Children") and demoted the full title to
+                # an alias, and resolution then rewrote
+                # correct endpoints down to the fragment
+                # (scale-test pilot, 2026-10-29).
+                if 2 <= len(plain) < len(seq) \
+                        and not quoted[seq[0]]:
                     aliases = [norm_ws(tokens[x])
                                for x in seq if quoted[x]]
                     full = " ".join(cores)
@@ -899,6 +949,40 @@ def census_entities(text: str) -> dict:
     return {"entities": entities,
             "extracted": len(surfaces),
             "unattested": unattested}
+
+
+# Absorption may complete a name with name material
+# only. An extra token that is a function word, a prose
+# opener, or a role/title word marks the longer surface
+# as a phrase that merely CONTAINS the fragment — a
+# title phrase ("Attorney General of Afghanistan"), a
+# work title containing a place ("Battle of Los
+# Angeles"), a coordination ("South Plainfield and the
+# Cedar Brook"), a prose-glued surface ("Similarly
+# Amdír", "... Education To") — never the fragment's
+# own entity under a fuller name. Every measured
+# absorption whose extra tokens contained such a word
+# was damage (scale-test pilot, 2026-10-29); the
+# completions that survive the veto — given names,
+# compound parts, generational suffixes — carry none.
+_ABSORB_VETO = frozenset({
+    # function words
+    "the", "a", "an", "and", "or", "to", "of", "in",
+    "on", "at", "by", "for", "with", "from", "as",
+    "into", "upon", "per", "via",
+    # prose openers / connectives
+    "similarly", "through", "however", "meanwhile",
+    "thus", "hence", "then", "also", "once",
+    # role / title words
+    "attorney", "general", "prime", "minister",
+    "president", "king", "queen", "prince", "princess",
+    "secretary", "director", "chairman", "chairwoman",
+    "governor", "mayor", "chief", "justice", "captain",
+    "professor", "doctor", "bishop", "pope", "emperor",
+    "empress", "duke", "duchess", "lord", "lady",
+    "judge", "senator", "ambassador", "chancellor",
+    "premier",
+}) | _INITIAL_DROP
 
 
 def _identity_index(doc_text: str) -> tuple[dict, dict, set]:
@@ -972,6 +1056,11 @@ def _resolve_endpoint(ep_norm: str, index: tuple,
        stands;
     2. a recorded alias (nickname / bridged form /
        folded alias form) resolves to its entity;
+    2b. a nickname-headed form — the entity's recorded
+       nickname heading the entity's name tail (Mike
+       Padden for Michael John Padden) — resolves to
+       its entity, the same fold the census applies
+       among its own surfaces;
     3. a fragment of the item's own anchor (the sweep
        asked about that entity) resolves to the anchor;
     4. a proper token-subset of exactly ONE maximal
@@ -979,6 +1068,12 @@ def _resolve_endpoint(ep_norm: str, index: tuple,
        ambiguous; of none, it stands as proposed (the
        proposer may name entities the census missed —
        absence from the roster is not proof of error).
+       Absorption completes a name with name material
+       only: a candidate whose extra tokens contain a
+       function word, a prose opener, or a role/title
+       word (_ABSORB_VETO) merely CONTAINS the fragment
+       (a title phrase, a work title, a coordination, a
+       prose-glued surface) and is never a target.
     """
     by_norm, alias_of, maximals = index
     if ep_norm in by_norm:
@@ -1000,6 +1095,24 @@ def _resolve_endpoint(ep_norm: str, index: tuple,
             return None, []
     if ep_norm in alias_of:
         return by_norm[alias_of[ep_norm]]["surface"], []
+    # 2b. a nickname-headed form: the endpoint heads the
+    # entity's name tail with the entity's recorded
+    # nickname (Mike Padden for Michael John Padden) —
+    # the same fold the census applies among its own
+    # surfaces, extended to endpoints, which otherwise
+    # attested nowhere and blocked. The nickname must be
+    # this entity's recorded alias and the remaining
+    # tokens exactly the entity's tail; anything else
+    # falls through untouched.
+    ep_seq = [t for t in re.split(r"[\s-]+", ep_norm) if t]
+    if len(ep_seq) >= 2 and ep_seq[0] in alias_of:
+        target = alias_of[ep_seq[0]]
+        t_seq = [t for t in re.split(r"[\s-]+", target)
+                 if t]
+        if len(t_seq) > len(ep_seq) and \
+                t_seq[len(t_seq) - len(ep_seq) + 1:] \
+                == ep_seq[1:]:
+            return by_norm[target]["surface"], []
     etoks = _identity_tokens(ep_norm)
     if anchor_norm and anchor_norm in by_norm \
             and etoks < _identity_tokens(anchor_norm):
@@ -1013,6 +1126,7 @@ def _resolve_endpoint(ep_norm: str, index: tuple,
     cands = sorted(by_norm[m]["surface"] for m in maximals
                    if (etoks < toks[m]
                        or (etoks == toks[m] and ep_norm != m))
+                   and not (toks[m] - etoks) & _ABSORB_VETO
                    and not re.search(
                        r"[A-Z][\w.]*\s+and\s+[A-Z]",
                        by_norm[m]["surface"]))
@@ -1732,9 +1846,7 @@ def guard_triples(items: list[dict], doc_text: str,
         if quote_punct_insensitive else None
     identity = _identity_index(doc_text) if items \
         else None
-    doc_bridged = norm_ws(" ".join(
-        t for t in doc_text.split()
-        if not _is_quote_token(t))) \
+    doc_bridged = _bridged_form(doc_text) \
         if identity is not None else None
     # The document's stipulated aliases (defined terms,
     # acronym pairs) and its punctuation-collapsed form
