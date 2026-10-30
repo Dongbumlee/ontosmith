@@ -604,7 +604,13 @@ judge. The guards are:
 - `l0_attest` — both endpoints must occur in the
   document.
 - `l0_role_word` — an endpoint that is only a role
-  noun — "the manager" — is not an entity.
+  noun the document leaves undefined — "the manager"
+  — is not an entity. A term the document itself
+  defines (a contract's `("Company")`, a stipulated
+  "Party") is an identity inside that document and
+  passes; a defined term with a stated referent is
+  resolved to the referent and recorded like any
+  canonicalization.
 - endpoint identity — an endpoint typed under a
   mention form (a first name alone, a nickname, a
   surname alone, a name missing its suffix) is
@@ -618,7 +624,10 @@ judge. The guards are:
   entity.
 - `theme_missing` — the relation is nothing but
   prepositions.
-- `theme_presence`.
+- `duplicate` — the proposal's key, after identity
+  resolution, equals an already-kept proposal's;
+  recorded in the sidecar like any other loss rather
+  than dropped silently.
 
 Blocks
 are never silent: the CANDIDATES stage's completion
@@ -627,32 +636,35 @@ metrics carry the same counts, and every blocked item
 is written to `candidates_blocked.jsonl` in the batch
 directory with its reason and its evidence quote.
 
-`theme_presence` deserves a paragraph of its own,
-because it can block a relation **wholesale**. For a
-relation whose surface form ends in a preposition —
-*works at*, *diagnosed with*, *located in* — the
-guard requires the object to be attested inside the
-proposal's shortest evidence quote, not merely
-somewhere in the document. The reason is fabrication
-control: without it, a model can pair any subject with
-any object the document mentions, anchored to an
-unrelated quote fragment. But natural text often names
-the object across the passage rather than inside the
-minimal quote — and then every proposal for that
-relation blocks, and the relation is simply absent
-from the graph.
-
-If that is your corpus's shape, the pack author has a
-lever: declare **`theme_attest_chunk`: true** on the
-schema draft (before approval — the declaration rides
-the emitted payload and is bound by the approval hash,
-like `merge_prohibited_type_pairs`). The guard then
-also accepts the object attested anywhere in the
-proposal's chunk. It is deliberately an opt-in: chunk
-attestation is weaker than quote attestation, so the
-default stays quote-only, and a pack that never
-declares it behaves exactly as before. The field is
-defined in [PACK_DESIGN.md](PACK_DESIGN.md) §4.
+One former block deserves a paragraph of its own,
+because it used to remove relations **wholesale**.
+For a relation whose surface form ends in a
+preposition — *works at*, *diagnosed with*,
+*located in* — the guard once required the object to
+be attested inside the proposal's shortest evidence
+quote, not merely somewhere in the document (the
+former `theme_presence` block). The reason was
+fabrication control: without it, a model can pair any
+subject with any object the document mentions,
+anchored to an unrelated quote fragment. But natural
+text often names the object across the passage rather
+than inside the minimal quote — and then every
+proposal for that relation blocked, and the relation
+was simply absent from the graph. A judged sample of
+the blocked class showed it was overwhelmingly
+text-true, so the guard no longer blocks it: the
+proposal is kept with a `theme_grade` field recording
+its evidence level (`chunk` or `document`), and the
+judge — which sees the quote and its context, and
+whose rules already weigh evidence strength — makes
+the call. Fabrication control rests on the verbatim
+quote gate plus the judge, where it is exercised per
+fact rather than per relation class. The older pack
+declaration `theme_attest_chunk` is still accepted
+(and still rides the emitted payload, bound by the
+approval hash), but grading has subsumed it: it no
+longer changes guard behavior. The field is defined
+in [PACK_DESIGN.md](PACK_DESIGN.md) §4.
 
 **Held pairs, under your pack too.** A build under
 your pack can hold entity-resolution pairs it would
