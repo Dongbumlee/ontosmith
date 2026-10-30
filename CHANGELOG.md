@@ -9,6 +9,30 @@ and the project adheres to
 
 ### Added
 
+- **Scorer: alias-aware matching + opt-in TN-3/4/5 layers** —
+  `match_records` now also matches a predicted record under
+  the attested alias surfaces in its guard-emitted
+  `canonicalized` field (the guard's identity resolution
+  rewrites endpoints to one canonical surface; the frozen
+  scorer matched only the emitted surface, which read the
+  upstream-attestation fix as a recall regression on the
+  cap-b replay: 262 vs the old guard's 273 — with alias keys
+  the same output scores 300). `NormalizationTable` gains
+  three caller-data layers, all default-empty (byte-identical
+  to the TN-1/TN-2 instrument): TN-3 relation groups, TN-4
+  inverse expansions, TN-5 subsumptions. Grouping ADDS keys
+  on both sides — verbatim keys are always retained, so a
+  group can never break a TN-2 pairing (verified on the
+  frozen cap-b corpus: baseline hits lost 0; hits beyond the
+  frozen instrument plus the hand-verified variant set 0).
+  `verify_cli.load_table` reads the new keys. Enabling the
+  layers as a pack's table is a new registered evaluation
+  (the open-domain table is frozen; dual reporting per its
+  effect_reporting rule) — measured on cap-b/gold v1.1.0, the
+  full stack would read 365 candidate-level hits vs 273
+  frozen (union 364 vs 301); the table data itself is NOT
+  adopted here.
+
 - **Mention layer, first cut (issue #54)** — profile-gated
   (`mention_layer` in setup_config; absent = off, and the
   undeclared path is byte-identical). Entities register by

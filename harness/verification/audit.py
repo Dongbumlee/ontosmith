@@ -32,7 +32,7 @@ from __future__ import annotations
 import random
 import re
 
-from .scoring import NormalizationTable, gold_keys, match_records, norm_text, record_key
+from .scoring import NormalizationTable, gold_keys, match_records, norm_text, record_keys
 
 #: Verdict values that carry no decision. Anything else a
 #: panel returns is decisive (its exact vocabulary — e.g.
@@ -96,7 +96,7 @@ def build_audit_sets(predicted: list[dict], gold: list[dict],
     for grec in gold:
         gold_key_set |= gold_keys(grec, table)
     matched_pred = [r for r in predicted
-                    if record_key(r, table) in gold_key_set]
+                    if record_keys(r, table) & gold_key_set]
 
     def items(tag: str, pool: list[dict], n) -> list[dict]:
         chosen = pool if n is None else stratified_sample(pool, n, seed)

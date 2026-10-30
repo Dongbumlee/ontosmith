@@ -24,6 +24,28 @@ declarations), never code constants here — the lab scorer
 read its table from a pack file; the product core takes the
 same table as an input.
 
+Three further opt-in layers ride the same table, all empty by
+default (an empty layer is byte-identical to the TN-1/TN-2
+instrument): TN-3 relation groups (declared label families
+add group-label keys on BOTH sides, alongside — never instead
+of — the verbatim-label keys), TN-4 inverse
+expansions (a gold relation also matches records stated under
+declared additional inverse labels, endpoints swapped), and
+TN-5 subsumptions (a gold relation also matches records stated
+under a declared STRONGER label that entails it). These layers
+redefine what counts as a match, so a caller that enables them
+owns a new registered evaluation: report the TN-1/TN-2 figure
+and the extended figure side by side, the delta labeled, never
+folded in silently.
+
+Independent of the table, a predicted record carrying the
+guard's ``canonicalized`` field (endpoint -> the document-
+attested surfaces the guard resolved as one entity) also
+matches under each attested surface: canonicalization rewrites
+a record's endpoints to one canonical surface, and the alias
+set is the same kind of evidence a gold name cluster already
+is. Records without the field are unaffected.
+
 Corrections:
 
 - corrected precision = (raw matches + judged-supported
@@ -100,10 +122,21 @@ class NormalizationTable:
     relation; an inverse record canonicalizes to the primary
     with endpoints swapped (TN-2). An empty table (the
     default) canonicalizes nothing — plain exact match.
+
+    Opt-in extensions (default empty; see the module
+    docstring for the reporting rule): ``relation_groups``
+    maps a relation label to its TN-3 group label;
+    ``inverse_expansions`` maps a GOLD relation to additional
+    inverse labels a matching record may be stated under
+    (TN-4); ``subsumptions`` maps a GOLD relation to stronger
+    labels that entail it (TN-5).
     """
 
     symmetric: frozenset = frozenset()
     inverses: dict = field(default_factory=dict)
+    relation_groups: dict = field(default_factory=dict)
+    inverse_expansions: dict = field(default_factory=dict)
+    subsumptions: dict = field(default_factory=dict)
 
     def canonical_key(self, doc_key, subject, relation, obj) -> tuple:
         """The canonical match key for one (subject, relation,
@@ -114,7 +147,10 @@ class NormalizationTable:
         inventory's labels are exact strings; case variants
         are distinct relations), TN-1 sorts the endpoints of
         a symmetric relation, else TN-2 maps an inverse to its
-        primary with endpoints swapped.
+        primary with endpoints swapped. (TN-3 group labels do
+        not rewrite here: grouping ADDS keys at the record
+        level — see gold_keys / record_keys — so a grouped
+        label can never break a TN-2 pairing.)
         """
         s, o = norm_text(subject), norm_text(obj)
         r = str(relation or "")
@@ -142,11 +178,58 @@ def record_key(rec: dict, table: NormalizationTable) -> tuple:
 def gold_keys(rec: dict, table: NormalizationTable) -> set[tuple]:
     """All canonical keys a gold record can match: the cross
     product of its head and tail name sets (a gold triple is
-    matched when ANY declared name pair matches)."""
+    matched when ANY declared name pair matches). With TN-4 /
+    TN-5 declared, the set also carries the swapped-endpoint
+    keys under each additional inverse label and the same-
+    direction keys under each stronger (subsuming) label."""
     heads = rec.get("head_names") or [rec.get("subject")]
     tails = rec.get("tail_names") or [rec.get("object")]
-    return {table.canonical_key(_doc_key(rec), h, rec.get("relation"), t)
-            for h in heads for t in tails}
+    rel = rec.get("relation")
+    doc = _doc_key(rec)
+    rels = {rel}
+    group = table.relation_groups.get(str(rel or ""))
+    if group is not None:
+        rels.add(group)
+    keys = {table.canonical_key(doc, h, r, t)
+            for h in heads for t in tails for r in rels}
+    for inv in table.inverse_expansions.get(str(rel or ""), ()):
+        inv_rels = {inv, table.relation_groups.get(inv, inv)}
+        keys |= {table.canonical_key(doc, t, r, h)
+                 for h in heads for t in tails for r in inv_rels}
+    for sub in table.subsumptions.get(str(rel or ""), ()):
+        sub_rels = {sub, table.relation_groups.get(sub, sub)}
+        keys |= {table.canonical_key(doc, h, r, t)
+                 for h in heads for t in tails for r in sub_rels}
+    return keys
+
+
+def record_keys(rec: dict, table: NormalizationTable) -> set[tuple]:
+    """All canonical keys a predicted record can match under:
+    its own key and — when TN-3 declares a group for its
+    relation — the grouped-label key, plus, when the record
+    carries the guard's ``canonicalized`` alias field, the
+    keys formed by each attested alias surface of either
+    endpoint (under both relation forms)."""
+    keys = {record_key(rec, table)}
+    doc = _doc_key(rec)
+    rel = rec.get("relation")
+    rels = {rel}
+    group = table.relation_groups.get(str(rel or ""))
+    if group is not None:
+        rels.add(group)
+    for r in rels:
+        keys.add(table.canonical_key(doc, rec.get("subject"), r,
+                                     rec.get("object")))
+    canon = rec.get("canonicalized") or {}
+    for surface in canon.get("subject") or ():
+        for r in rels:
+            keys.add(table.canonical_key(doc, surface, r,
+                                         rec.get("object")))
+    for surface in canon.get("object") or ():
+        for r in rels:
+            keys.add(table.canonical_key(doc, rec.get("subject"),
+                                         r, surface))
+    return keys
 
 
 @dataclass
@@ -185,16 +268,23 @@ def match_records(predicted: list[dict], gold: list[dict],
     """
     table = table or NormalizationTable()
     pred_by_key: dict[tuple, dict] = {}
+    pred_keys_by_key: dict[tuple, set[tuple]] = {}
     for rec in predicted:
-        pred_by_key.setdefault(record_key(rec, table), rec)
-    pred_key_set = set(pred_by_key)
+        key = record_key(rec, table)
+        pred_by_key.setdefault(key, rec)
+        pred_keys_by_key.setdefault(key, set()).update(
+            record_keys(rec, table))
+    pred_key_set = set().union(*pred_keys_by_key.values()) \
+        if pred_keys_by_key else set()
+    variant_to_primary = {v: k for k, vs in pred_keys_by_key.items()
+                          for v in vs}
     matched_pred_keys: set[tuple] = set()
     matched_gold_idx: set[int] = set()
     for i, grec in enumerate(gold):
         hit = gold_keys(grec, table) & pred_key_set
         if hit:
             matched_gold_idx.add(i)
-            matched_pred_keys |= hit
+            matched_pred_keys |= {variant_to_primary[v] for v in hit}
     return MatchResult(
         predicted_total=len(pred_by_key),
         gold_total=len(gold),
