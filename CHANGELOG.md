@@ -7,6 +7,8 @@ and the project adheres to
 
 ## [Unreleased]
 
+## [0.1.2] - 2026-10-30
+
 ### Added
 
 - **Identity seat seam** — `guard_triples` accepts an
