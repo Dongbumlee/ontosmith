@@ -212,6 +212,32 @@ and the project adheres to
 
 ### Fixed
 
+- **Identity completion damaged attested names the
+  word list did not know.** The candidate guard's
+  completion step rewrites a fragment mention to the
+  longer census name that contains it; a curated list
+  of generic elements decided which containing phrases
+  were safe to absorb into. The list missed glued
+  surfaces in other shapes — verb and prose glue,
+  demonym prepends, a show title wrapped around a
+  country — and a per-language list cannot travel to
+  the next genre or language anyway. The list is
+  deleted. A subset rewrite of a mention now requires
+  document-supplied identity evidence for the added
+  material, whatever the mention's length; the one
+  exception is an infix completion (middle-name
+  material) of a mention that occurs nowhere outside
+  the candidate, where refusing would protect no
+  competing name and cost the fact. Leading
+  completions (glue, specifiers) and trailing
+  completions (derived entities) always need
+  evidence. A mention with its own textual life in
+  the document and no evidence for the longer form
+  stands as proposed — the triple is kept, the name
+  uncompleted — instead of being rewritten. The
+  regression record is
+  `tests/test_identity_surface_damage.py`.
+
 - **The cost-cap preflight checked the wrong stage set.**
   `_preflight_cost_cap` selected its seats by testing
   `stage in stages` (completed stages) where its own
