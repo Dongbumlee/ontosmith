@@ -1450,20 +1450,20 @@ def punct_collapse(s: str) -> str:
 # endpoint term defined in the very document that proposed
 # them — the guard was killing the contract's own defined
 # parties. Methods borrowed (never their numbers): DEFT
-# definition patterns; Schwartz–Hearst acronym pairing.
+# definition patterns; Schwartz-Hearst acronym pairing.
 
 _DEF_PAREN_RX = re.compile(
-    r"([A-Z][\w&.,'’\-]+(?:\s+(?:[A-Z][\w&.,'’\-]+|of|the|and|&))*)"
+    r"([A-Z][\w&.,'\u2019\-]+(?:\s+(?:[A-Z][\w&.,'\u2019\-]+|of|the|and|&))*)"
     r"\s*\(\s*(?:the\s+)?[\"“]([^\"”]{1,60})[\"”]\s*\)")
 _DEF_HEREINAFTER_RX = re.compile(
-    r"([A-Z][\w&.,'’\-]+(?:\s+(?:[A-Z][\w&.,'’\-]+|of|the|and|&))*)"
+    r"([A-Z][\w&.,'\u2019\-]+(?:\s+(?:[A-Z][\w&.,'\u2019\-]+|of|the|and|&))*)"
     r"\s*,?\s*hereinafter\s+(?:referred\s+to\s+as\s+)?"
     r"(?:the\s+)?[\"“]([^\"”]{1,60})[\"”]")
 _DEF_MEANS_RX = re.compile(
     r"[\"“]([^\"”]{1,60})[\"”]\s+"
     r"(?:means|shall\s+mean|has\s+the\s+meaning)")
 _DEF_MEANS_BARE_RX = re.compile(
-    r"(?<![\w.])([A-Z][\w'’\-]*(?:\s+[A-Z][\w'’\-]*){0,3})"
+    r"(?<![\w.])([A-Z][\w'\u2019\-]*(?:\s+[A-Z][\w'\u2019\-]*){0,3})"
     r"\s+(?:means|shall\s+mean|will\s+mean)\b")
 _DEF_PAREN_ANY_RX = re.compile(
     r"\(([^()]{0,40}?)"
@@ -1473,7 +1473,7 @@ _DEF_REFERRED_RX = re.compile(
     r"(?:herein\s+)?as\s+(?:the\s+|a\s+|an\s+)?"
     r"[\"“]([^\"”]{1,60})[\"”]")
 _NAME_RUN_RX = re.compile(
-    r"[A-Z][\w&.'’\-]*(?:\s+(?:[A-Z][\w&.'’\-]+|of|the|and|&))*")
+    r"[A-Z][\w&.'\u2019\-]*(?:\s+(?:[A-Z][\w&.'\u2019\-]+|of|the|and|&))*")
 _KO_DEF_PAREN_RX = re.compile(
     r"\(이하\s*[\"'“]([^\"'”]{1,20})[\"'”]\)")
 _KO_DEF_SAY_RX = re.compile(
@@ -1849,8 +1849,8 @@ def guard_triples(items: list[dict], doc_text: str,
                 canon[ep] = [base[ep], target]
                 eff[ep] = target
                 reg_forms[ep] = [pnorm, tnorm]
-                fs, ok = forms.get(ep, ([], False))
-                forms[ep] = ([tnorm] + fs, True)
+                fs = forms.get(ep, ([], False))[0]
+                forms[ep] = ([tnorm, *fs], True)
             else:
                 reg_forms[ep] = [pnorm]
 
