@@ -996,44 +996,13 @@ _ABSORB_VETO = frozenset({
 # first word), a designation phrase, or a distinct
 # entity sharing a name token (the company 'Cimatti'
 # is not its founder). The vetoes in _absorption_veto
-# refuse such targets on structural grounds — what
-# KIND of material the extra tokens are, and whether
+# refuse such targets on structural and evidentiary
+# grounds — the shape of the completion, and whether
 # the document itself supplies identity evidence for
-# the rewrite — never on a list of known-bad surfaces.
-
-# Generic elements: the type-denoting common nouns of
-# proper names (the "generic term" of toponymy, as in
-# UNGEGN / GeoNames feature designators) — the part of
-# a name that says WHAT KIND of thing it is. An extra
-# token from this class in an absorption target means
-# the longer surface is a typed entity built around
-# the fragment (a university in Chicago, the senate of
-# a country), not the fragment's own fuller name.
-_GENERIC_ELEMENTS = frozenset({
-    "university", "college", "school", "institute",
-    "institution", "academy", "seminary", "senate",
-    "parliament", "assembly", "council", "committee",
-    "commission", "congress", "court", "bank",
-    "company", "corporation", "corp", "inc", "ltd",
-    "llc", "club", "association", "society",
-    "federation", "union", "league", "party", "church",
-    "cathedral", "mosque", "temple", "museum",
-    "library", "hospital", "hotel", "park", "parc",
-    "river", "lake", "mount", "mountain", "island",
-    "isle", "city", "town", "village", "county",
-    "district", "province", "region", "state",
-    "department", "ministry", "agency", "bureau",
-    "office", "army", "navy", "regiment", "battalion",
-    "airport", "station", "bridge", "castle", "palace",
-    "monastery", "abbey", "theater", "theatre",
-    "stadium", "arena", "foundation", "fund", "group",
-    "holdings", "systems", "technologies",
-    "laboratories", "labs", "networks", "studios",
-    "productions", "records", "press", "government",
-    "administration", "authority", "service", "center",
-    "centre", "number", "orchestra", "ensemble",
-    "choir", "stage", "formation",
-})
+# the rewrite — never on a list of known-bad surfaces
+# or of type-denoting words: a hand-written word list
+# is a per-language artifact, and this layer's rules
+# must be statements about names, not about English.
 
 _GEN_SUFFIXES = frozenset(
     {"jr", "sr", "ii", "iii", "iv", "esq"})
@@ -1092,14 +1061,6 @@ def _absorption_veto(ep_norm: str, cand: str,
     ep_seq = _seq_of(ep_norm)
     cand_seq = _seq_of(cand)
     extras = set(cand_seq) - set(ep_seq)
-    # A generic element among the extra tokens means
-    # the longer surface is a TYPED entity built around
-    # the mention — the senate of a country, a
-    # university in a city, a numbered agreement — not
-    # the mention's own fuller name. Position does not
-    # matter: a completion may only add name material.
-    if extras & _GENERIC_ELEMENTS:
-        return True
     # An extra token the document writes in all caps is
     # a designator (an initialism or a defined-term
     # shout), not name material: 'FK Fyllingsdalen' is
@@ -1138,20 +1099,52 @@ def _absorption_veto(ep_norm: str, cand: str,
                         and i >= first \
                         and i + len(o_seq) > last:
                     return True
-    # A complete single-token name may be rewritten to
-    # a longer name only on document-supplied identity
-    # evidence. Bare containment is not evidence — the
-    # token may name a distinct entity of its own (the
-    # company 'Cimatti' is not its founder
-    # 'Marco Cimatti'), or the longer surface may be a
-    # prose word glued to the name at a lost boundary
-    # (a verse line's 'Methinks Ulysses').
-    if len(ep_seq) == 1 and len(cand_seq) > 1 \
-            and ep_norm in by_norm \
+    # A mention may be rewritten to a longer name only
+    # on document-supplied identity evidence. Bare
+    # containment is not evidence — the longer surface
+    # may be a typed entity built around the mention
+    # (a university in Chicago, a country's senate, a
+    # park around a river), a distinct entity sharing
+    # a name token (the company 'Cimatti' is not its
+    # founder 'Marco Cimatti'), or prose glued to the
+    # name at a lost boundary (a verse line's
+    # 'Methinks Ulysses', a show's name around a
+    # country in 'Voice Romania'). The one exception
+    # is the mention's only anchor (see _anchored):
+    # an infix completion of a mention that occurs
+    # nowhere outside the candidate, where refusing
+    # would protect nothing and cost the fact.
+    if len(cand_seq) > len(ep_seq) \
             and not _rewrite_evidence(
-                ep_seq, cand, index):
+                ep_seq, cand, index) \
+            and not _anchored(
+                ep_norm, ep_seq, cand, cand_seq, index):
         return True
     return False
+
+
+def _anchored(ep_norm: str, ep_seq: list, cand: str,
+              cand_seq: list, index: tuple) -> bool:
+    """The mention's only anchor: the fragment never
+    occurs in the document outside the candidate, and
+    the completion is INFIX only — the extra tokens
+    sit strictly between the fragment's own first and
+    last tokens (a seat-written 'Jared Allen' for
+    'Jared Scot Allen': the middle name is the name's
+    own material). Leading completions are where glue
+    and specifiers live ('Voice Romania' is a show,
+    not the country; 'Joining SC Freiburg' is a verb
+    phrase), and trailing completions are where
+    derived entities live (a country's senate) — those
+    always need evidence. Refusing an infix rewrite
+    of an anchorless mention would not protect a
+    competing attested name — there is none — it
+    would only leave the mention unattested and cost
+    the fact."""
+    al = _align(ep_seq, cand_seq)
+    if al is None or al[0] or al[2] or not al[1]:
+        return False
+    return _outside_count(index[3], ep_norm, cand) == 0
 
 
 def _rewrite_evidence(ep_seq: list, cand: str,
@@ -1359,16 +1352,24 @@ def _resolve_endpoint(ep_norm: str, index: tuple,
        function word, a prose opener, or a role/title
        word (_ABSORB_VETO) merely CONTAINS the fragment
        (a title phrase, a work title, a coordination, a
-       prose-glued surface) and is never a target. A
-       fragment that occurs in the document outside the
-       candidate's own occurrences has independent
-       textual life and is not absorbed either, and a
+       prose-glued surface) and is never a target, and a
        candidate completed by a designation code
        ('251a/a', 'q/q') is a designation phrase, not a
-       longer name. The completions absorption exists
-       for — a middle name supplied ('Jared Allen' for
-       'Jared Scot Allen') — pass every rule: the
-       fragment occurs nowhere but inside the full name.
+       longer name. A surviving candidate must then
+       pass the structural vetoes (_absorption_veto):
+       an initialism never absorbs, an all-caps extra
+       token is a designator, a second complete entity
+       name inside the candidate marks a glued surface,
+       and — the general rule — a rewrite needs
+       document-supplied identity evidence (a recorded
+       longer alias form, a generational suffix, a
+       hyphen compound, or a second attestation of the
+       longer name), unless it is the mention's only
+       anchor (an infix completion of a mention that
+       occurs nowhere outside the candidate — the
+       middle name case: 'Jared Allen' for 'Jared Scot
+       Allen'). The vetoes refuse only a UNIQUE
+       candidate; a contested field stays ambiguous.
     """
     by_norm, alias_of, maximals, bridged = index
     if ep_norm in by_norm:

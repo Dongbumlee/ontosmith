@@ -606,3 +606,59 @@ class TestStructuralAbsorptionVetoes(unittest.TestCase):
                      "Acme for a decade"}],
             SMITH_DOC)
         self.assertEqual(kept[0]["subject"], "John Smith")
+
+
+# --- Round 4 (2026-10-30): the evidence rule generalised --
+# Round 3's generic-element veto was a hand-written list
+# of English type nouns (university, senate, corporation,
+# ...) — a per-language word list, and word lists are not
+# a mechanism. The bake-off that replaced it measured
+# what the list uniquely covered and found the coverage
+# was an instance of one rule: a subset rewrite needs
+# document-supplied identity evidence (see
+# _rewrite_evidence), whatever the fragment's length.
+# The list is gone. Two specified behaviours fall out of
+# the general rule and are pinned here: a longer name the
+# document attests only once does not complete a mention
+# that has its own textual life (the mention stands, the
+# fact is kept), and leading/trailing glue around a name
+# (a show's title around a country) is refused on the
+# same evidence grounds, not on the words involved.
+
+VOICE_DOC = (
+    "Tudor Chirila is a Romanian singer. He was a "
+    "coach on Voice Romania for two seasons. Chirila "
+    "is a citizen of Romania.")
+
+CAREY_DOC = (
+    "The Johns Hopkins Carey Business School is in "
+    "Baltimore. Carey Business School admits students "
+    "each fall. The Carey Business School announced a "
+    "new dean this year.")
+
+
+class TestEvidenceRuleGeneralised(unittest.TestCase):
+    def test_country_not_absorbed_into_show_title(self):
+        kept, _ = proposer.guard_triples(
+            [{"subject": "Tudor Chirila",
+              "relation": "country of citizenship",
+              "object": "Romania",
+              "quote": "Chirila is a citizen of Romania"}],
+            VOICE_DOC)
+        self.assertEqual(kept[0]["object"], "Romania")
+
+    def test_hapax_full_name_does_not_complete(self):
+        # The full name occurs once; the short form has
+        # its own life in the document. The mention
+        # stands as proposed and the fact is kept — the
+        # completion is forgone, not the triple.
+        kept, blocked = proposer.guard_triples(
+            [{"subject": "Carey Business School",
+              "relation": "located in",
+              "object": "Baltimore",
+              "quote": "The Johns Hopkins Carey Business "
+                     "School is in Baltimore"}],
+            CAREY_DOC)
+        self.assertEqual(blocked, [])
+        self.assertEqual(kept[0]["subject"],
+                         "Carey Business School")
