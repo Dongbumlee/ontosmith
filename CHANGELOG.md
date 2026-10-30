@@ -17,7 +17,10 @@ and the project adheres to
   scorer matched only the emitted surface, which read the
   upstream-attestation fix as a recall regression on the
   cap-b replay: 262 vs the old guard's 273 — with alias keys
-  the same output scores 300). `NormalizationTable` gains
+  the same output scores 301). Alias keys are the cross
+  product of attested subject x object surfaces, mirroring
+  gold_keys, so a record canonicalized at BOTH endpoints
+  still matches its gold pair. `NormalizationTable` gains
   three caller-data layers, all default-empty (byte-identical
   to the TN-1/TN-2 instrument): TN-3 relation groups, TN-4
   inverse expansions, TN-5 subsumptions. Grouping ADDS keys
@@ -29,7 +32,7 @@ and the project adheres to
   layers as a pack's table is a new registered evaluation
   (the open-domain table is frozen; dual reporting per its
   effect_reporting rule) — measured on cap-b/gold v1.1.0, the
-  full stack would read 365 candidate-level hits vs 273
+  full stack would read 366 candidate-level hits vs 273
   frozen (union 364 vs 301); the table data itself is NOT
   adopted here.
 

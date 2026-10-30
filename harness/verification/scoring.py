@@ -208,8 +208,13 @@ def record_keys(rec: dict, table: NormalizationTable) -> set[tuple]:
     its own key and — when TN-3 declares a group for its
     relation — the grouped-label key, plus, when the record
     carries the guard's ``canonicalized`` alias field, the
-    keys formed by each attested alias surface of either
-    endpoint (under both relation forms)."""
+    keys formed by the attested alias surfaces of its
+    endpoints (under both relation forms). The alias keys
+    are the full cross product of subject surfaces x object
+    surfaces, mirroring gold_keys: when BOTH endpoints were
+    canonicalized, the gold pair (alias subject, alias
+    object) must still match — single-endpoint substitution
+    alone misses exactly that case."""
     keys = {record_key(rec, table)}
     doc = _doc_key(rec)
     rel = rec.get("relation")
@@ -217,18 +222,13 @@ def record_keys(rec: dict, table: NormalizationTable) -> set[tuple]:
     group = table.relation_groups.get(str(rel or ""))
     if group is not None:
         rels.add(group)
-    for r in rels:
-        keys.add(table.canonical_key(doc, rec.get("subject"), r,
-                                     rec.get("object")))
     canon = rec.get("canonicalized") or {}
-    for surface in canon.get("subject") or ():
-        for r in rels:
-            keys.add(table.canonical_key(doc, surface, r,
-                                         rec.get("object")))
-    for surface in canon.get("object") or ():
-        for r in rels:
-            keys.add(table.canonical_key(doc, rec.get("subject"),
-                                         r, surface))
+    subjects = [rec.get("subject"), *(canon.get("subject") or ())]
+    objects = [rec.get("object"), *(canon.get("object") or ())]
+    for s in subjects:
+        for o in objects:
+            for r in rels:
+                keys.add(table.canonical_key(doc, s, r, o))
     return keys
 
 

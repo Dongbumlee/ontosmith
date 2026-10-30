@@ -113,6 +113,32 @@ class TestMatching(unittest.TestCase):
                  "relation": "place of birth", "object": "Mediaș"}]
         self.assertEqual(match_records(bare, gold).matched_gold, 0)
 
+    def test_alias_both_endpoints_match(self):
+        # BOTH endpoints canonicalized (the guard rewrote the
+        # subject and the object): gold knows only the short
+        # surface of each, so matching needs the alias cross
+        # product, not single-endpoint substitution.
+        pred = [{"doc_id": "d", "subject": "Digital Bangladesh",
+                 "relation": "head of government",
+                 "object": "Prime Minister Sheikh Hasina",
+                 "canonicalized": {
+                     "subject": ["Bangladesh", "Digital Bangladesh"],
+                     "object": ["Sheikh Hasina",
+                                "Prime Minister Sheikh Hasina"]}}]
+        gold = [{"doc_id": "d", "head_names": ["Bangladesh"],
+                 "tail_names": ["Sheikh Hasina"],
+                 "relation": "head of government"}]
+        self.assertEqual(match_records(pred, gold).matched_gold, 1)
+        # A crossed pair that was never attested as one entity
+        # still cannot match: aliases widen surfaces per
+        # endpoint, they do not invent pairings with other
+        # records' endpoints.
+        gold_other = [{"doc_id": "d", "head_names": ["Bangladesh"],
+                       "tail_names": ["Mediaș"],
+                       "relation": "head of government"}]
+        self.assertEqual(
+            match_records(pred, gold_other).matched_gold, 0)
+
     def test_tn3_relation_group(self):
         table = NormalizationTable(
             relation_groups={"country": "CONTAINMENT",
