@@ -54,6 +54,9 @@ COMMANDS: dict[str, tuple[str, str, str, tuple[str, ...]]] = {
     "batch": ("pipeline.batch_cli", "Pipeline",
               "Batch pipeline: create/run/status/rollback "
               "+ ER settlement", ()),
+    "seat": ("pipeline.seat_cli", "Pipeline",
+             "Judge identity decision envelopes with a "
+             "model; write a frozen decisions file", ()),
     "profile": ("pipeline.profiler", "Pipeline",
                 "Corpus profiler: stage-0 profile of a "
                 "corpus (deterministic, no LLM)", ()),

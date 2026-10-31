@@ -413,6 +413,39 @@ def stage_candidates(b: Batch, root: Path, stages: list[str]) -> None:
     identity_decisions = None
     identity_seat_src = None
     identity_seat_stats = {"consulted": 0, "opinions": 0}
+    # Collection mode (the seat program's first pass):
+    # the profile may instead name a collection path.
+    # The collecting seat records every rule-4 point and
+    # never opines, so this run's guard outcomes are the
+    # rule chain's alone; at stage end the points are
+    # written as envelopes for an offline judge. Declaring
+    # both modes is a contradiction — fail closed.
+    identity_collect_path = None
+    identity_collect_points: list[dict] = []
+    _collect_decl = (setup_cfg or {}).get(
+        "identity_seat_collect")
+    if _collect_decl is not None:
+        if not (isinstance(_collect_decl, str)
+                and _collect_decl.strip()):
+            raise ValueError(
+                "identity_seat_collect must name an "
+                "envelope output file (fail closed)")
+        if (setup_cfg or {}).get(
+                "identity_seat_decisions") is not None:
+            raise ValueError(
+                "identity_seat_collect and "
+                "identity_seat_decisions are mutually "
+                "exclusive: a run either harvests decision "
+                "points or consumes frozen verdicts "
+                "(fail closed)")
+        identity_collect_path = Path(_collect_decl)
+        if not identity_collect_path.is_absolute():
+            identity_collect_path = root / identity_collect_path
+        _log(b.batch_id,
+             "CANDIDATES: identity seat COLLECT "
+             f"(decision points -> {_collect_decl}; the "
+             "collecting seat never opines, guard outcomes "
+             "are the rule chain's alone)")
     _seat_decl = (setup_cfg or {}).get(
         "identity_seat_decisions")
     if _seat_decl is not None:
@@ -664,6 +697,12 @@ def stage_candidates(b: Batch, root: Path, stages: list[str]) -> None:
             from . import proposer as _prop
             doc_seat = _prop.identity_seat_for_doc(
                 identity_decisions,
+                _prop.identity_doc_key(text),
+                stats=identity_seat_stats)
+        elif identity_collect_path is not None:
+            from . import proposer as _prop
+            doc_seat = _prop.collecting_identity_seat(
+                identity_collect_points,
                 _prop.identity_doc_key(text),
                 stats=identity_seat_stats)
         # LLM proposer — free triples + clause slots.
@@ -1096,6 +1135,50 @@ def stage_candidates(b: Batch, root: Path, stages: list[str]) -> None:
             **identity_seat_src,
             "consulted": identity_seat_stats["consulted"],
             "opinions": identity_seat_stats["opinions"]}
+    if identity_collect_path is not None:
+        from . import proposer as _prop
+        from . import seat_envelope as _se
+        _texts_by_key = {
+            _prop.identity_doc_key(t): t
+            for t in texts.values()}
+        _key_by_doc_id = {
+            d: _prop.identity_doc_key(t)
+            for d, t in texts.items()}
+        _items_by_key: dict[str, list[dict]] = {}
+        _seen_items: set = set()
+        for _rec in [*candidates, *blocked_all]:
+            _dk = _key_by_doc_id.get(_rec.get("doc_id"))
+            if _dk is None:
+                continue
+            _it = {"s": _rec.get("subject"),
+                   "r": _rec.get("relation"),
+                   "o": _rec.get("object")}
+            _sig = (_dk, _it["s"], _it["r"], _it["o"])
+            if _sig in _seen_items:
+                continue
+            _seen_items.add(_sig)
+            _items_by_key.setdefault(_dk, []).append(_it)
+        _envelopes = _se.build_envelopes(
+            identity_collect_points, _texts_by_key,
+            _items_by_key)
+        identity_collect_path.parent.mkdir(
+            parents=True, exist_ok=True)
+        with open(identity_collect_path, "w",
+                  encoding="utf-8") as _f:
+            for _e in _envelopes:
+                _f.write(json.dumps(
+                    _e, ensure_ascii=False) + "\n")
+        b.metrics["candidates"]["identity_seat_collect"] = {
+            "path": str(_collect_decl),
+            "n_points": len(_envelopes),
+            "consulted": identity_seat_stats["consulted"],
+            "sha256": hashlib.sha256(
+                identity_collect_path.read_bytes()
+            ).hexdigest()}
+        _log(b.batch_id,
+             f"CANDIDATES: identity seat collected "
+             f"{len(_envelopes)} decision points -> "
+             f"{_collect_decl}")
     if pair_enum:
         b.metrics["candidates"]["pair_enum"] = {
             **pair_stats, "window": pair_window,

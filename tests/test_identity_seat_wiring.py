@@ -147,6 +147,42 @@ class TestIdentitySeatWiring(unittest.TestCase):
         self.assertIn("identity seat decisions",
                       str(cm.exception))
 
+    def test_collect_mode_harvests_points_outcomes_unchanged(self):
+        b, d = _run_stage(
+            self.root, "seat-collect",
+            {"identity_seat_collect": "envelopes.jsonl"})
+        # The collecting seat never opines: the run's
+        # outcome is the rule chain's alone (the surname
+        # stands, exactly as the no-declaration run).
+        cands = self._candidates(d)
+        self.assertEqual(len(cands), 1)
+        self.assertEqual(cands[0]["object"], "Hamasaki")
+        envs = [json.loads(line) for line in
+                (self.root / "envelopes.jsonl").read_text().splitlines()
+                if line.strip()]
+        self.assertEqual(len(envs), 1)
+        env = envs[0]
+        self.assertEqual(env["point"]["ep"], "hamasaki")
+        self.assertEqual(env["point"]["cand"],
+                         "ayumi hamasaki")
+        self.assertEqual(env["point"]["fragment"], "Hamasaki")
+        self.assertEqual(env["point"]["candidate"],
+                         "Ayumi Hamasaki")
+        self.assertTrue(env["occurrences"]["fragment"])
+        self.assertTrue(env["items"])
+        metrics = b.metrics["candidates"][
+            "identity_seat_collect"]
+        self.assertEqual(metrics["n_points"], 1)
+
+    def test_collect_and_decisions_together_fail_closed(self):
+        with self.assertRaises(ValueError) as cm:
+            _run_stage(
+                self.root, "seat-both",
+                {"identity_seat_collect": "envelopes.jsonl",
+                 "identity_seat_decisions": "seat.jsonl"})
+        self.assertIn("mutually exclusive",
+                      str(cm.exception))
+
 
 if __name__ == "__main__":
     unittest.main()
