@@ -154,6 +154,10 @@ class TestJudgeLoop(unittest.TestCase):
                       seat_cli.SYSTEM_PROMPT)
         self.assertIn("the title of a different document",
                       seat_cli.SYSTEM_PROMPT)
+        self.assertIn("distinguishing words beyond the generic "
+                      "word itself", seat_cli.SYSTEM_PROMPT)
+        self.assertIn("is not the title and stands",
+                      seat_cli.SYSTEM_PROMPT)
 
 
 if __name__ == "__main__":
