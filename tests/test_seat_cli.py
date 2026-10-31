@@ -147,6 +147,14 @@ class TestJudgeLoop(unittest.TestCase):
                       "entity's name", seat_cli.SYSTEM_PROMPT)
         self.assertIn("abstain", seat_cli.SYSTEM_PROMPT)
 
+    def test_frozen_prompt_carries_the_document_title_policy(self):
+        self.assertIn("the generic word for the document itself",
+                      seat_cli.SYSTEM_PROMPT)
+        self.assertIn("this document's own title, complete",
+                      seat_cli.SYSTEM_PROMPT)
+        self.assertIn("the title of a different document",
+                      seat_cli.SYSTEM_PROMPT)
+
 
 if __name__ == "__main__":
     unittest.main()

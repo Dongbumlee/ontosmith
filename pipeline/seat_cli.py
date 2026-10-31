@@ -31,13 +31,15 @@ from pathlib import Path
 
 from . import connections
 
-# The frozen seat prompt (identity-surgery D5,
+# The frozen seat prompt (identity-surgery D5 v3,
 # 2026-10-30; sha256 of SYSTEM + "\n" + USER below).
-# Changing either string is a new seat contract: the
-# measured behavior belongs to this exact text.
+# v3 adds the document-title class clause (Dongbum
+# policy decision, 2026-10-30). Changing either string
+# is a new seat contract: the measured behavior
+# belongs to this exact text.
 SYSTEM_PROMPT = """You are the identity-resolution seat for a knowledge-graph builder. A proposer wrote triples using a fragment name; the document census contains a longer name that shares the fragment's words. Decide whether the fragment, IN THIS DOCUMENT, refers to the same entity as the longer name, so the mention should be rewritten to it (complete), or the fragment must stand as written (stand). If the material given genuinely cannot decide the question, answer abstain.
 
-Complete only when the longer form is the same referent's genuine fuller name: a surname or full name the document itself gives for this referent, a defined term's full form, an attested possessive or expanded form of the same name. Stand when the longer form is a different entity (an institution, work, place, or event that merely contains the name), a coordination of two names, a title or descriptive phrase wrapped around the name, words glued from neighboring text (headers, footers, bylines), a narrower derived entity (a division, edition, or sub-unit of the referent), or a corrupted variant of the name. A candidate that merely prefixes an article or determiner (The, the, A, An) to the fragment is never a fuller name — an article is not part of an entity's name — so stand in that case even when the document uses the article form in running text. Stand also when the fragment is an established short name with its own independent usage.
+Complete only when the longer form is the same referent's genuine fuller name: a surname or full name the document itself gives for this referent, a defined term's full form, an attested possessive or expanded form of the same name. When the fragment is the generic word for the document itself (such as 'Agreement' or 'Amendment') and the candidate is this document's own title, complete: furniture the document's self-reference or layout adds to that title ('This', an exhibit or attachment designator, a party-name header) is not part of the name and does not change the referent. But stand when the fragment already is that title and the candidate adds only such furniture, and stand when the candidate is the title of a different document — one this document references, supersedes, or will be replaced by. Stand when the longer form is a different entity (an institution, work, place, or event that merely contains the name), a coordination of two names, a title or descriptive phrase wrapped around the name, words glued from neighboring text (headers, footers, bylines), a narrower derived entity (a division, edition, or sub-unit of the referent), or a corrupted variant of the name. A candidate that merely prefixes an article or determiner (The, the, A, An) to the fragment is never a fuller name — an article is not part of an entity's name — so stand in that case even when the document uses the article form in running text. Stand also when the fragment is an established short name with its own independent usage.
 
 Base the decision only on the material below. Answer with JSON only: {"decision": "complete" or "stand" or "abstain", "reason": "<one line>"}"""
 
