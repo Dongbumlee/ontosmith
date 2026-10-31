@@ -2178,6 +2178,31 @@ def identity_seat_for_doc(decisions: dict, doc_key: str,
     return seat
 
 
+def collecting_identity_seat(sink: list, doc_key: str,
+                             stats: dict | None = None):
+    """The collecting seat: records every rule-4 point it
+    is consulted on — (doc_key, fragment norm, candidate
+    norm, fragment surface, candidate surface) appended to
+    `sink` — and answers None for all of them, so the rule
+    chain decides exactly as with no seat installed. A
+    batch declares collection to harvest the decision
+    points an offline judge (the `seat` command's model,
+    or a human) will later rule on; the frozen verdicts
+    come back through a decisions file. Collection never
+    changes a guard outcome."""
+    def seat(ep_norm, cand_norm, feats):
+        if stats is not None:
+            stats["consulted"] = \
+                stats.get("consulted", 0) + 1
+        sink.append({
+            "doc": doc_key, "ep": ep_norm, "cand": cand_norm,
+            "fragment": feats.get("fragment_surface", ep_norm),
+            "candidate": feats.get("candidate_surface",
+                                   cand_norm)})
+        return None
+    return seat
+
+
 def guard_triples(items: list[dict], doc_text: str,
                   role_words: Iterable[str] | None = None,
                   entity_types: set[str] | None = None,

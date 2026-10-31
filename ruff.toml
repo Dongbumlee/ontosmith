@@ -32,6 +32,10 @@ ignore = [
 # roster_pass: E501 — proposer prompt literals are byte-pinned
 # behavior (prompt text is measured configuration).
 "pipeline/roster_pass.py" = ["E501"]
+# seat_cli: E501 — the seat prompt literals are byte-pinned
+# measured configuration (the frozen D5 seat contract);
+# rewrapping them would change the judged text.
+"pipeline/seat_cli.py" = ["E501"]
 # query_stack: measured retrieval code; zip strictness,
 # long literal lines, and legacy names are reviewed in a
 # later productization pass, not in the tidying pass.

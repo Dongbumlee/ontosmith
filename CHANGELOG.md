@@ -7,6 +7,32 @@ and the project adheres to
 
 ## [Unreleased]
 
+### Added
+
+- **Identity seat collection + the `seat` command** —
+  the seat workflow is now a supported two-pass flow.
+  A profile may declare `identity_seat_collect` (path):
+  the CANDIDATES stage then records every rule-4
+  decision point it is consulted on and writes them as
+  envelopes (document, triples, attestations, document
+  registry) at stage end. The collecting seat never
+  opines, so the collecting run's guard outcomes are
+  the deterministic rule chain's alone. The new
+  `ontosmith seat` command judges an envelope file
+  with a declared model through the frozen seat prompt
+  and writes a decisions file for a later run's
+  `identity_seat_decisions`; abstentions and failed
+  calls are omitted (no opinion) and listed in a run
+  record beside the output, and an optional
+  `--max-cost-usd` cap stops judging on metered spend.
+  Declaring collect and decisions in the same profile
+  fails closed. Known seat behavior, by design: the
+  judge is conservative on possessive-wrapped
+  candidates ("X's Y" forms), which may be left
+  uncompleted — the fragment stands as written, so the
+  miss is recoverable at review rather than a wrong
+  name in the graph.
+
 ## [0.1.2] - 2026-10-30
 
 ### Added
