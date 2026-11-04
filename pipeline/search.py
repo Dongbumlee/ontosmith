@@ -970,22 +970,8 @@ def hybrid_search(store, query: str, k: int = 10,
         triples, token_sets, query)
     if graph_docs:
         arms.append("graph")
-    triple_scores: dict[int, float] = {}
-    qtoks = {t for t in query_stack.tokenize(query)
-             if t not in query_stack.STOP
-             and query_stack.is_content_token(t)}
-    for i, (t, ttoks) in enumerate(
-            zip(triples, token_sets, strict=True)):
-        overlap = len(qtoks & ttoks)
-        if overlap >= 2:
-            w = (t["p_true"] or 0.3) * (
-                1.0 if t["tier"] == 1
-                else query_stack.TIER2_EDGE_DISCOUNT)
-            triple_scores[i] = w * overlap
-    ranked_triples = [
-        {**triples[i], "score": round(s, 6)}
-        for i, s in sorted(triple_scores.items(),
-                           key=lambda kv: -kv[1])[:int(k)]]
+    ranked_triples = _rank_triples(triples, query, k,
+                                   token_sets=token_sets)
 
     return {
         "query": query,
@@ -996,6 +982,305 @@ def hybrid_search(store, query: str, k: int = 10,
         "documents": documents,
         "graph_documents": graph_docs[:int(k)],
         "triples": ranked_triples,
+    }
+
+
+def _rank_triples(triples, query: str, k: int,
+                  token_sets=None) -> list[dict]:
+    """The graph arm's per-triple ranking: content-token
+    overlap ≥ 2 against ``subject relation object``,
+    weighted by p_true and the tier-2 discount. Shared by
+    :func:`hybrid_search` (the displayed triples) and
+    :func:`sentence_search` (the candidate pool)."""
+    if token_sets is None:
+        token_sets = [set(query_stack.tokenize(
+            f"{t['subject']} {t['relation']} {t['object']}"))
+            for t in triples]
+    qtoks = {t for t in query_stack.tokenize(query)
+             if t not in query_stack.STOP
+             and query_stack.is_content_token(t)}
+    scores: dict[int, float] = {}
+    for i, (t, ttoks) in enumerate(
+            zip(triples, token_sets, strict=True)):
+        overlap = len(qtoks & ttoks)
+        if overlap >= 2:
+            w = (t["p_true"] or 0.3) * (
+                1.0 if t["tier"] == 1
+                else query_stack.TIER2_EDGE_DISCOUNT)
+            scores[i] = w * overlap
+    return [{**triples[i], "score": round(s, 6)}
+            for i, s in sorted(scores.items(),
+                               key=lambda kv: -kv[1])[:int(k)]]
+
+
+# ----------------------------------------------------------------------
+# sentence-level serving — the serving lab's final form
+# ----------------------------------------------------------------------
+#: Token budget a sentence-serving result fills to. One
+#: budget for every query, so results stay comparable
+#: across questions and arms.
+SENTENCE_BUDGET_TOKENS = 4000
+
+#: Triples whose evidence quotes seed the graph pool.
+_POOL_TRIPLES = 12
+
+#: Chunk-arm rows whose sentences join the candidate
+#: set. The fill only ever reaches the top of the
+#: ranking; the cap bounds the embedder's per-query
+#: work, it does not trim the fill.
+_SENTENCE_CANDIDATE_CHUNKS = 60
+
+
+def _zscores(values: list[float]) -> list[float]:
+    """Population z-scores; a constant input scores 0."""
+    n = len(values)
+    if n == 0:
+        return []
+    mean = sum(values) / n
+    var = sum((v - mean) ** 2 for v in values) / n
+    sd = math.sqrt(var)
+    if sd == 0.0:
+        return [0.0] * n
+    return [(v - mean) / sd for v in values]
+
+
+def _cosine(a, b) -> float:
+    va = np.asarray(a, dtype=np.float64)
+    vb = np.asarray(b, dtype=np.float64)
+    na = float(np.linalg.norm(va)) or 1.0
+    nb = float(np.linalg.norm(vb)) or 1.0
+    return float(va @ vb / (na * nb))
+
+
+def _ws_norm(s: str) -> str:
+    return " ".join((s or "").split()).lower()
+
+
+def sentence_search(store, query: str, k: int = 10,
+                    embedder=None,
+                    budget_tokens: int =
+                    SENTENCE_BUDGET_TOKENS,
+                    fetch_k: int | None = None) -> dict:
+    """Sentence-level evidence serving: the serving
+    lab's final form (internal measurement series,
+    2026-10-31) wired onto the store contract.
+
+    1. **Graph pool** — the top triples under the graph
+       arm's own ranking contribute the sentences that
+       carry their evidence quotes. A pool sentence is
+       anchored through the vector arm: the chunk of the
+       triple's own document most similar to the quote
+       stands in as its owning chunk (the build's chunks
+       are fixed windows, so containment is checked by
+       similarity, not by offset).
+    2. **Two-layer score** — every candidate sentence
+       (pool sentences + the sentences of the top
+       chunk-arm chunks) scores z(sentence cosine) +
+       z(owning-chunk cosine), each z taken within its
+       own layer's candidate population.
+    3. **Z2 merge** — sentences and whole chunks fill
+       one ranked list: a sentence carries 2 x its
+       combined score, a chunk its z(chunk cosine).
+    4. **Sentence-boundary fill** — units are taken
+       whole, in rank order, while they fit the token
+       budget; a unit whose text a taken unit already
+       covers is skipped. Nothing is cut mid-sentence.
+
+    The form is embedding-shaped, so ``embedder`` is
+    required: a missing binding refuses by name rather
+    than silently degrading to another serving form.
+    Returns the hybrid result's shape plus ``units``.
+    """
+    query = (query or "").strip()
+    if not query:
+        raise ValueError("empty search query")
+    if embedder is None:
+        raise ValueError(
+            "sentence serving needs an embedder: bind one "
+            "with --embed (the connection layer's default "
+            "embedder) — the sentence form has no lexical "
+            "fallback")
+    fetch = int(fetch_k) if fetch_k else query_stack.CHUNK_FETCH_K
+    filt = store.batch_filter()
+    notes: list[str] = []
+
+    qvec = embedder.embed([query])[0]
+
+    # chunk arms, as in hybrid_search: lexical always,
+    # vector when the build shipped embeddings
+    toks = [t for t in query_stack.tokenize(query)
+            if query_stack.is_content_token(t)]
+    rows: dict[str, dict] = {}
+    if toks:
+        for r in store.search_chunks(
+                text=" OR ".join(toks), filters=filt, k=fetch):
+            rows[r["chunk_id"]] = r
+    shipped = store.describe().get("embeddings")
+    if shipped:
+        for r in store.search_chunks(
+                vector=[float(x) for x in qvec], filters=filt,
+                k=fetch):
+            rows.setdefault(r["chunk_id"], r)
+            rows[r["chunk_id"]] = {
+                **rows[r["chunk_id"]], **r}
+    else:
+        notes.append(
+            "store ships no chunk embeddings: chunk-layer "
+            "cosines are computed over the candidate "
+            "chunks directly")
+
+    # chunk-layer cosines for every candidate chunk;
+    # candidates rank by the vector arm's score when the
+    # store shipped embeddings, else by the lexical score
+    if shipped:
+        cand_chunks = sorted(
+            rows.values(),
+            key=lambda r: -(r.get("vector_score", -2.0)))
+    else:
+        cand_chunks = sorted(
+            rows.values(), key=lambda r: -(r.get("score", 0.0)))
+    cand_chunks = cand_chunks[:_SENTENCE_CANDIDATE_CHUNKS]
+    chunk_cos: dict[str, float] = {}
+    need_embed = [c for c in cand_chunks
+                  if "vector_score" not in c]
+    if need_embed:
+        embs = embedder.embed([c["text"] for c in need_embed])
+        for c, e in zip(need_embed, embs, strict=True):
+            chunk_cos[c["chunk_id"]] = _cosine(qvec, e)
+    for c in cand_chunks:
+        if "vector_score" in c:
+            chunk_cos[c["chunk_id"]] = float(c["vector_score"])
+
+    # graph pool: top triples → their quotes' sentences
+    from .proposer import split_sentences
+    triples = store.triples()
+    ranked_triples = _rank_triples(triples, query,
+                                   max(int(k), _POOL_TRIPLES))
+    pool: list[dict] = []
+    seen_pool: set[str] = set()
+    for t in ranked_triples[:_POOL_TRIPLES]:
+        quote = (t.get("quote") or "").strip()
+        if not quote:
+            continue
+        # owning chunk: the triple's own document chunk
+        # most similar to the quote
+        qf = dict(filt)
+        if t.get("doc_id"):
+            qf["doc_id"] = t["doc_id"]
+        owners = []
+        if shipped:
+            qvec_quote = embedder.embed([quote])[0]
+            owners = store.search_chunks(
+                vector=[float(x) for x in qvec_quote],
+                filters=qf, k=1)
+        owner_id = owners[0]["chunk_id"] if owners else ""
+        if owner_id and owner_id not in chunk_cos:
+            chunk_cos[owner_id] = float(
+                owners[0].get("vector_score", 0.0))
+            cand_chunks.append(owners[0])
+        # the sentence(s) of the owner chunk carrying the
+        # quote; the quote itself when it does not anchor
+        texts: list[str] = []
+        if owners:
+            nq = _ws_norm(quote)
+            for s in split_sentences(owners[0]["text"]):
+                if _ws_norm(s) in nq or nq in _ws_norm(s):
+                    texts.append(s)
+        if not texts:
+            texts = [quote]
+        for s in texts:
+            key = _ws_norm(s)
+            if key and key not in seen_pool:
+                seen_pool.add(key)
+                pool.append({"text": s, "doc_id": t["doc_id"],
+                             "chunk_id": owner_id,
+                             "via": "graph"})
+
+    # sentence candidates: pool + chunk-arm sentences
+    cands: list[dict] = list(pool)
+    seen = {_ws_norm(c["text"]) for c in cands}
+    for c in cand_chunks:
+        for s in split_sentences(c["text"]):
+            key = _ws_norm(s)
+            if key and key not in seen:
+                seen.add(key)
+                cands.append({"text": s,
+                              "doc_id": c["doc_id"],
+                              "chunk_id": c["chunk_id"],
+                              "via": "chunk"})
+    if not cands:
+        return {"query": query, "store": store.describe(),
+                "arms": ["sentences"], "notes": notes,
+                "entities": store.find_entities(query,
+                                                limit=5),
+                "triples": ranked_triples[:int(k)],
+                "units": [], "documents": []}
+
+    # two-layer score: z(sentence cosine) + z(chunk cosine)
+    embs = embedder.embed([c["text"] for c in cands])
+    sent_cos = [_cosine(qvec, e) for e in embs]
+    z_sent = _zscores(sent_cos)
+    chunk_ids = list(chunk_cos)
+    z_chunk = dict(zip(chunk_ids, _zscores(
+        [chunk_cos[cid] for cid in chunk_ids]), strict=True))
+    for c, zs in zip(cands, z_sent, strict=True):
+        c["score"] = zs + z_chunk.get(c["chunk_id"], 0.0)
+
+    # Z2 merge: sentences at 2 x combined, chunks at
+    # z(chunk cosine); fill whole units to the budget
+    merged: list[dict] = [
+        {"kind": "sentence", "text": c["text"],
+         "doc_id": c["doc_id"], "chunk_id": c["chunk_id"],
+         "via": c["via"], "merge": 2.0 * c["score"]}
+        for c in cands]
+    merged += [
+        {"kind": "chunk", "text": c["text"],
+         "doc_id": c["doc_id"], "chunk_id": c["chunk_id"],
+         "via": "chunk",
+         "merge": z_chunk.get(c["chunk_id"], 0.0)}
+        for c in cand_chunks]
+    merged.sort(key=lambda u: -u["merge"])
+
+    units: list[dict] = []
+    covered: set[str] = set()
+    used = 0
+    for u in merged:
+        if u["kind"] == "chunk":
+            parts = {_ws_norm(s) for s in
+                     split_sentences(u["text"])}
+            if parts and parts <= covered:
+                continue
+        elif _ws_norm(u["text"]) in covered:
+            continue
+        cost = len(query_stack.tokenize(u["text"]))
+        if used + cost > int(budget_tokens):
+            continue
+        used += cost
+        units.append({**u, "score": round(u["merge"], 6),
+                      "tokens": cost})
+        if u["kind"] == "chunk":
+            covered |= {_ws_norm(s) for s in
+                        split_sentences(u["text"])}
+        else:
+            covered.add(_ws_norm(u["text"]))
+
+    documents: list[dict] = []
+    by_doc: dict[str, dict] = {}
+    for u in units:
+        d = by_doc.setdefault(
+            u["doc_id"], {"doc_id": u["doc_id"], "units": 0})
+        d["units"] += 1
+    documents = list(by_doc.values())
+
+    return {
+        "query": query,
+        "store": store.describe(),
+        "arms": ["sentences", "graph-pool"],
+        "notes": notes,
+        "entities": store.find_entities(query, limit=5),
+        "triples": ranked_triples[:int(k)],
+        "units": units,
+        "documents": documents,
     }
 
 
@@ -1037,16 +1322,28 @@ def render_results(result: dict) -> str:
         lines.append("Entities")
         for e in result["entities"]:
             lines.append(f"  - {e['name']}")
-    lines.append("Documents")
-    if result["documents"]:
-        for i, d in enumerate(result["documents"], 1):
-            lines.append(
-                f"  {i}. {d['doc_id']}  (score {d['score']})")
-            for c in d["chunks"][:2]:
-                excerpt = " ".join(c["text"].split())[:160]
+    if result.get("units") is not None:
+        lines.append("Evidence")
+        if result["units"]:
+            for i, u in enumerate(result["units"], 1):
+                lines.append(
+                    f"  {i}. [{u['kind']} · {u['doc_id']} · "
+                    f"score {u['score']}]")
+                excerpt = " ".join(u["text"].split())[:300]
                 lines.append(f"     {excerpt}")
+        else:
+            lines.append("  (no evidence matched)")
     else:
-        lines.append("  (no chunk matched)")
+        lines.append("Documents")
+        if result["documents"]:
+            for i, d in enumerate(result["documents"], 1):
+                lines.append(
+                    f"  {i}. {d['doc_id']}  (score {d['score']})")
+                for c in d["chunks"][:2]:
+                    excerpt = " ".join(c["text"].split())[:160]
+                    lines.append(f"     {excerpt}")
+        else:
+            lines.append("  (no chunk matched)")
     lines.append("Triples")
     if result["triples"]:
         for t in result["triples"]:
@@ -1064,7 +1361,7 @@ def render_results(result: dict) -> str:
 def main(argv=None) -> int:
     """``ontosmith search <query> [--source PATH]
     [--batch ID] [--store auto|file|neo4j] [--k N]
-    [--embed] [--json]``."""
+    [--embed] [--sentences] [--json]``."""
     ap = argparse.ArgumentParser(
         prog="ontosmith search",
         description="Hybrid search over a built graph "
@@ -1093,6 +1390,13 @@ def main(argv=None) -> int:
                          "connection layer's default "
                          "embedder (refuses if the embedder "
                          "seat's key is unset)")
+    ap.add_argument("--sentences", action="store_true",
+                    help="sentence-level evidence serving "
+                         "(graph pool + two-layer sentence "
+                         "scores, filled to a token budget "
+                         "at sentence boundaries) instead "
+                         "of the document-level hybrid; "
+                         "needs the embedder, like --embed")
     ap.add_argument("--json", action="store_true",
                     help="print the result as JSON instead "
                          "of the report card")
@@ -1102,13 +1406,19 @@ def main(argv=None) -> int:
         store = open_store(source=args.source,
                            batch=args.batch, store=args.store)
         embedder = None
-        if args.embed:
+        if args.embed or args.sentences:
             from .embedder import default_embedder
             embedder = default_embedder()
         else:
             embedder = try_embedder()
-        result = hybrid_search(store, args.query, k=args.k,
-                               embedder=embedder)
+        if args.sentences:
+            result = sentence_search(store, args.query,
+                                     k=args.k,
+                                     embedder=embedder)
+        else:
+            result = hybrid_search(store, args.query,
+                                   k=args.k,
+                                   embedder=embedder)
     except (ValueError, connections.BindingKeyError) as e:
         print(f"search refused: {e}", file=sys.stderr)
         return 1

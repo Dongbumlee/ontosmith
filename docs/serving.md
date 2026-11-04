@@ -90,6 +90,21 @@ cannot run — no embeddings in the store, no triple
 overlap — is absent from the list and explained in
 the JSON's `notes`, never silently implied.
 
+**Sentence-level evidence (`--sentences`).** The
+default result ranks documents; a reader (human or
+model) often wants the evidence itself. With
+`--sentences`, search returns whole sentences and
+chunks in one ranked list, filled to a fixed token
+budget and never cut mid-sentence: the top triples'
+evidence quotes seed a graph pool of sentences, and
+every candidate sentence scores on two layers — its
+own similarity to the question plus its owning
+chunk's — so a decisive sentence inside an unremarkable
+passage still surfaces. The form is embedding-shaped
+and binds the embedder the way `--embed` does; with
+no embedder bound it refuses by name instead of
+silently serving a different form.
+
 **Language.** Query tokenization is script-aware:
 Latin, Hangul, CJK, kana, Cyrillic and other scripts
 tokenize on whitespace and punctuation, so a

@@ -613,5 +613,75 @@ class TestCliAndSelection(unittest.TestCase):
         self.assertEqual(store.kind, "file")
 
 
+class TestSentenceSearch(unittest.TestCase):
+    """The sentence-level serving form: graph pool,
+    two-layer scores, Z2 merge, sentence-boundary fill."""
+
+    def setUp(self):
+        self._tmp = tempfile.TemporaryDirectory()
+        self.root = Path(self._tmp.name)
+        self.store = search.FileServingStore(
+            _write_batch(self.root), root=self.root)
+
+    def tearDown(self):
+        self._tmp.cleanup()
+
+    def test_no_embedder_refuses(self):
+        with self.assertRaises(ValueError) as cm:
+            search.sentence_search(
+                self.store, "relay satellite launched")
+        self.assertIn("embedder", str(cm.exception))
+
+    def test_empty_query_refuses(self):
+        with self.assertRaises(ValueError):
+            search.sentence_search(
+                self.store, "  ", embedder=_StubEmbedder())
+
+    def test_graph_pool_sentence_leads(self):
+        result = search.sentence_search(
+            self.store, "Gamma Inc launched a relay "
+            "satellite", embedder=_StubEmbedder())
+        self.assertEqual(result["arms"],
+                         ["sentences", "graph-pool"])
+        texts = [u["text"] for u in result["units"]]
+        self.assertIn("Gamma Inc launched a relay "
+                      "satellite in 2022.", texts)
+        first = result["units"][0]
+        self.assertEqual(first["kind"], "sentence")
+        self.assertEqual(first["doc_id"], "doc-b")
+        pool_first = [u for u in result["units"]
+                      if u.get("via") == "graph"]
+        self.assertTrue(pool_first)
+
+    def test_sentence_units_are_whole_sentences(self):
+        from pipeline.proposer import split_sentences
+        universe = set()
+        for doc in (DOC_A, DOC_B):
+            universe |= set(split_sentences(doc))
+        result = search.sentence_search(
+            self.store, "Gamma Inc launched a relay "
+            "satellite", embedder=_StubEmbedder())
+        for u in result["units"]:
+            if u["kind"] == "sentence":
+                self.assertIn(u["text"], universe)
+
+    def test_budget_is_respected(self):
+        result = search.sentence_search(
+            self.store, "Gamma Inc launched a relay "
+            "satellite", embedder=_StubEmbedder(),
+            budget_tokens=8)
+        total = sum(u["tokens"] for u in result["units"])
+        self.assertLessEqual(total, 8)
+        self.assertTrue(result["units"])
+
+    def test_render_shows_evidence(self):
+        result = search.sentence_search(
+            self.store, "Gamma Inc launched a relay "
+            "satellite", embedder=_StubEmbedder())
+        card = search.render_results(result)
+        self.assertIn("Evidence", card)
+        self.assertIn("Gamma Inc launched", card)
+
+
 if __name__ == "__main__":
     unittest.main()

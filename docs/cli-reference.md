@@ -831,7 +831,8 @@ evidence is missing.
 
 ```text
 usage: ontosmith search [-h] [--source SOURCE] [--batch BATCH]
-                        [--store {auto,file,neo4j}] [--k K] [--embed] [--json]
+                        [--store {auto,file,neo4j}] [--k K] [--embed]
+                        [--sentences] [--json]
                         query
 
 Hybrid search over a built graph: lexical + vector + graph
@@ -853,6 +854,10 @@ options:
   --embed               activate the vector arm via the connection layer's
                         default embedder (refuses if the embedder seat's key
                         is unset)
+  --sentences           sentence-level evidence serving (graph pool + two-
+                        layer sentence scores, filled to a token budget at
+                        sentence boundaries) instead of the document-level
+                        hybrid; needs the embedder, like --embed
   --json                print the result as JSON instead of the report card
 ```
 
