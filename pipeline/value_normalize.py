@@ -28,6 +28,16 @@ invented), and a date-only surface under a datetime
 declaration is demoted to date; duration is length only —
 a start/end pair is an interval (a value-node promotion
 case), not a duration, and fails here as one.
+
+A date carries its STATED precision (precision amendment,
+2026-11-06): a surface stating only a month or a year
+("May 2008", "2008-05", "2008") normalizes to its
+reduced-precision ISO form with the precision named in
+the result (``precision``: day / month / year). No
+component is invented to complete it — the precision IS
+the record of what the document stated, and the store
+keeps it beside the value so a range query reads the
+value as the period it names, not as a fabricated day.
 """
 from __future__ import annotations
 
@@ -58,6 +68,9 @@ _WEEKDAYS = {
 }
 
 _ISO_DATE_RE = re.compile(r"^(\d{4})-(\d{2})-(\d{2})$")
+_ISO_MONTH_RE = re.compile(r"^(\d{4})-(\d{2})$")
+_ISO_YEAR_RE = re.compile(r"^(\d{4})$")
+_MONTH_YEAR_RE = re.compile(r"^([A-Za-z]+)\.?\s+(\d{4})$")
 _MONTH_NAME_RE = re.compile(
     r"^(?:(\d{1,2})(?:st|nd|rd|th)?\s+)?"
     r"([A-Za-z]+)\.?"
@@ -82,6 +95,14 @@ _NUMBER_SCALED_RE = re.compile(
 #: currency word maps to NO code (incomplete, §11-4).
 _CURRENCY_SYMBOLS = {"$": "USD", "€": "EUR", "£": "GBP",
                      "¥": "JPY", "₩": "KRW", "₹": "INR"}
+#: "US$400,000.00" — the US prefix on the dollar symbol is
+#: a stated notation for USD, as deterministic as the bare
+#: symbol (contract documents use it constantly; the gap
+#: was found by the 2026-11-06 value-attribute
+#: re-measurement, where the bare "$" handling left the
+#: "US" residue unparseable).
+_US_DOLLAR_PREFIX_RE = re.compile(r"^US\s*\$\s*",
+                                  re.IGNORECASE)
 _CURRENCY_WORDS = {
     "usd": "USD", "us dollar": "USD", "us dollars": "USD",
     "eur": "EUR", "euro": "EUR", "euros": "EUR",
@@ -175,16 +196,66 @@ def _well_formed_date(value) -> bool:
         _ISO_DATE_RE.match(value.strip()) is not None
 
 
-def _normalize_date(surface, proposed, reference_date):
-    parsed = _parse_date_parts(surface)
-    if parsed is None and reference_date is not None:
-        parsed = _parse_relative_date(surface, reference_date)
+def _parse_date_surface(surface: str):
+    """(value, precision) for a stated date surface, or
+    None. Full dates give day precision; reduced-precision
+    surfaces — ISO "2008-05" / "2008" and month-name
+    "May 2008" — give month / year precision and keep
+    their reduced form as the value: no component is
+    invented to complete them."""
+    text = surface.strip()
+    parsed = _parse_date_parts(text)
     if parsed is not None:
-        return {"value": parsed.isoformat(),
+        return parsed.isoformat(), "day"
+    m = _ISO_MONTH_RE.match(text)
+    if m:
+        year, month = int(m.group(1)), int(m.group(2))
+        if 1 <= month <= 12:
+            return f"{year:04d}-{month:02d}", "month"
+        return None
+    if _ISO_YEAR_RE.match(text):
+        return text, "year"
+    m = _MONTH_YEAR_RE.match(text)
+    if m:
+        month = _MONTHS.get(m.group(1).lower())
+        if month is not None:
+            return (f"{int(m.group(2)):04d}-{month:02d}",
+                    "month")
+    return None
+
+
+def _proposed_date(value):
+    """(value, precision) if a proposer-supplied normalized
+    date is well-formed ISO at any stated precision (day,
+    month or year), else None."""
+    if not isinstance(value, str):
+        return None
+    text = value.strip()
+    if _ISO_DATE_RE.match(text) or _ISO_MONTH_RE.match(
+            text) or _ISO_YEAR_RE.match(text):
+        return _parse_date_surface(text)
+    return None
+
+
+def _normalize_date(surface, proposed, reference_date):
+    parsed = _parse_date_surface(surface)
+    if parsed is not None:
+        value, precision = parsed
+        return {"value": value, "precision": precision,
                 "code_normalized": True}
-    if proposed is not None and _well_formed_date(proposed):
-        return {"value": str(proposed).strip(),
-                "code_normalized": False}
+    if reference_date is not None:
+        resolved = _parse_relative_date(surface,
+                                        reference_date)
+        if resolved is not None:
+            return {"value": resolved.isoformat(),
+                    "precision": "day",
+                    "code_normalized": True}
+    if proposed is not None:
+        checked = _proposed_date(proposed)
+        if checked is not None:
+            value, precision = checked
+            return {"value": value, "precision": precision,
+                    "code_normalized": False}
     return None
 
 
@@ -202,6 +273,7 @@ def _normalize_datetime(surface, proposed, reference_date):
         # is demoted to date (§11-7): no time is invented.
         return {"value": parsed_date.isoformat(),
                 "normalized_type": "date",
+                "precision": "day",
                 "code_normalized": True}
     m = _TIME_RE.match(text)
     if m:
@@ -236,7 +308,8 @@ def _normalize_datetime(surface, proposed, reference_date):
             pass
         if _well_formed_date(candidate):
             return {"value": candidate, "normalized_type":
-                    "date", "code_normalized": False}
+                    "date", "precision": "day",
+                    "code_normalized": False}
     return None
 
 
@@ -280,11 +353,16 @@ def _normalize_money(surface, proposed, reference_date):
     text = surface.strip()
     currency = None
     rest = text
-    for symbol, code in _CURRENCY_SYMBOLS.items():
-        if symbol in rest:
-            currency = code
-            rest = rest.replace(symbol, " ", 1).strip()
-            break
+    m = _US_DOLLAR_PREFIX_RE.match(rest)
+    if m:
+        currency = "USD"
+        rest = rest[m.end():].strip()
+    if currency is None:
+        for symbol, code in _CURRENCY_SYMBOLS.items():
+            if symbol in rest:
+                currency = code
+                rest = rest.replace(symbol, " ", 1).strip()
+                break
     if currency is None:
         lowered = rest.lower()
         for word in sorted(_CURRENCY_WORDS, key=len,
@@ -394,7 +472,8 @@ def normalize_value(value_type: str, surface,
     date/datetime/duration, a number for number/money, a
     string for identifier) and type extras ride along
     (``unit`` for number, ``currency`` + ``complete`` for
-    money). Failure: ``{"ok": False, "value_type", "surface",
+    money, ``precision`` for date — the stated precision,
+    day / month / year). Failure: ``{"ok": False, "value_type", "surface",
     "reason"}`` — a format violation the caller records; the
     value never reaches the judge."""
     if value_type not in _NORMALIZERS:
@@ -426,7 +505,7 @@ def normalize_value(value_type: str, surface,
               "code_normalized": out.get("code_normalized",
                                          True),
               "complete": out.get("complete", True)}
-    for key in ("unit", "currency"):
+    for key in ("unit", "currency", "precision"):
         if key in out:
             result[key] = out[key]
     return result

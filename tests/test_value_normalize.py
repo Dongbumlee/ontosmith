@@ -4,10 +4,13 @@ attribute judgment split.
 
 Covered: each of the six closed value types on normal,
 boundary and failure surfaces; the §11 decisions — money
-never guesses a currency (incomplete, not failed), number
+never guesses a currency (incomplete, not failed) and
+accepts the US$ prefix as stated USD notation, number
 splits its unit and never converts, datetime stays naive
 without a stated timezone and demotes a date-only surface
-to date, duration is length only (a start/end pair fails);
+to date, duration is length only (a start/end pair fails),
+a date keeps its stated precision (day / month / year)
+instead of inventing the missing components;
 relative dates resolve only against an explicit reference
 date; an unparseable surface rides on a well-formed
 proposed value with code_normalized False (the conversion
@@ -40,6 +43,46 @@ class TestDate(unittest.TestCase):
     def test_invalid_calendar_date_fails(self):
         r = vn.normalize_value("date", "2024-02-30")
         self.assertFalse(r["ok"])
+
+    def test_full_date_has_day_precision(self):
+        r = vn.normalize_value("date", "2024-03-01")
+        self.assertEqual(r["precision"], "day")
+        r = vn.normalize_value("date", "March 1, 2024")
+        self.assertEqual(r["precision"], "day")
+
+    def test_iso_month_precision(self):
+        r = vn.normalize_value("date", "2008-05")
+        self.assertTrue(r["ok"])
+        self.assertEqual(r["value"], "2008-05")
+        self.assertEqual(r["precision"], "month")
+
+    def test_month_name_year_precision(self):
+        r = vn.normalize_value("date", "May 2008")
+        self.assertTrue(r["ok"])
+        self.assertEqual(r["value"], "2008-05")
+        self.assertEqual(r["precision"], "month")
+
+    def test_year_only_precision(self):
+        r = vn.normalize_value("date", "2008")
+        self.assertTrue(r["ok"])
+        self.assertEqual(r["value"], "2008")
+        self.assertEqual(r["precision"], "year")
+
+    def test_invalid_month_is_rejected(self):
+        self.assertFalse(
+            vn.normalize_value("date", "2024-13")["ok"])
+        self.assertFalse(
+            vn.normalize_value("date", "2024-00")["ok"])
+        self.assertFalse(
+            vn.normalize_value("date", "2024-13-01")["ok"])
+
+    def test_partial_proposed_keeps_its_precision(self):
+        r = vn.normalize_value("date", "sometime in 2008",
+                               proposed="2008")
+        self.assertTrue(r["ok"])
+        self.assertFalse(r["code_normalized"])
+        self.assertEqual(r["value"], "2008")
+        self.assertEqual(r["precision"], "year")
 
     def test_relative_needs_reference(self):
         r = vn.normalize_value("date", "next Friday")
@@ -184,6 +227,13 @@ class TestMoney(unittest.TestCase):
         r = vn.normalize_value("money", "$1.25 million")
         self.assertEqual(r["value"], 1250000)
         self.assertEqual(r["currency"], "USD")
+
+    def test_us_dollar_prefix(self):
+        r = vn.normalize_value("money", "US$400,000.00")
+        self.assertTrue(r["ok"])
+        self.assertEqual(r["value"], 400000)
+        self.assertEqual(r["currency"], "USD")
+        self.assertTrue(r["complete"])
 
     def test_unit_bearing_surface_is_not_money(self):
         self.assertFalse(
