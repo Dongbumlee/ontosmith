@@ -137,7 +137,19 @@ Rules:
   qualifier role for context-only types), "definition": <one
   precise paragraph>, "form_examples": [<typical surface forms>],
   "not_entities": {<category>: [<boundary examples that must NOT
-  be extracted as this type>]}}.
+  be extracted as this type>]}}. An entity entry MAY declare
+  "attributes": [{"name": <snake_case>, "value_type":
+  "date"|"datetime"|"number"|"money"|"duration"|"identifier",
+  "required": <bool>, "multi": <bool>, "definition": <what the
+  value is>}] — the values the corpus states ABOUT this type
+  (an agreement's effective date, a contract's value). Values
+  are NOT entities: when the corpus terrain is a date, an
+  amount, a period or an identifier, declare it as an
+  attribute of the type it belongs to — never as an entity
+  type, and never as a relation endpoint. Declare an
+  attribute only where the corpus states such values
+  recurrently; "required" means the value must be captured
+  whenever a document states it.
 - Each relation entry: {"type": <name>, "definition": <one
   precise paragraph>, "endpoint_signature": [<entity type
   names>], "boundary_examples": [<statements or near-miss cases
@@ -861,6 +873,24 @@ def _check_overlaps(entries: dict[str, dict], kind: str,
             by_definition[key] = name
 
 
+def _check_attributes(entry: dict, entity_name: str,
+                      findings: list[dict]) -> None:
+    """Value-attribute declaration checks for one entity
+    entry. The shape rules live in one place
+    (profile_config.attribute_declaration_defects — the same
+    rules the emitted payload is held to); each defect is a
+    finding here. An entry with no "attributes" key declares
+    none and is checked no further."""
+    if "attributes" not in entry:
+        return
+    path = f"entity_inventory.{entity_name}.attributes"
+    for defect in profile_config.attribute_declaration_defects(
+            entry.get("attributes")):
+        findings.append(_finding("BAD_ATTRIBUTE", path,
+                                 f"entity type {entity_name!r}: "
+                                 f"{defect}"))
+
+
 def _payload_for(draft: dict, pack_version: str) -> dict:
     """The pack payload emission would write (also what
     validation checks against the pack contract). Definitions
@@ -1282,6 +1312,7 @@ def validate_schema_draft(draft: dict) -> list[dict]:
             findings.append(_finding(
                 "BAD_ROLE", f"entity_inventory.{name}.role",
                 f"entity type {name!r} has a non-string role"))
+        _check_attributes(entry, name, findings)
     entity_norms = {_norm_name(n) for n in entities}
     for name, entry in relations.items():
         if not _relation_boundary_material(entry):
