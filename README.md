@@ -192,9 +192,10 @@ prerequisites, gathered in one place:
    costs no spend.
 
 Cost, with its scope: every build is priced from its
-own counted projection before it runs, and the
-ledger enforces the stop-line frozen at creation
-(Cost guardrails, below). No figure quoted in a
+own counted projection before it runs, and the ledger
+records what it spent; a USD stop-line applies only
+when you set one for the run (Cost guardrails, below).
+No figure quoted in a
 document prices your corpus — the projection under
 your configuration does.
 
@@ -226,7 +227,7 @@ over HTTP and needs the server, not the extra.)
 
 | Piece | What it is |
 |---|---|
-| Batch pipeline | The staged build: ingest → NER/roster → candidates → gates → route → write → index → verify, under a versioned pack, with a ledger-enforced spend cap |
+| Batch pipeline | The staged build: ingest → NER/roster → candidates → gates → route → write → index → verify, under a versioned pack, with a ledger that records what each run spent |
 | Corpus profiler | `ontosmith profile` — a deterministic census of your corpus and the decision points a human should settle first |
 | Ontology builder | `ontosmith ontology` — drafts a domain schema from a profile, or imports an external ontology under a recorded scoping; deterministic validation; emits a hash-pinned pack only after explicit human approval |
 | Four domain packs + Core baseline | Domain ontologies as data — schema, definitions, boundary examples, thresholds, measured conformance record (below) |
@@ -274,7 +275,7 @@ of each.
    after an explicit human approval.
 3. **Build** — `ontosmith batch` runs the staged pipeline
    under the pack. Measured operating points ship as
-   defaults; the run's cost is capped by a stop-line, and
+   defaults; the run's cost is recorded in its ledger, and
    countable before it starts (`verify project`).
 4. **Inspect** — `ontosmith inspect` shows any triple with
    its evidence span and provenance chain — and names what
@@ -470,14 +471,18 @@ custom-binding contract — is
 
 ## Cost guardrails
 
-Spend is guarded by default. The tooling prints a
-**counted projection** before a run (`ontosmith verify
-project` — candidate pairs counted from your data, priced
-at rates you supply (`--unit-cost`); the tool takes
-prices from the caller and never hardcodes a rate card).
+Every run's spend is accounted, whether or not it is
+capped. The tooling prints a **counted projection**
+before a run (`ontosmith verify project` — candidate
+pairs counted from your data, priced at rates you supply
+(`--unit-cost`); the tool takes prices from the caller
+and never hardcodes a rate card), and the batch ledger
+records what the run actually spent.
 
-Every batch enforces a
-**stop-line**: a run that would cross its cap refuses to
+A USD **stop-line** exists only when you set one: the
+cap's only home is the `ONTOSMITH_MAX_COST_USD`
+environment variable — unset (or `none`) means no cap.
+With a cap set, a run that would cross it refuses to
 start the unit that crosses it, and resumes from its
 ledger instead of re-spending.
 
