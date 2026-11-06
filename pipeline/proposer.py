@@ -516,9 +516,17 @@ def propose_triples_for_doc(doc_id: str, text: str, key: str,
                             prior: dict | None = None) -> dict:
     """Raw triple proposals for one document (unguarded).
 
-    Returns {items, cost, calls, errors, chunks, chunks_at_cap};
+    Returns {items, attribute_items, cost, calls, errors,
+    chunks, chunks_at_cap};
     each item carries the chunk it came from (+ its normalized
-    form) for the guards. When the profile's guidance asks for
+    form) for the guards. Items the proposer shapes as value
+    attribute values ({"entity", "attribute", "value",
+    "quote"} — the shape the guidance names when a schema
+    declares attributes) are NOT triples and land in
+    attribute_items instead, for the attribute path
+    (pipeline.attribute_values) to gate and judge; a document
+    whose schema declares no attributes proposes none, and
+    attribute_items is empty. When the profile's guidance asks for
     typed endpoints, items also carry subject_type / object_type
     as proposed (validated against the profile's type
     vocabulary in guard_triples).
@@ -564,8 +572,27 @@ def propose_triples_for_doc(doc_id: str, text: str, key: str,
             err = None
         except Exception as e:
             items, u, err = [], {}, str(e)[:200]
-        out = []
+        out, attr_out = [], []
         for it in items:
+            if isinstance(it, dict) and all(
+                    it.get(k) for k in
+                    ("entity", "attribute", "value", "quote")):
+                # A declared value attribute's value, reported
+                # as its own item (the guidance shape). Carried
+                # separately from the triples: the attribute
+                # path (declaration check, format gate, judge)
+                # is pipeline.attribute_values, and nothing
+                # here validates or judges it.
+                attr_out.append({
+                    "entity": str(it["entity"]).strip(),
+                    "entity_type": str(
+                        it.get("entity_type") or "").strip(),
+                    "attribute": str(it["attribute"]).strip(),
+                    "value": str(it["value"]).strip(),
+                    "quote": str(it["quote"]).strip(),
+                    "chunk_idx": idx,
+                    "chunk_norm": norm_ws(chunk)})
+                continue
             if isinstance(it, dict) and all(
                     it.get(k) for k in
                     ("subject", "relation", "object", "quote")):
@@ -599,13 +626,14 @@ def propose_triples_for_doc(doc_id: str, text: str, key: str,
                         if isinstance(av, str) and av.strip():
                             rec[f"{ep}_attested"] = av.strip()
                 out.append(rec)
-        return out, u, err
+        return out, attr_out, u, err
 
-    items, cost, calls, errors = [], 0.0, 0, 0
+    items, attribute_items, cost, calls, errors = [], [], 0.0, 0, 0
     chunks_at_cap = 0
     with ThreadPoolExecutor(max_workers=8) as ex:
-        for out, u, err in ex.map(work, tasks):
+        for out, attr_out, u, err in ex.map(work, tasks):
             items.extend(out)
+            attribute_items.extend(attr_out)
             if len(out) >= cap:
                 chunks_at_cap += 1
             cost = connections.add_cost(cost, u.get("cost"))
@@ -613,6 +641,7 @@ def propose_triples_for_doc(doc_id: str, text: str, key: str,
             if err:
                 errors += 1
     return {"items": items,
+            "attribute_items": attribute_items,
             "cost": None if cost is None else round(cost, 4),
             "calls": calls,
             "errors": errors, "proposed": len(items),
