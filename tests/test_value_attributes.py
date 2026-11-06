@@ -319,6 +319,17 @@ class TestProcessing(unittest.TestCase):
         self.assertEqual(len(out["accepted"]), 2)
         self.assertEqual(out["multi_rejected"], [])
 
+    def test_partial_date_accepted_with_its_precision(self):
+        out = av.process_attribute_candidates(
+            [_candidate(value="May 2008",
+                        quote="released in May 2008")],
+            _cfg())
+        self.assertEqual(len(out["accepted"]), 1)
+        record = out["accepted"][0]
+        self.assertEqual(record["value"], "2008-05")
+        self.assertEqual(record["precision"], "month")
+        self.assertEqual(record["surface"], "May 2008")
+
     def test_money_incompleteness_rides_the_record(self):
         out = av.process_attribute_candidates(
             [_candidate(attribute="contract_value",
@@ -374,7 +385,8 @@ class TestGroups(unittest.TestCase):
         self.assertEqual(
             group["attributes"]["effective_date"]["values"],
             [{"value": "2024-03-01",
-              "surface": "March 1, 2024"}])
+              "surface": "March 1, 2024",
+              "precision": "day"}])
         self.assertEqual(
             [v["value"] for v in group["attributes"]
              ["renewal_notice_days"]["values"]], [30, 60])
@@ -493,6 +505,31 @@ class TestStorage(unittest.TestCase):
                          "USD")
         self.assertEqual(row["a_renewal_notice_days"],
                          [30, 60])
+
+    def test_write_statements_carry_date_precision(self):
+        plans = av.attribute_write_statements(
+            [{"id": "ent-1", "attributes": _groups()}])
+        statement, rows = plans[0]
+        self.assertIn("e.attr_effective_date_precision",
+                      statement)
+        self.assertEqual(
+            rows[0]["a_effective_date_precision"], "day")
+
+    def test_write_statements_carry_month_precision(self):
+        plans = av.attribute_write_statements(
+            [{"id": "ent-1", "attributes": {
+                "release_date": {
+                    "value_type": "date", "values": [
+                        {"value": "2008-05",
+                         "surface": "May 2008",
+                         "precision": "month"}]}}}])
+        statement, rows = plans[0]
+        self.assertIn("e.attr_release_date = "
+                      "date(row.a_release_date)", statement)
+        self.assertEqual(rows[0]["a_release_date"],
+                         "2008-05")
+        self.assertEqual(
+            rows[0]["a_release_date_precision"], "month")
 
     def test_multi_temporal_values_convert_as_a_list(self):
         plans = av.attribute_write_statements(

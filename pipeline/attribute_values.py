@@ -34,7 +34,11 @@ module is what the item travels:
    it (the audit convention triples keep with their quote),
    its verdict, and — when the caller supplies it — the
    pack version, so later expiry-candidate accounting can
-   name the declaration the value was judged under.
+   name the declaration the value was judged under. A date
+   value also carries its stated precision (day / month /
+   year) the whole way — record, group, node property —
+   so what the document stated is never silently read as
+   more precise than it was.
 
 Multi is per value (§11-2): a multi attribute accepts any
 number of distinct values, each judged and recorded on its
@@ -179,7 +183,7 @@ def process_attribute_candidates(
             "code_normalized": normalized["code_normalized"],
             "verdict": verdict,
         }
-        for extra in ("unit", "currency"):
+        for extra in ("unit", "currency", "precision"):
             if extra in normalized:
                 record[extra] = normalized[extra]
         if pack_version:
@@ -233,8 +237,9 @@ def entity_attribute_groups(accepted) -> dict:
     """Accepted records grouped for the graph stores:
     {entity key: {"entity_type", "attributes": {name:
     {"value_type", "values": [{value, surface, unit?,
-    currency?}]}}}} — values in acceptance order, one entry
-    per accepted value (multi is per value end to end)."""
+    currency?, precision?}]}}}} — values in acceptance
+    order, one entry per accepted value (multi is per
+    value end to end)."""
     groups: dict = {}
     for record in accepted or []:
         key = _entity_key(record)
@@ -247,7 +252,7 @@ def entity_attribute_groups(accepted) -> dict:
              "values": []})
         value = {"value": record["value"],
                  "surface": record["surface"]}
-        for extra in ("unit", "currency"):
+        for extra in ("unit", "currency", "precision"):
             if extra in record:
                 value[extra] = record[extra]
         slot["values"].append(value)
@@ -276,7 +281,15 @@ def attribute_write_statements(attr_rows) -> list:
     so range queries work — under `attr_<name>`, with the
     original surface beside them (`attr_<name>_surface`)
     and, where the type carries them, `attr_<name>_unit` /
-    `attr_<name>_currency`. Names that are not declaration
+    `attr_<name>_currency` / `attr_<name>_precision`. The
+    precision property is a date's stated precision: the
+    Cypher date() conversion resolves a reduced-precision
+    value ("2008-05") to the period's first day, and the
+    precision property is the record that keeps the
+    interpretation honest — a month-precision value
+    denotes the whole month, and a range query reads the
+    precision beside the value to interpret it as that
+    period. Names that are not declaration
     slugs are skipped: declaration validation owns that
     finding, the store never writes an unsanitized property
     name into a statement."""
@@ -322,6 +335,13 @@ def attribute_write_statements(attr_rows) -> list:
                     codes if multi else codes[0]
                 clause += (f", e.attr_{name}_currency = "
                            f"row.a_{name}_currency")
+            if value_type == "date":
+                precisions = [v.get("precision")
+                              for v in values]
+                params[f"a_{name}_precision"] = \
+                    precisions if multi else precisions[0]
+                clause += (f", e.attr_{name}_precision = "
+                           f"row.a_{name}_precision")
             clauses.append((name, value_type, multi, clause))
         if not clauses:
             continue
