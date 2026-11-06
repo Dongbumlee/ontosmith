@@ -46,6 +46,7 @@ import os
 import re
 from datetime import UTC, datetime
 
+from . import attribute_values
 from .neo4j_store import Neo4jClient
 from .registry import attestation_id, normalize_name
 from .registry_store import RegistryStore
@@ -194,17 +195,31 @@ class GraphStore:
     def upsert_entities(self, entities, corpus: str | None = None) -> int:
         """MERGE entities by entity_id. Accepts dicts
         {entity_id, name, label?, aliases?, corpus?} or
-        pipeline.registry.Entity objects. Returns rows written."""
+        pipeline.registry.Entity objects. Returns rows written.
+
+        An entity carrying "attributes" (the grouped accepted
+        value attributes) gets a second write pass —
+        attribute_values.attribute_write_statements — landing
+        the values as typed node properties; the base
+        statement is never modified, so an entity with no
+        attributes is written exactly as before."""
         rows = []
+        attr_rows = []
         for e in entities:
             if not isinstance(e, dict):
                 e = {"entity_id": e.entity_id, "name": e.name,
-                     "label": e.label, "aliases": e.aliases}
+                     "label": e.label, "aliases": e.aliases,
+                     "attributes": getattr(e, "attributes",
+                                           None)}
             rows.append({
                 "id": e["entity_id"], "name": e["name"],
                 "label": e.get("label") or "",
                 "aliases": list(e.get("aliases") or []),
                 "corpus": e.get("corpus") or corpus})
+            if e.get("attributes"):
+                attr_rows.append({"id": e["entity_id"],
+                                  "attributes":
+                                      e["attributes"]})
         n = 0
         for i in range(0, len(rows), 500):
             batch = rows[i:i + 500]
@@ -217,6 +232,12 @@ class GraphStore:
                 "e.corpus = coalesce(row.corpus, e.corpus) "
                 "RETURN count(e)",
                 {"rows": batch}) or 0
+        for statement, arows in \
+                attribute_values.attribute_write_statements(
+                        attr_rows):
+            for i in range(0, len(arows), 500):
+                self.c.one(statement,
+                           {"rows": arows[i:i + 500]})
         return int(n)
 
     def upsert_edges(self, triples) -> int:

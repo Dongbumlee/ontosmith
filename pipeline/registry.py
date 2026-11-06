@@ -207,6 +207,13 @@ class Entity:
     run_id: str = ""
     doc_id: str = ""
     corpus: str = ""        # corpus namespace; "" = unscoped legacy
+    # Accepted value-attribute values, grouped as
+    # pipeline.attribute_values.entity_attribute_groups
+    # produces ({name: {"value_type", "values": [...]}}).
+    # Projected onto the graph node as typed properties by
+    # the graph stores; never part of identity — an attribute
+    # is not an entity and takes no part in resolution.
+    attributes: dict = field(default_factory=dict)
 
 
 class EntityRegistry(ABC):

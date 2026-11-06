@@ -137,7 +137,19 @@ Rules:
   qualifier role for context-only types), "definition": <one
   precise paragraph>, "form_examples": [<typical surface forms>],
   "not_entities": {<category>: [<boundary examples that must NOT
-  be extracted as this type>]}}.
+  be extracted as this type>]}}. An entity entry MAY declare
+  "attributes": [{"name": <snake_case>, "value_type":
+  "date"|"datetime"|"number"|"money"|"duration"|"identifier",
+  "required": <bool>, "multi": <bool>, "definition": <what the
+  value is>}] — the values the corpus states ABOUT this type
+  (an agreement's effective date, a contract's value). Values
+  are NOT entities: when the corpus terrain is a date, an
+  amount, a period or an identifier, declare it as an
+  attribute of the type it belongs to — never as an entity
+  type, and never as a relation endpoint. Declare an
+  attribute only where the corpus states such values
+  recurrently; "required" means the value must be captured
+  whenever a document states it.
 - Each relation entry: {"type": <name>, "definition": <one
   precise paragraph>, "endpoint_signature": [<entity type
   names>], "boundary_examples": [<statements or near-miss cases
@@ -226,7 +238,17 @@ Rules:
   without an attested instance, and why>, "reason":
   <why the definition already covers it>} decision point
   instead. An extend_signature record with no evidence
-  justifies nothing.
+  justifies nothing. Declared VALUE ATTRIBUTES inherit
+  under the same discipline: adding an attribute, relaxing
+  its "required" flag or widening its "multi" flag is free;
+  dropping a declared attribute takes {"action":
+  "remove_attribute", "kind": "entity", "type": <entity
+  type>, "detail": <attribute name>, "reason": <why>}, and
+  changing an attribute's "value_type", strengthening
+  "required" (false to true), narrowing "multi", or
+  rewriting the attribute's definition takes {"action":
+  "revise_attribute", "kind": "entity", "type": <entity
+  type>, "detail": <attribute name>, "reason": <why>}.
 - HOLE REPORT. When the context carries a "hole_report",
   it names families that processing reported holes for.
   Address each family in this revision as one bundle —
@@ -381,11 +403,15 @@ def _brief_parts(brief) -> tuple[str, list[str], list[str], str]:
 #: inherited (seed) schema: a seed type dropped, a seed
 #: signature pair dropped, an inherited definition rewritten,
 #: a signature pair added on the strength of the existing
-#: definition. Validation matches removals and rewrites
+#: definition, a declared value attribute dropped, an
+#: inherited attribute's declaration revised (its value_type,
+#: a requirement strengthening, a multi narrowing, its
+#: definition). Validation matches removals and rewrites
 #: against these records; free-text points never justify.
 SEED_CHANGE_ACTIONS = ("remove_type", "remove_signature",
                        "revise_definition", "narrow_definition",
-                       "extend_signature")
+                       "extend_signature", "remove_attribute",
+                       "revise_attribute")
 
 #: The structured decision-point action that declares the
 #: boundary between two sibling types, and the boundary
@@ -861,6 +887,24 @@ def _check_overlaps(entries: dict[str, dict], kind: str,
             by_definition[key] = name
 
 
+def _check_attributes(entry: dict, entity_name: str,
+                      findings: list[dict]) -> None:
+    """Value-attribute declaration checks for one entity
+    entry. The shape rules live in one place
+    (profile_config.attribute_declaration_defects — the same
+    rules the emitted payload is held to); each defect is a
+    finding here. An entry with no "attributes" key declares
+    none and is checked no further."""
+    if "attributes" not in entry:
+        return
+    path = f"entity_inventory.{entity_name}.attributes"
+    for defect in profile_config.attribute_declaration_defects(
+            entry.get("attributes")):
+        findings.append(_finding("BAD_ATTRIBUTE", path,
+                                 f"entity type {entity_name!r}: "
+                                 f"{defect}"))
+
+
 def _payload_for(draft: dict, pack_version: str) -> dict:
     """The pack payload emission would write (also what
     validation checks against the pack contract). Definitions
@@ -1091,6 +1135,83 @@ def _check_boundary_declarations(
                 f"with the schema"))
 
 
+def _attribute_map(entry: dict) -> dict:
+    """An entity entry's declared value attributes by name."""
+    return {str(a["name"]): a
+            for a in entry.get("attributes") or []
+            if isinstance(a, dict)
+            and _nonempty_str(a.get("name"))}
+
+
+def _check_attribute_lineage(seed_entry: dict, new_entry: dict,
+                             entity_name: str, justified,
+                             findings: list[dict]) -> None:
+    """Attribute classification for one inherited entity type
+    (design note §9 — the existing change classes, no new
+    ones). ADDING an attribute is an additive change: free.
+    Relaxing required (true -> false) and widening multi are
+    safe in the same direction. The rest are not silent: a
+    DROPPED attribute is a deletion (class (c) — its values
+    and verdicts are invalidated) and needs a remove_attribute
+    record; a value_type change, a required strengthening
+    (false -> true), a multi narrowing, or a rewritten
+    attribute definition is a meaning change (class (b) —
+    partial re-judgment of that attribute) and needs a
+    revise_attribute record. Both records name the entity
+    type as "type" and the attribute as "detail"."""
+    seed_attrs = _attribute_map(seed_entry)
+    new_attrs = _attribute_map(new_entry)
+    for attr_name, seed_attr in seed_attrs.items():
+        path = (f"entity_inventory.{entity_name}."
+                f"attributes.{attr_name}")
+        new_attr = new_attrs.get(attr_name)
+        if new_attr is None:
+            if not justified(("remove_attribute",), "entity",
+                             entity_name, detail=attr_name):
+                findings.append(_finding(
+                    "SEED_ATTRIBUTE_UNJUSTIFIED", path,
+                    f"declared attribute {attr_name!r} of "
+                    f"inherited entity type {entity_name!r} is "
+                    f"dropped by this revision with no "
+                    f"remove_attribute decision point "
+                    f"recording why — dropping an attribute "
+                    f"invalidates its values and verdicts "
+                    f"(a deletion change), it never happens "
+                    f"silently"))
+            continue
+        changes = []
+        if seed_attr.get("value_type") != \
+                new_attr.get("value_type"):
+            changes.append(
+                f"value_type {seed_attr.get('value_type')!r} "
+                f"-> {new_attr.get('value_type')!r}")
+        if not seed_attr.get("required") and \
+                new_attr.get("required"):
+            changes.append("required strengthened "
+                           "(optional -> required)")
+        if seed_attr.get("multi") and \
+                not new_attr.get("multi"):
+            changes.append("multi narrowed "
+                           "(multiple -> single)")
+        if _norm_text(str(seed_attr.get("definition")
+                          or "")) != \
+                _norm_text(str(new_attr.get("definition")
+                               or "")):
+            changes.append("definition rewritten")
+        if changes and not justified(
+                ("revise_attribute",), "entity", entity_name,
+                detail=attr_name):
+            findings.append(_finding(
+                "SEED_ATTRIBUTE_UNDECLARED", path,
+                f"declared attribute {attr_name!r} of "
+                f"inherited entity type {entity_name!r} "
+                f"changes ({'; '.join(changes)}) with no "
+                f"revise_attribute decision point recording "
+                f"why — a meaning change re-judges that "
+                f"attribute's values, so the change is "
+                f"declared, never silent"))
+
+
 def _check_seed_lineage(draft: dict, entities: dict,
                         relations: dict,
                         findings: list[dict]) -> None:
@@ -1102,9 +1223,14 @@ def _check_seed_lineage(draft: dict, entities: dict,
     SEED_CHANGE_ACTIONS); a signature pair ADDITION needs the
     definition revision that keeps the definition consistent
     with the widened signature, or an extend_signature record
-    stating the definition already covers it. Boundary
-    material (examples) is drafting surface, not contract —
-    revisions may rework it unrecorded."""
+    stating the definition already covers it. Declared value
+    attributes inherit under the same discipline — a dropped
+    attribute needs remove_attribute, a meaning-bearing
+    revision (value_type, requirement strengthening, multi
+    narrowing, definition) needs revise_attribute; see
+    _check_attribute_lineage. Boundary material (examples)
+    is drafting surface, not contract — revisions may rework
+    it unrecorded."""
     seed = draft.get("seed")
     if not isinstance(seed, dict):
         return
@@ -1170,6 +1296,10 @@ def _check_seed_lineage(draft: dict, entities: dict,
                     f"recording why — a silent rewrite can "
                     f"narrow the type and strand the facts "
                     f"the old breadth covered"))
+            if kind == "entity":
+                _check_attribute_lineage(seed_entry, new_entry,
+                                         name, justified,
+                                         findings)
         if kind != "relation":
             continue
         for name, seed_entry in seed_map.items():
@@ -1224,8 +1354,9 @@ def validate_schema_draft(draft: dict) -> list[dict]:
     carrier, or per-type definitions disagreeing with the
     schema_front, is a fork); merge prohibitions naming real
     types; seed lineage for seeded drafts (no unjustified
-    removal, signature shrinkage, or silent definition
-    rewrite — see _check_seed_lineage); and full pack-contract
+    removal, signature shrinkage, silent definition
+    rewrite, or unrecorded attribute change — see
+    _check_seed_lineage); and full pack-contract
     conformance of the would-be payload via
     profile_config.setup_config_errors."""
     findings: list[dict] = []
@@ -1282,6 +1413,7 @@ def validate_schema_draft(draft: dict) -> list[dict]:
             findings.append(_finding(
                 "BAD_ROLE", f"entity_inventory.{name}.role",
                 f"entity type {name!r} has a non-string role"))
+        _check_attributes(entry, name, findings)
     entity_norms = {_norm_name(n) for n in entities}
     for name, entry in relations.items():
         if not _relation_boundary_material(entry):

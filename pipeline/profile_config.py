@@ -59,6 +59,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from . import value_normalize
+
 # Keys a pipeline stage actually reads. Value = the consumer, for
 # humans auditing this registry.
 CONSUMED_KEYS: dict[str, str] = {
@@ -434,6 +436,14 @@ def setup_config_errors(cfg: dict, *, merged: bool = False) -> list[str]:
                     f"schema_front relation {r.get('type')!r}: "
                     f"'inverse_of' must be a non-empty relation "
                     f"name")
+        for e in sf.get("entity_inventory") or []:
+            if not isinstance(e, dict):
+                continue
+            for defect in attribute_declaration_defects(
+                    e.get("attributes")):
+                errors.append(
+                    f"schema_front entity {e.get('type')!r}: "
+                    f"{defect}")
     for bkey in ("pair_enumeration", "roster_pass",
                  "pair_abbrev_guard", "pair_theme_attest_sentence",
                  "quote_punct_insensitive", "theme_attest_chunk"):
@@ -543,6 +553,108 @@ def setup_config_errors(cfg: dict, *, merged: bool = False) -> list[str]:
     return errors
 
 
+def attribute_declaration_defects(attributes) -> list[str]:
+    """Shape defects of one entity entry's ``attributes``
+    declaration list (schema_front value attributes, design
+    note 2026-11-06). Returns human-readable defect strings
+    (empty = valid); an absent list is valid — a type that
+    declares no attributes behaves exactly as before. The
+    vocabulary is closed: a snake_case name, a value_type in
+    pipeline.value_normalize.VALUE_TYPES, boolean
+    required/multi flags, an optional non-empty definition.
+    Shared by setup_config validation here and the ontology
+    builder's draft validation, so a declaration is held to
+    one shape in both places."""
+    if attributes is None:
+        return []
+    if not isinstance(attributes, list):
+        return ["'attributes' must be a list of declaration "
+                "objects"]
+    defects: list[str] = []
+    seen: set[str] = set()
+    for i, decl in enumerate(attributes):
+        where = f"attributes[{i}]"
+        if not isinstance(decl, dict):
+            defects.append(f"{where}: declaration is not an "
+                           f"object")
+            continue
+        name = decl.get("name")
+        if not (isinstance(name, str) and name):
+            defects.append(f"{where}: declaration has no "
+                           f"non-empty 'name'")
+            continue
+        if not value_normalize.ATTRIBUTE_NAME_RE.match(name):
+            defects.append(
+                f"{where}: attribute name {name!r} is not a "
+                f"snake_case slug (^[a-z][a-z0-9_]*$) — the "
+                f"name becomes a graph property name")
+        if name in seen:
+            defects.append(
+                f"{where}: attribute {name!r} is declared "
+                f"twice on this type — an attribute is "
+                f"defined in exactly one place")
+        seen.add(name)
+        value_type = decl.get("value_type")
+        if value_type not in value_normalize.VALUE_TYPES:
+            defects.append(
+                f"{where}: value_type {value_type!r} is not "
+                f"one of the closed set "
+                f"{value_normalize.VALUE_TYPES} — there is "
+                f"no free-string value type")
+        for flag in ("required", "multi"):
+            if flag in decl and not isinstance(decl[flag],
+                                               bool):
+                defects.append(
+                    f"{where}: {flag!r} must be a boolean")
+        definition = decl.get("definition")
+        if definition is not None and not (
+                isinstance(definition, str)
+                and definition.strip()):
+            defects.append(
+                f"{where}: 'definition' must be a non-empty "
+                f"string when present")
+    return defects
+
+
+def entity_attributes(cfg: dict | None,
+                      entity_type: str) -> list[dict]:
+    """The value attributes the profile's schema_front
+    declares for one entity type (declaration dicts, in
+    declaration order). Empty when the profile carries no
+    schema_front, the type is not in the inventory, or the
+    type declares none."""
+    sf = (cfg or {}).get("schema_front")
+    if not isinstance(sf, dict):
+        return []
+    for entry in sf.get("entity_inventory") or []:
+        if isinstance(entry, dict) \
+                and entry.get("type") == entity_type:
+            return [a for a in entry.get("attributes") or []
+                    if isinstance(a, dict)]
+    return []
+
+
+def declared_attribute(cfg: dict | None, entity_type: str,
+                       name: str) -> dict | None:
+    """One declared attribute by (entity type, name), or
+    None — an undeclared attribute does not exist for
+    extraction (design: declaration first)."""
+    for decl in entity_attributes(cfg, entity_type):
+        if decl.get("name") == name:
+            return decl
+    return None
+
+
+def schema_front_has_attributes(cfg: dict | None) -> bool:
+    """True when any entity type in the profile's
+    schema_front declares at least one value attribute."""
+    sf = (cfg or {}).get("schema_front")
+    if not isinstance(sf, dict):
+        return False
+    return any(isinstance(e, dict) and e.get("attributes")
+               for e in sf.get("entity_inventory") or [])
+
+
 def entity_type_names(cfg: dict | None) -> set[str]:
     """The profile's declared entity-type vocabulary.
 
@@ -626,6 +738,23 @@ def _render_schema_front(sf: dict) -> str:
             forms = [str(x) for x in e.get("form_examples") or []]
             if forms:
                 lines.append(f"  Typical forms: {'; '.join(forms)}")
+            # Declared value attributes render only when the
+            # entry declares them — an entry without an
+            # "attributes" list renders byte-identically to
+            # before, so frozen guidance never moves.
+            for a in e.get("attributes") or []:
+                if not (isinstance(a, dict) and a.get("name")):
+                    continue
+                flags = [str(a.get("value_type") or "")]
+                if a.get("required"):
+                    flags.append("required")
+                if a.get("multi"):
+                    flags.append("multiple values allowed")
+                head = (f"  Attribute {a['name']} "
+                        f"({', '.join(flags)})")
+                if a.get("definition"):
+                    head += f": {a['definition']}"
+                lines.append(head)
             if role != "entity":
                 lines.append(
                     "  NEVER an entity and NEVER a relation "
@@ -712,6 +841,19 @@ def _render_schema_front(sf: dict) -> str:
         "name>, \"object\": ..., \"object_type\": ..., "
         "\"quote\": ...}. The quote rules above are unchanged: "
         "shortest verbatim phrase, character-for-character.")
+    if any(isinstance(e, dict) and e.get("attributes")
+           for e in entities):
+        lines.append(
+            "Declared value attributes: when the text states "
+            "a value for an attribute declared above, report "
+            "it as its own item in the same array: "
+            "{\"entity\": <the entity's surface>, "
+            "\"entity_type\": <exact type name>, \"attribute\": "
+            "<exact attribute name>, \"value\": <the value "
+            "exactly as written>, \"quote\": ...}. A value is "
+            "not an entity — never report one as a subject or "
+            "object, and report only attributes the schema "
+            "declares.")
     return "\n".join(lines)
 
 
