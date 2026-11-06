@@ -7,6 +7,67 @@ and the project adheres to
 
 ## [Unreleased]
 
+## [0.1.8] - 2026-11-06
+
+### Added
+
+- **Declared value attributes** — a schema_front entity
+  entry may declare `attributes`: the values a document
+  states about an entity (an agreement's effective
+  date, a work's release date, a contract's value),
+  each with a name, one of six closed value types
+  (date, datetime, number, money, duration,
+  identifier), and required/multi flags. Declaration
+  shape is validated in one place, shared by draft
+  validation and setup validation, and attributes
+  render into proposer guidance only when declared —
+  a schema that declares none renders and writes
+  exactly as before.
+- **Deterministic normalization behind a format
+  gate** — form is code's work, never a model's.
+  Money maps symbols and currency names to ISO 4217
+  codes and never guesses an unstated currency (the
+  value is stored incomplete instead); the `US$`
+  prefix is accepted as USD notation. Number splits
+  value and unit and never converts units. Datetime
+  keeps a stated offset and otherwise stays naive,
+  and a date-only surface under a datetime declaration
+  demotes to date. Duration is length only — a
+  start/end pair is an interval, not a duration, and
+  fails as one. A candidate that fails the gate is
+  recorded as a format violation; the judge is never
+  consulted for it.
+- **The judge split for values** — a gate-passing
+  candidate goes to the decisions seat with one
+  question: does the document's evidence state this
+  value for this entity? Accepted values are recorded
+  with the normalized typed value and the original
+  surface beside it. Multi is enforced per value, and
+  a required attribute's absence is a warning record
+  — the entity stands.
+- **Typed node-property storage** — accepted values
+  land on the graph node as typed properties
+  (`attr_<name>`, temporal types converted so range
+  queries work) with the surface beside them, written
+  as a second pass after the base entity statement,
+  which is never modified.
+- **Date precision** — a date carries its stated
+  precision: a surface stating only a month or a year
+  ("May 2008", "2008") normalizes to its
+  reduced-precision ISO form (2008-05, 2008) with the
+  precision named (day / month / year) instead of
+  failing or gaining an invented day. The precision
+  is stored beside the value
+  (`attr_<name>_precision`), so a range query reads
+  the value as the period it names.
+- **Attribute lineage classification** — in a seeded
+  revision, adding an attribute or relaxing a
+  requirement is a safe change; removing an
+  attribute, changing its value type, strengthening
+  a requirement, or rewriting its definition needs
+  the structured seed-change record, and validation
+  flags the change without one.
+
 ## [0.1.7] - 2026-11-05
 
 ### Added
