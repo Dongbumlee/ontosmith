@@ -254,6 +254,90 @@ def entity_attribute_groups(accepted) -> dict:
     return groups
 
 
+_TEMPORAL_CONVERTERS = {"date": "date", "datetime": "datetime",
+                        "duration": "duration"}
+
+
+def attribute_write_statements(attr_rows) -> list:
+    """Cypher write plans for grouped attribute values:
+    [(statement, rows)] for a store to run AFTER its base
+    entity MERGE (the nodes must exist; the base statement is
+    never modified, so an entity with no attributes is
+    written exactly as before).
+
+    ``attr_rows`` are {"id": entity_id, "attributes":
+    {name: {"value_type", "values": [...]}}} — the
+    entity_attribute_groups shape per entity. Rows are
+    grouped by attribute signature (the (name, value_type,
+    multi) set), one UNWIND statement per signature, because
+    Cypher property names cannot be parameters. Values land
+    as TYPED node properties — date/datetime/duration
+    convert through the matching Cypher temporal function,
+    so range queries work — under `attr_<name>`, with the
+    original surface beside them (`attr_<name>_surface`)
+    and, where the type carries them, `attr_<name>_unit` /
+    `attr_<name>_currency`. Names that are not declaration
+    slugs are skipped: declaration validation owns that
+    finding, the store never writes an unsanitized property
+    name into a statement."""
+    by_signature: dict[tuple, list] = {}
+    for row in attr_rows or []:
+        attributes = row.get("attributes") or {}
+        clauses = []
+        params = {"id": row["id"]}
+        for name in sorted(attributes):
+            if not value_normalize.ATTRIBUTE_NAME_RE.match(
+                    name):
+                continue
+            slot = attributes[name] or {}
+            values = slot.get("values") or []
+            if not values:
+                continue
+            value_type = slot.get("value_type") or ""
+            multi = len(values) > 1
+            converter = _TEMPORAL_CONVERTERS.get(value_type)
+            raw = [v.get("value") for v in values]
+            params[f"a_{name}"] = raw if multi else raw[0]
+            surfaces = [v.get("surface") for v in values]
+            params[f"a_{name}_surface"] = \
+                surfaces if multi else surfaces[0]
+            if converter:
+                expr = (f"[{converter}(v) FOR v IN "
+                        f"row.a_{name}]") if multi else \
+                    f"{converter}(row.a_{name})"
+            else:
+                expr = f"row.a_{name}"
+            clause = (f"e.attr_{name} = {expr}, "
+                      f"e.attr_{name}_surface = "
+                      f"row.a_{name}_surface")
+            if value_type == "number":
+                units = [v.get("unit") for v in values]
+                params[f"a_{name}_unit"] = \
+                    units if multi else units[0]
+                clause += (f", e.attr_{name}_unit = "
+                           f"row.a_{name}_unit")
+            if value_type == "money":
+                codes = [v.get("currency") for v in values]
+                params[f"a_{name}_currency"] = \
+                    codes if multi else codes[0]
+                clause += (f", e.attr_{name}_currency = "
+                           f"row.a_{name}_currency")
+            clauses.append((name, value_type, multi, clause))
+        if not clauses:
+            continue
+        signature = tuple((n, t, m) for n, t, m, _ in clauses)
+        by_signature.setdefault(signature, []).append(
+            (", ".join(c for _, _, _, c in clauses), params))
+    plans = []
+    for _signature, items in by_signature.items():
+        statement = (
+            "UNWIND $rows AS row "
+            "MATCH (e:Entity {entity_id: row.id}) SET "
+            + items[0][0] + " RETURN count(e)")
+        plans.append((statement, [p for _, p in items]))
+    return plans
+
+
 def _normalized_display(normalized: dict) -> str:
     parts = [str(normalized.get("value"))]
     if normalized.get("currency"):

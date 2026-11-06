@@ -15,7 +15,7 @@ import os
 import urllib.request
 from pathlib import Path
 
-from . import connections
+from . import attribute_values, connections
 from .registry import Entity, EntityRegistry, GraphStore, Triple, attestation_id
 
 
@@ -613,18 +613,33 @@ class Neo4jGraphStore(GraphStore):
         MERGE by entity_id, SET name/aliases, label only when
         non-empty, corpus via coalesce (never clears an existing one).
         Accepts pipeline.registry.Entity objects or dicts. Returns rows
-        written."""
+        written.
+
+        An entity dict carrying "attributes" (the grouped
+        accepted value attributes) gets a second write pass —
+        attribute_values.attribute_write_statements — landing
+        the values as typed node properties beside the
+        legacy fields; the base statement above is never
+        modified, so an entity with no attributes is written
+        exactly as before."""
         rows = []
+        attr_rows = []
         for e in entities:
             if not isinstance(e, dict):
                 e = {"entity_id": e.entity_id, "name": e.name,
                      "label": e.label, "aliases": e.aliases,
-                     "corpus": e.corpus}
+                     "corpus": e.corpus,
+                     "attributes": getattr(e, "attributes",
+                                           None)}
             rows.append({
                 "id": e["entity_id"], "name": e["name"],
                 "label": e.get("label") or "",
                 "aliases": list(e.get("aliases") or []),
                 "corpus": e.get("corpus") or None})
+            if e.get("attributes"):
+                attr_rows.append({"id": e["entity_id"],
+                                  "attributes":
+                                      e["attributes"]})
         n = 0
         for i in range(0, len(rows), 500):
             n += self.c.one(
@@ -636,6 +651,12 @@ class Neo4jGraphStore(GraphStore):
                 "e.corpus = coalesce(row.corpus, e.corpus) "
                 "RETURN count(e)",
                 {"rows": rows[i:i + 500]}) or 0
+        for statement, arows in \
+                attribute_values.attribute_write_statements(
+                        attr_rows):
+            for i in range(0, len(arows), 500):
+                self.c.one(statement,
+                           {"rows": arows[i:i + 500]})
         return int(n)
 
     def write_triples(self, triples: list[Triple]) -> int:

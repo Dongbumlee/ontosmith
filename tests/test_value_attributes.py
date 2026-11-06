@@ -431,5 +431,154 @@ class TestProposerEmission(unittest.TestCase):
         self.assertEqual(res["attribute_items"], [])
 
 
+class _RecordingClient:
+    """Neo4jClient-shaped stub: records one() calls."""
+
+    def __init__(self):
+        self.calls = []
+
+    def one(self, statement, parameters=None):
+        self.calls.append((statement, parameters))
+        rows = (parameters or {}).get("rows") or []
+        return len(rows)
+
+    def run(self, statements):
+        return [[] for _ in statements]
+
+
+def _groups():
+    out = av.process_attribute_candidates(
+        [_candidate(),
+         _candidate(attribute="contract_value",
+                    value="$500,000",
+                    quote="valued at $500,000"),
+         _candidate(attribute="renewal_notice_days",
+                    value="30", quote="30 days' notice"),
+         _candidate(attribute="renewal_notice_days",
+                    value="60", quote="60 days for cause")],
+        _cfg())
+    return av.entity_attribute_groups(
+        out["accepted"])["Supply Agreement A"]["attributes"]
+
+
+class TestStorage(unittest.TestCase):
+
+    _LEGACY = ("UNWIND $rows AS row "
+               "MERGE (e:Entity {entity_id: row.id}) "
+               "SET e.name = row.name, e.aliases = row.aliases, "
+               "e.label = CASE WHEN row.label = '' THEN e.label "
+               "ELSE row.label END, "
+               "e.corpus = coalesce(row.corpus, e.corpus) "
+               "RETURN count(e)")
+
+    def test_write_statements_convert_temporal_types(self):
+        plans = av.attribute_write_statements(
+            [{"id": "ent-1", "attributes": _groups()}])
+        self.assertEqual(len(plans), 1)
+        statement, rows = plans[0]
+        self.assertIn("e.attr_effective_date = "
+                      "date(row.a_effective_date)", statement)
+        self.assertIn("e.attr_effective_date_surface",
+                      statement)
+        self.assertIn("e.attr_contract_value_currency",
+                      statement)
+        self.assertIn("e.attr_renewal_notice_days_unit",
+                      statement)
+        self.assertIn("e.attr_renewal_notice_days = "
+                      "row.a_renewal_notice_days", statement)
+        row = rows[0]
+        self.assertEqual(row["a_effective_date"], "2024-03-01")
+        self.assertEqual(row["a_contract_value"], 500000)
+        self.assertEqual(row["a_contract_value_currency"],
+                         "USD")
+        self.assertEqual(row["a_renewal_notice_days"],
+                         [30, 60])
+
+    def test_multi_temporal_values_convert_as_a_list(self):
+        plans = av.attribute_write_statements(
+            [{"id": "ent-1", "attributes": {
+                "milestone_date": {
+                    "value_type": "date", "values": [
+                        {"value": "2024-03-01",
+                         "surface": "March 1, 2024"},
+                        {"value": "2024-06-01",
+                         "surface": "June 1, 2024"}]}}}])
+        statement, rows = plans[0]
+        self.assertIn("[date(v) FOR v IN "
+                      "row.a_milestone_date]", statement)
+        self.assertEqual(rows[0]["a_milestone_date"],
+                         ["2024-03-01", "2024-06-01"])
+
+    def test_write_statements_skip_unsafe_names(self):
+        plans = av.attribute_write_statements(
+            [{"id": "ent-1", "attributes": {
+                "Bad Name": {"value_type": "date", "values": [
+                    {"value": "2024-03-01",
+                     "surface": "March 1, 2024"}]}}}])
+        self.assertEqual(plans, [])
+
+    def test_no_attributes_no_plans(self):
+        self.assertEqual(av.attribute_write_statements(
+            [{"id": "ent-1", "attributes": {}}]), [])
+        self.assertEqual(av.attribute_write_statements([]),
+                         [])
+
+    def test_graph_store_writes_attributes_as_second_pass(self):
+        from pipeline.graph_store import GraphStore
+
+        client = _RecordingClient()
+        store = GraphStore(client=client)
+        n = store.upsert_entities([{
+            "entity_id": "ent-1", "name": "Supply Agreement A",
+            "label": "Agreement", "aliases": [],
+            "attributes": _groups()}])
+        self.assertEqual(n, 1)
+        self.assertEqual(client.calls[0][0], self._LEGACY)
+        self.assertEqual(len(client.calls), 2)
+        self.assertIn("attr_effective_date",
+                      client.calls[1][0])
+
+    def test_graph_store_without_attributes_is_legacy_only(self):
+        from pipeline.graph_store import GraphStore
+
+        client = _RecordingClient()
+        store = GraphStore(client=client)
+        store.upsert_entities([{
+            "entity_id": "ent-1", "name": "Acme", "label": "",
+            "aliases": []}])
+        self.assertEqual(len(client.calls), 1)
+        self.assertEqual(client.calls[0][0], self._LEGACY)
+
+    def test_neo4j_store_mirrors_the_write(self):
+        from pipeline.neo4j_store import Neo4jGraphStore
+
+        client = _RecordingClient()
+        store = Neo4jGraphStore(client)
+        store.upsert_entities([{
+            "entity_id": "ent-1", "name": "Supply Agreement A",
+            "label": "Agreement", "aliases": [],
+            "attributes": _groups()}])
+        self.assertEqual(client.calls[0][0], self._LEGACY)
+        self.assertEqual(len(client.calls), 2)
+
+    def test_entity_object_attributes_flow(self):
+        from pipeline.graph_store import GraphStore
+        from pipeline.registry import Entity
+
+        client = _RecordingClient()
+        store = GraphStore(client=client)
+        entity = Entity(entity_id="ent-1",
+                        name="Supply Agreement A",
+                        label="Agreement",
+                        attributes=_groups())
+        store.upsert_entities([entity])
+        self.assertEqual(len(client.calls), 2)
+        plain = Entity(entity_id="ent-2", name="Acme",
+                       label="")
+        store.upsert_entities([plain])
+        self.assertEqual(len(client.calls), 3)
+        self.assertEqual(client.calls[2][0], self._LEGACY)
+
+
 if __name__ == "__main__":
     unittest.main()
