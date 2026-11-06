@@ -47,7 +47,11 @@ The ontology here is a **flat extraction contract**: a
 closed inventory of entity and relation types, each with
 a definition and boundary examples — drafted from your
 corpus or imported, approved by a human, and enforced
-type by type by the decision model. It is deliberately
+type by type by the decision model. An entity type may
+also declare value attributes (a date, an amount, a
+term): typed values a document states about an entity,
+normalized by deterministic code and judged like every
+other fact before they are written as node properties. It is deliberately
 *not* a formal ontology: there is no class hierarchy,
 no inheritance, and no logical axioms — OntoSmith is
 not an OWL ontology editor, and it runs no inference

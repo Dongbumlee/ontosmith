@@ -392,7 +392,7 @@ edited, or written by hand with no guesswork.
 | `relation_types` | array of string | draft (derived) | Mirror of the relation inventory's type names |
 | `merge_prohibited_type_pairs` | array of [string, string] | brief / drafting / author | Operating declaration: entity type pairs the build's entity resolution must never merge (a prohibited pair is recorded to the ER review band instead). Rides the emitted payload; bound by the approval hash |
 | `theme_attest_chunk` | boolean | author | Operating declaration (opt-in, default off): formerly widened the candidate guard's theme-presence check from the quote to the proposal's chunk. Theme grading has subsumed it — a verb+preposition proposal whose object attests in the document but not in its quote is now kept with its evidence grade (`theme_grade`) for the judge, so the declaration no longer changes guard behavior; it remains accepted and still rides the emitted payload, bound by the approval hash. The guard itself is documented in the hands-on guide, Track 3 §5 |
-| `decision_points` | array of string \| object | drafting / author | Open questions the drafter surfaced for the human approver. Object entries are structured records: seed-change records (`remove_type`, `remove_signature`, `revise_definition`, `extend_signature`, …) that justify changing an inherited schema, and `declare_boundary` records that settle a confusable type pair — validation matches on the records; free text justifies nothing |
+| `decision_points` | array of string \| object | drafting / author | Open questions the drafter surfaced for the human approver. Object entries are structured records: seed-change records (`remove_type`, `remove_signature`, `revise_definition`, `extend_signature`, `remove_attribute`, `revise_attribute`, …) that justify changing an inherited schema, and `declare_boundary` records that settle a confusable type pair — validation matches on the records; free text justifies nothing |
 | `seed` | object | draft (extension only) | The inherited schema: its source record, the seed front's content hash, and the seed `schema_front` itself. Validation holds the revision to the inheritance rules against it (no unjustified removal, signature shrinkage, or silent definition rewrite) |
 
 The `schema_front` object:
@@ -412,6 +412,37 @@ Each `entity_inventory` entry:
 | `definition` | string | One precise paragraph — what this type is |
 | `form_examples` | array of string | Typical surface forms of the type |
 | `not_entities` | object (category → array of string) | Boundary examples that must NOT be extracted as this type, grouped by category |
+| `attributes` | array (optional) | The value attributes declared for this type — the values a document states ABOUT an entity of this type (entries below). Absent (or empty) declares none, and the type behaves exactly as a type without attributes |
+
+Each `attributes` entry:
+
+| Field | Type | Meaning |
+|---|---|---|
+| `name` | string (snake_case slug) | The attribute's name — it becomes a property name in the graph store |
+| `value_type` | enum: `date`, `datetime`, `number`, `money`, `duration`, `identifier` | The closed value-type set. There is no free-string type: a value whose form cannot be checked is not a value attribute |
+| `required` | boolean (optional, default false) | "Must be captured when a document states it". A required attribute with no accepted value for an entity produces a warning record — never a failure, and the entity stands |
+| `multi` | boolean (optional, default false) | Whether the attribute accepts more than one distinct value per entity; each value is judged and stored on its own |
+| `definition` | string (optional) | What the value is, precisely enough for the judge |
+
+An attribute candidate travels declaration → format gate →
+judge: an attribute the front does not declare does not
+exist, form (parsing, unit/currency handling,
+normalization) is deterministic code and a form failure
+never reaches the judge, and the judge decides only
+whether the document's evidence states the value for the
+entity. An accepted value is stored as a typed node
+property (`attr_<name>`) with its original surface beside
+it (`attr_<name>_surface`, plus `attr_<name>_unit` /
+`attr_<name>_currency` where the type carries them). A
+date value also carries its stated precision
+(`attr_<name>_precision`: day / month / year) — a surface
+stating only a month or a year is stored at that
+precision, never completed with an invented component.
+In a seeded revision, adding an attribute or relaxing
+`required` is a safe change; removing one, changing its
+`value_type`, strengthening `required`, or rewriting its
+definition needs a structured seed-change record
+(`remove_attribute` / `revise_attribute`).
 
 Each `relation_inventory` entry:
 
