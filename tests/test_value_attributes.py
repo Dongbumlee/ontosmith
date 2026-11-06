@@ -580,5 +580,168 @@ class TestStorage(unittest.TestCase):
         self.assertEqual(client.calls[2][0], self._LEGACY)
 
 
+def _seeded_schema() -> dict:
+    return {
+        "purpose": "Contract schema: agreements and parties.",
+        "entity_inventory": [
+            {"type": "Agreement", "role": "entity",
+             "definition": "A named written agreement.",
+             "form_examples": ["a titled agreement"],
+             "attributes": [
+                 {"name": "effective_date",
+                  "value_type": "date", "required": True,
+                  "definition": "The date the agreement "
+                                "takes effect."},
+                 {"name": "renewal_notice_days",
+                  "value_type": "number",
+                  "definition": "Days of notice before "
+                                "renewal."}]},
+            {"type": "Party", "role": "entity",
+             "definition": "A named party to an agreement.",
+             "form_examples": ["a company name"]},
+        ],
+        "relation_inventory": [
+            {"type": "PartyTo",
+             "definition": "The text states the party is "
+                           "bound by the agreement.",
+             "endpoint_signature": ["Party", "Agreement"],
+             "boundary_examples": [
+                 "'signed the agreement' states the link"],
+             "direction": "directed"},
+        ],
+    }
+
+
+def _seeded_attr_draft(raw_schema, decision_points=None):
+    import copy
+
+    from pipeline import ontology_builder as ob
+
+    raw = {"schema_front": raw_schema}
+    if decision_points is not None:
+        raw["decision_points"] = decision_points
+    seed = {"pack_id": "contracts",
+            "pack_version": "0.1.0",
+            "schema_front": _seeded_schema()}
+    profile = {
+        "family": "contracts",
+        "profile_hash": "sha256:0123456789abcdef",
+        "inventory": {"n_files": 10, "n_unique_content": 10,
+                      "total_chars": 40000},
+        "claims": [],
+    }
+    return ob.draft_schema(
+        profile, "contracts and their parties",
+        family="contracts", pack_id="contracts",
+        display_name="Contracts",
+        drafter=lambda context: copy.deepcopy(raw),
+        seed=seed)
+
+
+def _attr_codes(schema, decision_points=None) -> set:
+    from pipeline import ontology_builder as ob
+
+    draft = _seeded_attr_draft(schema, decision_points)
+    return {f["code"] for f in ob.validate_schema_draft(draft)}
+
+
+def _agreement(schema) -> dict:
+    return schema["entity_inventory"][0]
+
+
+class TestAttributeLineage(unittest.TestCase):
+
+    def test_unchanged_attributes_validate_clean(self):
+        codes = _attr_codes(_seeded_schema())
+        self.assertNotIn("SEED_ATTRIBUTE_UNJUSTIFIED", codes)
+        self.assertNotIn("SEED_ATTRIBUTE_UNDECLARED", codes)
+
+    def test_added_attribute_is_free(self):
+        schema = _seeded_schema()
+        _agreement(schema)["attributes"].append(
+            {"name": "governing_region",
+             "value_type": "identifier"})
+        codes = _attr_codes(schema)
+        self.assertNotIn("SEED_ATTRIBUTE_UNJUSTIFIED", codes)
+        self.assertNotIn("SEED_ATTRIBUTE_UNDECLARED", codes)
+
+    def test_dropped_attribute_needs_a_record(self):
+        schema = _seeded_schema()
+        _agreement(schema)["attributes"] = \
+            _agreement(schema)["attributes"][:1]
+        self.assertIn("SEED_ATTRIBUTE_UNJUSTIFIED",
+                      _attr_codes(schema))
+        codes = _attr_codes(schema, [{
+            "action": "remove_attribute", "kind": "entity",
+            "type": "Agreement",
+            "detail": "renewal_notice_days",
+            "reason": "the revised corpus never states "
+                      "notice periods"}])
+        self.assertNotIn("SEED_ATTRIBUTE_UNJUSTIFIED", codes)
+
+    def test_value_type_change_needs_a_record(self):
+        schema = _seeded_schema()
+        _agreement(schema)["attributes"][0]["value_type"] = \
+            "datetime"
+        self.assertIn("SEED_ATTRIBUTE_UNDECLARED",
+                      _attr_codes(schema))
+        codes = _attr_codes(schema, [{
+            "action": "revise_attribute", "kind": "entity",
+            "type": "Agreement", "detail": "effective_date",
+            "reason": "agreements now state an effective "
+                      "moment, not just a date"}])
+        self.assertNotIn("SEED_ATTRIBUTE_UNDECLARED", codes)
+
+    def test_required_strengthening_is_a_meaning_change(self):
+        schema = _seeded_schema()
+        _agreement(schema)["attributes"][1]["required"] = True
+        self.assertIn("SEED_ATTRIBUTE_UNDECLARED",
+                      _attr_codes(schema))
+
+    def test_required_relaxation_is_safe(self):
+        schema = _seeded_schema()
+        _agreement(schema)["attributes"][0]["required"] = False
+        codes = _attr_codes(schema)
+        self.assertNotIn("SEED_ATTRIBUTE_UNDECLARED", codes)
+
+    def test_multi_narrowing_is_a_meaning_change(self):
+        import copy
+
+        seed = _seeded_schema()
+        seed["entity_inventory"][0]["attributes"][1][
+            "multi"] = True
+        schema = copy.deepcopy(seed)
+        schema["entity_inventory"][0]["attributes"][1][
+            "multi"] = False
+
+        from pipeline import ontology_builder as ob
+
+        raw = {"schema_front": schema}
+        draft = ob.draft_schema(
+            {"family": "contracts",
+             "profile_hash": "sha256:0123456789abcdef",
+             "inventory": {"n_files": 10,
+                           "n_unique_content": 10,
+                           "total_chars": 40000},
+             "claims": []},
+            "contracts and their parties",
+            family="contracts", pack_id="contracts",
+            display_name="Contracts",
+            drafter=lambda context: copy.deepcopy(raw),
+            seed={"pack_id": "contracts",
+                  "pack_version": "0.1.0",
+                  "schema_front": seed})
+        codes = {f["code"]
+                 for f in ob.validate_schema_draft(draft)}
+        self.assertIn("SEED_ATTRIBUTE_UNDECLARED", codes)
+
+    def test_attribute_definition_rewrite_needs_a_record(self):
+        schema = _seeded_schema()
+        _agreement(schema)["attributes"][0]["definition"] = \
+            "The date the agreement was signed."
+        self.assertIn("SEED_ATTRIBUTE_UNDECLARED",
+                      _attr_codes(schema))
+
+
 if __name__ == "__main__":
     unittest.main()
