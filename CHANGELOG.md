@@ -7,6 +7,8 @@ and the project adheres to
 
 ## [Unreleased]
 
+## [0.1.9] - 2026-11-07
+
 ### Added
 
 - **Sentence-level evidence serving is the `search`
@@ -51,6 +53,31 @@ and the project adheres to
   inside `hybrid_search` was removed). The sample
   API's contract is unchanged: it serves the hybrid
   form, as before.
+- Every visual surface — the method, pipeline-flow,
+  ontology-loop and benchmark-anatomy diagrams, the
+  site, the posters and all four videos — is
+  regenerated under one brand system (the site's),
+  in a paper mode for documents and a stage mode for
+  video. Version stamps are removed from the videos
+  and images, and the videos' audio mixes are
+  rebuilt so the music bed sits well under the
+  narration (−17 to −19 dB against voice, final
+  loudness −14 LUFS).
+
+### Fixed
+
+- The whitepaper's cost-guardrail wording now
+  matches the shipped behavior: spend is always
+  accounted, and a USD stop-line exists only when a
+  cap is set through the `ONTOSMITH_MAX_COST_USD`
+  environment variable (§4.2, §5.6). §5.6 also
+  states the judging-only per-document costs on one
+  basis — $0.0360 for the flagship build against
+  $0.0701 projected for the shipped default,
+  judging to judging (≈ 1.95×, tracking the pair
+  counts) — beside the full-run totals, and the
+  serving sections (§2, §4.3, §7) describe the
+  sentence-level default this release ships.
 
 ## [0.1.8] - 2026-11-06
 
