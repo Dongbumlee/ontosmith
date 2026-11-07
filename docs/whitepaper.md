@@ -122,8 +122,12 @@ set the gates certify.
 
 **Serve it.** The build's registry is the source of truth;
 the serving graph is a rebuildable projection of it into
-Neo4j, supporting traversal and hybrid retrieval (vector +
-lexical + graph) over chunks and triples. §4 details the
+Neo4j, supporting traversal and retrieval. Serving is
+sentence-level by default: a direct index over the
+corpus's sentences, pooled with graph traversal —
+including a beam channel out from linked entities — and
+a rerank pass; chunk-level hybrid retrieval remains as a
+fallback that reports itself when it serves. §4 details the
 serving shape; §7 states plainly how much of it v1 ships.
 
 **Measure everything, adopt by gate.** Thresholds, the
@@ -414,14 +418,17 @@ written.
 
 ### 4.2 Cost guardrails
 
-Spend is guarded by default. Before a run, the tooling
-prints a **counted projection** — candidate pairs counted
-from the user's own rosters, priced at caller-supplied
-rates (`--unit-cost`); the tool takes prices from the
-caller and never reads a rate from the bound models.
-Every batch enforces a **stop-line**: a run that
-would cross its cap refuses the unit that crosses it and
-resumes from its ledger instead of re-spending. §5.6 gives
+Every run's spend is accounted, whether or not it is
+capped. Before a run, the tooling prints a **counted
+projection** — candidate pairs counted from the user's
+own rosters, priced at caller-supplied rates
+(`--unit-cost`); the tool takes prices from the caller
+and never reads a rate from the bound models. A USD
+**stop-line** exists only when one is set (the
+`ONTOSMITH_MAX_COST_USD` environment variable): with a
+cap set, a run that would cross it refuses the unit that
+crosses it and resumes from its ledger instead of
+re-spending. §5.6 gives
 the flagship run's projection, ledger, and the governing
 provider-observed total — published at aggregate level,
 with the method; the full ledger itself is internal
@@ -432,8 +439,16 @@ provenance and is not published.
 The **registry is the source of truth**; the graph in
 **Neo4j** is a rebuildable projection of it (traversal,
 native vector index, Lucene full-text). Retrieval is
-hybrid — vector + lexical + graph — over chunks and
-triples. This separation is deliberate: the store can be
+sentence-level by default: every sentence of the corpus
+is indexed directly at build time, a query pools the
+direct index's top results with units the graph reaches
+(traversal, plus a beam channel out from linked
+entities), and a rerank pass orders the merged pool;
+every unit carries the channel that served it. The older
+chunk-level hybrid retrieval (vector + lexical + graph
+over chunks) remains underneath as a fallback for builds
+whose sentence index cannot be served, and says so in
+its results when it serves. This separation is deliberate: the store can be
 rebuilt, replaced, or re-projected without touching the
 evidence-bearing record, and every served triple can be
 inspected back to its evidence span and provenance chain.
@@ -799,7 +814,7 @@ level, with the assumptions needed to recompute it.
 | Ledger total | $18.6802 |
 | Key-observed total (governing figure) | **$18.7980** |
 | Stop-line the run was executed under | $21.00 |
-| Realized unit costs | pair judging $0.0006683/pair (candidate-judging spend) · $0.03736/doc on the ledger total; $0.0376/doc on the governing key-observed total |
+| Realized unit costs | pair judging $0.0006683/pair (candidate-judging spend). Per document: judging alone $0.0360 for this build, against $0.0701 projected for the shipped default at the same per-pair rate (judging to judging, ≈ 1.95×, tracking the pair counts 26,938 vs 52,463); the full run, all stages, $0.03736/doc on the ledger total and $0.0376/doc on the governing key-observed total |
 
 Calculation method: a counted projection (pairs counted
 from the real rosters before spend; projected totals
@@ -809,7 +824,8 @@ figure is the provider-key-observed total, and the $0.1178
 ledger/observed difference is recorded in the run's
 metadata rather than smoothed away. The product prints the
 same kind of counted projection before any user spend
-(cost estimator + stop-line, on by default).
+(a counted cost projection before any user spend;
+a stop-line applies when a cap is set — §4.2).
 
 ### 5.7 Supporting record — Bio Medical pack (BioRED pilot)
 
@@ -1043,8 +1059,10 @@ no multi-version coexistence: the graph is one living
 artifact that tracks the latest schema. What versioning
 means here is smaller and cheaper — (i) the schema file
 itself is versioned, with a change ledger (what changed,
-why, whose approval); (ii) every triple carries a stamp of
-the schema version it was judged under; (iii) a change
+why, whose approval); (ii) every triple is traceable to
+the schema version it was judged under — in v1 the pack
+version is stamped per build run; per-verdict stamps are
+part of this design round; (iii) a change
 that measures badly is reverted by reverting the file.
 
 When a schema version changes, the graph is re-derived
@@ -1110,7 +1128,7 @@ snapshot per batch, and says so.
   measured at exactly zero on short abstracts. It is stated
   that way wherever it is cited.
 - **v1 serving is minimal.** The registry→Neo4j projection,
-  traversal, hybrid retrieval, triple inspection, and the
+  traversal, sentence-level retrieval, triple inspection, and the
   verification tooling are shipped, measured components;
   the user-facing surfaces on top of them — a search
   entry point, a sample API, and a minimal demo app —
