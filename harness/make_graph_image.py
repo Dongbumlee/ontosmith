@@ -6,7 +6,13 @@ the corpus itself: each force-layout cluster is roughly one book's
 world (Valjean's Paris, Quixote's La Mancha, Pierre's Russia...).
 
 Output: docs/assets/graph-full.png (dark, high-res).
+
+Palette is the brand stage mode (visual-unification design):
+deep-navy ground, cream labels, and community colors derived
+from the brand hues (amber / clay / teal / steel) instead of
+the stock tab20 family.
 """
+import colorsys
 import json
 from pathlib import Path
 
@@ -16,6 +22,28 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import networkx as nx
 import numpy as np
+
+# Brand stage tokens (design §3: deep ground, cream edges).
+GROUND = "#0a1620"
+EDGE = "#f6f0e4"
+LABEL = "#f6f0e4"
+CAPTION = "#cfe3ee"
+FAINT = "#5f8296"
+
+# Community palette: 12 muted colors from the brand hues,
+# cycled (design §3) — deterministic lightness/saturation
+# variants of amber / clay / teal / steel.
+_BRAND_HUES = (0.09, 0.04, 0.45, 0.57)  # amber, clay, teal, steel
+
+
+def _brand_palette(n):
+    variants = ((0.62, 0.50), (0.50, 0.58), (0.70, 0.42))
+    out = []
+    for light, sat in variants:
+        for hue in _BRAND_HUES:
+            r, g, b = colorsys.hls_to_rgb(hue, light, sat)
+            out.append((r, g, b))
+    return out[:max(n, 1)]
 
 ROOT = Path(__file__).parent
 BATCH = ROOT / "batches" / "clean-main-v1"
@@ -57,20 +85,20 @@ sizes = np.array([22 + 260 * np.sqrt(deg[v]) / np.sqrt(max(deg.values()))
 
 # v2: every community gets its OWN color (v1 reused 20 colors for
 # 26 communities, so distant clusters falsely shared a color).
-_full = (list(matplotlib.colormaps["tab20"].colors)
-         + list(matplotlib.colormaps["tab20b"].colors)
-         + list(matplotlib.colormaps["tab20c"].colors))
-palette = _full[:max(n_comms, 1)]
+# v3: the colors come from the brand hues, not tab20.
+palette = _brand_palette(n_comms)
 colors = [palette[color_of[v] % len(palette)] for v in G.nodes()]
 
+plt.rcParams["font.family"] = "sans-serif"
+plt.rcParams["font.sans-serif"] = ["Inter", "Noto Sans", "DejaVu Sans"]
 fig, ax = plt.subplots(figsize=(16, 12), dpi=200)
-fig.patch.set_facecolor("#0b1020")
-ax.set_facecolor("#0b1020")
+fig.patch.set_facecolor(GROUND)
+ax.set_facecolor(GROUND)
 ax.axis("off")
 
 edges = list(G.edges())
 ex = [pos[u][0] for u, v in edges] + [pos[v][0] for u, v in edges]
-nx.draw_networkx_edges(G, pos, ax=ax, width=0.35, edge_color="#8fb4ff",
+nx.draw_networkx_edges(G, pos, ax=ax, width=0.35, edge_color=EDGE,
                        alpha=0.16)
 # glow pass, then core pass
 nx.draw_networkx_nodes(G, pos, ax=ax, node_size=sizes * 3.2,
@@ -85,16 +113,15 @@ LABEL = {"Marius", "Don Quixote", "Pierre", "Cosette", "Jean Valjean",
          "Elizabeth", "Jane Eyre", "Emma", "Odysseus", "Achilles"}
 labels = {v: v for v in G.nodes() if v in LABEL}
 nx.draw_networkx_labels(G, pos, labels=labels, ax=ax, font_size=10.5,
-                        font_color="#e8ecf8", font_family="DejaVu Sans",
-                        font_weight="bold")
+                        font_color=LABEL, font_weight="bold")
 
 ax.text(0.5, 0.035,
         "jev Knowledge Graph — 391 documents, one web of verified facts",
-        transform=ax.transAxes, ha="center", color="#aab4d4",
+        transform=ax.transAxes, ha="center", color=CAPTION,
         fontsize=12.5)
 ax.text(0.5, 0.008,
         f"{n:,} entities · {m:,} Tier 1 relations · each cluster a book's world",
-        transform=ax.transAxes, ha="center", color="#5f6c94",
+        transform=ax.transAxes, ha="center", color=FAINT,
         fontsize=10)
 out = ROOT / "docs" / "assets"
 out.mkdir(parents=True, exist_ok=True)
