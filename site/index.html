@@ -127,6 +127,8 @@ h2{font-size:32px; font-weight:400; color:var(--navy); margin-bottom:8px; text-w
 .card:hover{transform:translateY(-4px); box-shadow:0 16px 40px var(--shadow-card)}
 .card img{width:100%; display:block; aspect-ratio:16/9; object-fit:cover}
 .card a.poster{display:block}
+.card .embed{position:relative; aspect-ratio:16/9; background:var(--video)}
+.card .embed iframe{position:absolute; inset:0; width:100%; height:100%; border:0; display:block}
 .card h3 a{color:inherit; text-decoration:none}
 .card h3 a:hover{text-decoration:underline}
 .card .body{padding:20px}
@@ -340,7 +342,7 @@ footer a{color:var(--cream)}
     </div>
     <div class="watchgrid">
       <div class="card">
-        <a class="poster" href="https://www.youtube.com/watch?v=qmCFIIOCCqA" target="_blank" rel="noopener"><img src="assets/poster-demo.jpg" alt="Demo poster frame"></a>
+        <div class="embed"><iframe src="https://www.youtube-nocookie.com/embed/qmCFIIOCCqA" title="OntoSmith demo — see it build" loading="lazy" allow="accelerometer; encrypted-media; picture-in-picture" allowfullscreen referrerpolicy="strict-origin-when-cross-origin"></iframe></div>
         <div class="body">
           <div class="dur">Demo, 6 minutes</div>
           <h3><a href="https://www.youtube.com/watch?v=qmCFIIOCCqA" target="_blank" rel="noopener">See it build</a></h3>
@@ -349,7 +351,7 @@ footer a{color:var(--cream)}
         </div>
       </div>
       <div class="card">
-        <a class="poster" href="https://www.youtube.com/watch?v=Vz2SIyquMXQ" target="_blank" rel="noopener"><img src="assets/poster-tutorial.jpg" alt="Tutorial poster frame"></a>
+        <div class="embed"><iframe src="https://www.youtube-nocookie.com/embed/Vz2SIyquMXQ" title="OntoSmith tutorial — do it yourself" loading="lazy" allow="accelerometer; encrypted-media; picture-in-picture" allowfullscreen referrerpolicy="strict-origin-when-cross-origin"></iframe></div>
         <div class="body">
           <div class="dur">Tutorial, 5 minutes 38</div>
           <h3><a href="https://www.youtube.com/watch?v=Vz2SIyquMXQ" target="_blank" rel="noopener">Do it yourself</a></h3>
@@ -358,7 +360,7 @@ footer a{color:var(--cream)}
         </div>
       </div>
       <div class="card">
-        <a class="poster" href="https://www.youtube.com/watch?v=PO6F9QdRxR8" target="_blank" rel="noopener"><img src="assets/poster-teardown.jpg" alt="Teardown poster frame"></a>
+        <div class="embed"><iframe src="https://www.youtube-nocookie.com/embed/PO6F9QdRxR8" title="OntoSmith teardown — look inside" loading="lazy" allow="accelerometer; encrypted-media; picture-in-picture" allowfullscreen referrerpolicy="strict-origin-when-cross-origin"></iframe></div>
         <div class="body">
           <div class="dur">Teardown, 7 minutes</div>
           <h3><a href="https://www.youtube.com/watch?v=PO6F9QdRxR8" target="_blank" rel="noopener">Look inside</a></h3>
