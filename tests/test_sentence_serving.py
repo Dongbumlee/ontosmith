@@ -293,7 +293,7 @@ class TestBeamCaps(unittest.TestCase):
             self.assertEqual(linked, ["hub co"])
             qvec = emb.embed(["What does Hub Co do?"])[0]
             units = search._beam_units(
-                store, ts, by_key, linked, qvec, emb,
+                store, by_key, linked, qvec, emb,
                 store.batch_filter(), {}, {}, [])
             self.assertTrue(units)
             self.assertLessEqual(len(units),

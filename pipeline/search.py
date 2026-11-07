@@ -1280,7 +1280,7 @@ def _quote_sentences(store, triples_sel, embedder, filt,
     return pool[:cap]
 
 
-def _beam_units(store, triples, by_key, linked, qvec,
+def _beam_units(store, by_key, linked, qvec,
                 embedder, filt, chunk_cos, chunk_texts,
                 cand_chunks):
     """The beam traversal channel, with the measured
@@ -1521,7 +1521,7 @@ def sentence_search(store, query: str, k: int = 10,
                 embedder, filt, chunk_cos, chunk_texts,
                 cand_chunks, cap=10 ** 9)]
     linked, by_key = _link_entities(triples, query)
-    beam = _beam_units(store, triples, by_key, linked, qvec,
+    beam = _beam_units(store, by_key, linked, qvec,
                        embedder, filt, chunk_cos, chunk_texts,
                        cand_chunks)
 

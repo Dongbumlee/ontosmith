@@ -251,7 +251,7 @@ def render_method(out: Path) -> Path:
     ax.plot([95, 95], [13.6, 12.6], color=GREY, lw=1.2)
     ax.plot([61, 95], [12.6, 12.6], color=GREY, lw=1.2)
     faces = [
-        (53.25, "Search", "lexical · graph arms"),
+        (53.25, "Search", "sentence-level evidence"),
         (70.25, "API", "sample HTTP API"),
         (87.25, "App", "fact + evidence view"),
     ]

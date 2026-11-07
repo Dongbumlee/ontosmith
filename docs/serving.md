@@ -12,12 +12,15 @@ reads it from there.
 The same surface also runs over a **file store**, which
 reads recorded artifacts directly — the shipped demo,
 or a finished batch's on-disk records. That is the
-keyless demo / read-back path, and it is **degraded by
-design**: the file store carries no embeddings, so the
-**vector arm never runs** on it — lexical and graph
-arms only, exactly as the `arms` line of every result
-says. It is a way to inspect recordings, not a second
-place a build can live.
+keyless demo / read-back path, and the demo's records
+form is **degraded by design**: it carries no
+embeddings, so the **vector arm never runs** on it —
+lexical and graph arms only, exactly as the `arms`
+line of every result says. A batch read-back is not
+degraded that way: it loads the build's shipped chunk
+and sentence indexes, embeddings included. Either way
+the file store is a way to inspect recordings, not a
+second place a build can live.
 
 Everything below was executed against the shipped
 demo build — *Pride and Prejudice*, the full novel,
