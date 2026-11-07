@@ -41,6 +41,7 @@ writers produce the same projection.
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import os
 import re
@@ -50,10 +51,12 @@ from . import attribute_values
 from .neo4j_store import Neo4jClient
 from .registry import attestation_id, normalize_name
 from .registry_store import RegistryStore
+from .sentence_index import ws_norm
 
 EMBED_DIMS = 3072  # text-embedding-3-large (§4)
 
 VECTOR_INDEX = "chunk_embedding"
+SENTENCE_VECTOR_INDEX = "sentence_embedding"
 CHUNK_TEXT_INDEX = "chunk_text_ft"
 ENTITY_NAME_INDEX = "entity_name_ft"
 
@@ -96,10 +99,18 @@ def schema_statements(analyzer: str | None = None) -> list[str]:
         "FOR (e:Entity) REQUIRE e.entity_id IS UNIQUE",
         "CREATE CONSTRAINT chunk_id_unique IF NOT EXISTS "
         "FOR (c:Chunk) REQUIRE c.chunk_id IS UNIQUE",
+        "CREATE CONSTRAINT sentence_id_unique IF NOT EXISTS "
+        "FOR (s:Sentence) REQUIRE s.sentence_id IS UNIQUE",
         "CREATE CONSTRAINT doc_id_unique IF NOT EXISTS "
         "FOR (d:Document) REQUIRE d.doc_id IS UNIQUE",
         f"CREATE VECTOR INDEX {VECTOR_INDEX} IF NOT EXISTS "
         "FOR (c:Chunk) ON (c.embedding) OPTIONS {indexConfig: "
+        f"{{`vector.dimensions`: {EMBED_DIMS}, "
+        "`vector.similarity_function`: 'cosine'}}",
+        f"CREATE VECTOR INDEX {SENTENCE_VECTOR_INDEX} "
+        "IF NOT EXISTS "
+        "FOR (s:Sentence) ON (s.embedding) OPTIONS "
+        "{indexConfig: "
         f"{{`vector.dimensions`: {EMBED_DIMS}, "
         "`vector.similarity_function`: 'cosine'}}",
         f"CREATE FULLTEXT INDEX {CHUNK_TEXT_INDEX} IF NOT EXISTS "
@@ -117,6 +128,14 @@ _CHUNK_FILTER_KEYS = ("corpus", "batch_id", "doc_id", "tier", "tag")
 def chunk_id_for(batch_id: str, doc_id: str, idx: int) -> str:
     """Deterministic, batch-scoped chunk id (E5)."""
     return f"{batch_id}:{doc_id}:{idx}"
+
+
+def sentence_id_for(batch_id: str, text: str) -> str:
+    """Deterministic, batch-scoped sentence id: the
+    sentence universe dedupes by ws-normalized text, so
+    identity is the batch plus a digest of that key."""
+    digest = hashlib.sha1(ws_norm(text).encode()).hexdigest()
+    return f"{batch_id}:s:{digest[:16]}"
 
 
 class GraphStore:
@@ -148,10 +167,13 @@ class GraphStore:
                 "SHOW INDEXES YIELD name, type, state, labelsOrTypes, "
                 "properties WHERE name IN $names "
                 "RETURN name, type, state, labelsOrTypes, properties",
-            "parameters": {"names": [VECTOR_INDEX, CHUNK_TEXT_INDEX,
+            "parameters": {"names": [VECTOR_INDEX,
+                                     SENTENCE_VECTOR_INDEX,
+                                     CHUNK_TEXT_INDEX,
                                      ENTITY_NAME_INDEX,
                                      "entity_id_unique",
                                      "chunk_id_unique",
+                                     "sentence_id_unique",
                                      "doc_id_unique"]}}])[0]
         return [{"name": r["row"][0], "type": r["row"][1],
                  "state": r["row"][2], "labels": r["row"][3],
@@ -424,6 +446,43 @@ class GraphStore:
                                    "score": row[6], "text_score": row[6]}
         return sorted(out.values(), key=lambda d: -d["score"])[:k]
 
+    def all_chunks(self, batch_id: str) -> list[dict]:
+        """Every projected chunk of the batch, in
+        (doc_id, idx) order — the fallback universe source
+        when a build shipped no sentence index and the
+        serving layer builds one at query time. Rows:
+        {chunk_id, doc_id, idx, batch_id, text}."""
+        rows = self.c.run([{
+            "statement": "MATCH (c:Chunk {batch_id: $batch}) "
+                         "RETURN c.chunk_id, c.doc_id, c.idx, "
+                         "c.text ORDER BY c.doc_id, c.idx",
+            "parameters": {"batch": batch_id}}])[0]
+        return [{"chunk_id": r["row"][0], "doc_id": r["row"][1],
+                 "idx": int(r["row"][2]),
+                 "batch_id": batch_id,
+                 "text": r["row"][3] or ""} for r in rows]
+
+    def sentence_snapshot(self, batch_id: str):
+        """(rows, embeddings) of the batch's projected
+        sentence universe, or None when the store holds
+        no (:Sentence) nodes for the batch (a build that
+        predates the shipped sentence index). Rows carry
+        text / doc_id / chunk_id; embeddings align by
+        position (plain lists — the serving layer
+        converts)."""
+        rows = self.c.run([{
+            "statement": "MATCH (s:Sentence "
+                         "{batch_id: $batch}) "
+                         "RETURN s.text, s.doc_id, s.chunk_id, "
+                         "s.embedding",
+            "parameters": {"batch": batch_id}}])[0]
+        if not rows:
+            return None
+        out = [{"text": r["row"][0], "doc_id": r["row"][1],
+                "chunk_id": r["row"][2]} for r in rows]
+        embs = [r["row"][3] for r in rows]
+        return out, embs
+
     # ------------------------------------------------------------------
     # E5: serving-index projection (pkl → Chunk nodes)
     # ------------------------------------------------------------------
@@ -500,7 +559,49 @@ class GraphStore:
                   "other_chunks_cleared": int(chunks_cleared),
                   "model": idx.get("model", ""),
                   "dims": int(embs.shape[1]) if len(embs) else 0,
+                  "sentences": 0,
                   "mentions": 0}
+        sents = idx.get("sentences")
+        sembs = idx.get("sentence_embeddings")
+        if sents is not None and sembs is not None:
+            # The sentence projection follows the chunk
+            # projection's one-graph rule: another batch's
+            # sentences are cleared before this batch's
+            # are loaded, so sentence serving never ranges
+            # over a replaced graph's documents.
+            self.c.run([{
+                "statement": "MATCH (s:Sentence) "
+                             "WHERE coalesce(s.batch_id, '') "
+                             "<> $keep DETACH DELETE s",
+                "parameters": {"keep": batch_id}}])
+            srows = [{
+                "sentence_id": sentence_id_for(batch_id,
+                                               s["text"]),
+                "doc_id": s["doc_id"],
+                "chunk_id": s["chunk_id"],
+                "text": s["text"], "batch_id": batch_id,
+                "corpus": corpus,
+                "embedding": [float(x) for x in sembs[i]],
+            } for i, s in enumerate(sents)]
+            n_sents = 0
+            for i in range(0, len(srows), batch_size):
+                batch = srows[i:i + batch_size]
+                n_sents += self.c.one(
+                    "UNWIND $rows AS row "
+                    "MERGE (s:Sentence "
+                    "{sentence_id: row.sentence_id}) "
+                    "SET s.doc_id = row.doc_id, "
+                    "s.chunk_id = row.chunk_id, "
+                    "s.text = row.text, "
+                    "s.batch_id = row.batch_id, "
+                    "s.corpus = row.corpus, "
+                    "s.embedding = row.embedding "
+                    "WITH row, s "
+                    "MATCH (c:Chunk {chunk_id: row.chunk_id}) "
+                    "MERGE (c)-[:HAS_SENTENCE]->(s) "
+                    "RETURN count(s)",
+                    {"rows": batch}) or 0
+            result["sentences"] = int(n_sents)
         if with_mentions:
             result["mentions"] = self._project_mentions(
                 batch_id, meta, chunks)

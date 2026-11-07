@@ -321,9 +321,14 @@ store`), which needs no running Neo4j at all. The
 endpoints and the answer shape are the same either
 way.
 
-`search` answers with linked entities and
-evidence-carrying triples, and ranked documents as
-well. Both stores carry the document texts: the
+`search` answers with linked entities,
+evidence-carrying triples, and — by default —
+sentence-level evidence units filled under a token
+budget (the build's sentence index, the graph's
+evidence quotes, and a beam traversal channel);
+without an embedder binding it falls back to ranked
+documents and names the fallback. Both stores carry
+the document texts: the
 file store from the batch's own index, and the
 graph store because INDEX projects **every built
 document's** chunks into it — each chunk tagged

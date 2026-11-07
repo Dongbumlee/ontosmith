@@ -325,7 +325,7 @@ footer a{color:var(--cream)}
     <div class="darkstats">
       <div class="stat"><div class="v serif">4</div><div class="k">ontology domain packs: legal, bio-medical, open-domain, and an imported FIBO contracts pack, on one shared core</div></div>
       <div class="stat"><div class="v serif">8</div><div class="k">pipeline stages, ingest to verify</div></div>
-      <div class="stat"><div class="v serif">3</div><div class="k">search arms: lexical, graph, vector</div></div>
+      <div class="stat"><div class="v serif">3</div><div class="k">serving channels in the default search: direct sentence index, graph pool, beam traversal</div></div>
     </div>
   </div>
 </div>
@@ -374,8 +374,10 @@ footer a{color:var(--cream)}
   <div class="wrap reveal">
     <h2 class="serif">Build, then ask</h2>
     <p class="lede">The graph lives in Neo4j: one graph, the current build&rsquo;s, and a build
-       under a changed ontology replaces it, named in the run, never silent. Search fuses lexical,
-       graph, and vector arms; a graph with no embeddings still answers on two.</p>
+       under a changed ontology replaces it, named in the run, never silent. Search serves
+       sentence-level evidence by default — the direct sentence index, the graph pool, and a
+       beam traversal channel — and falls back to hybrid lexical, graph, and vector fusion
+       when sentence serving cannot run; a build with no embeddings still answers on two arms.</p>
     <div class="term">
 <span class="c"># declare the connection first: the wizard walks the seats and writes your bindings</span><br>
 <span class="p">$</span> ontosmith configure<br>

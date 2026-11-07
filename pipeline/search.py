@@ -32,19 +32,29 @@ surface a stranger can run. This module is that surface:
   resolves it from the WRITE stamp, never from a
   user-supplied scope.
 
-:func:`hybrid_search` is the library API: lexical (+ vector
-when available) chunk arms fused at document level with the
-lab's RRF definition (``query_stack.hybrid_ranking``), plus
-the graph arm (``query_stack.graph_current_ranking``'s math,
-over the store's attestation records) and a deterministic
-entity link. It returns plain dicts — the CLI renders them
-as a report card, the sample API (``api.server``, R17)
-serves the same dict as JSON.
+:func:`sentence_search` is the CLI's default serving
+path (the serving fix): sentence-level evidence serving
+over a direct index of every sentence in the build,
+with the graph pool, a beam traversal channel over the
+entity graph, an optional local cross-encoder rerank of
+the merged head, and a whole-unit fill under one token
+budget. :func:`hybrid_search` — lexical (+ vector when
+available) chunk arms fused at document level with the
+lab's RRF definition (``query_stack.hybrid_ranking``),
+plus the graph arm (``query_stack.graph_current_ranking``'s
+math, over the store's attestation records) and a
+deterministic entity link — remains the chunk-serving
+library form: the CLI's internal fallback when sentence
+serving cannot run (no embedder bound, or a store that
+serves no sentence index), and the form the sample API
+(``api.server``, R17) serves as JSON. Both return plain
+dicts — the CLI renders them as a report card.
 
 Scope honesty: the PPR traversal arm and the LLM answerer
 stay in the eval stack (they need scipy / a chat binding);
-the product arms are lexical + vector + graph-overlap, and
-the result names the arms that actually ran.
+the product arms are lexical + vector + graph-overlap
+plus the sentence/beam serving channels, and the result
+names the arms that actually ran.
 """
 from __future__ import annotations
 
@@ -62,6 +72,11 @@ from .graph_store import GraphStore, chunk_id_for
 from .inspect import BATCH_ARTEFACTS
 from .registry import index_normalize
 from .registry_store import RegistryStore
+from .sentence_index import build_sentence_rows, ent_key, ws_norm
+
+#: The sentence identity key (dedupe / coverage), shared
+#: with the build-time sentence universe.
+_ws_norm = ws_norm
 
 #: Chunk filter keys, identical to graph_store's contract.
 CHUNK_FILTER_KEYS = ("corpus", "batch_id", "doc_id", "tier", "tag")
@@ -314,6 +329,8 @@ class FileServingStore(_ArtifactRecords):
         self.source = source
         self._chunks: list[dict] = []
         self._embeddings: dict[str, np.ndarray] = {}
+        self._sent_rows: list[dict] | None = None
+        self._sent_emb: np.ndarray | None = None
         self._documents: dict[str, str] = {}
         self._batch_id = ""
         self._corpus = ""
@@ -412,6 +429,11 @@ class FileServingStore(_ArtifactRecords):
             if embs is not None and i < len(embs):
                 self._embeddings[row["chunk_id"]] = np.asarray(
                     embs[i], dtype=np.float64)
+        sents = index.get("sentences")
+        sembs = index.get("sentence_embeddings")
+        if sents is not None and sembs is not None:
+            self._sent_rows = [dict(s) for s in sents]
+            self._sent_emb = np.asarray(sembs, dtype=np.float64)
 
     def _finish_chunks(self) -> None:
         """Cut chunks for documents the index did not cover
@@ -458,7 +480,51 @@ class FileServingStore(_ArtifactRecords):
             "documents": len(self._documents),
             "chunks": len(self._chunks),
             "embeddings": bool(self._embeddings),
+            "sentences": len(self._sent_rows)
+            if self._sent_rows is not None else None,
         }
+
+    # -- sentence index ---------------------------------------
+    def prepare_sentence_index(self, embedder) -> str | None:
+        """Make the sentence snapshot available. A build
+        whose INDEX stage shipped a sentence index needs
+        nothing (returns None). An older build — or the
+        records form, which ships no index at all — gets
+        the identical universe built at query time from
+        its chunks with the bound embedder, memoized on
+        the store; the returned note says so, so the
+        result never hides that the build predates the
+        shipped index. StoreError when the store holds
+        no chunks to build from."""
+        if self._sent_rows is not None:
+            return None
+        if not self._chunks:
+            raise StoreError(
+                f"the file store at {self.source} holds no "
+                f"chunks — there is no sentence universe "
+                f"to serve")
+        meta = [{"doc_id": c["doc_id"],
+                 "chunk_idx": c["idx"],
+                 "batch_id": c["batch_id"]}
+                for c in self._chunks]
+        rows = build_sentence_rows(
+            [c["text"] for c in self._chunks], meta)
+        embs = embedder.embed([r["text"] for r in rows])
+        self._sent_rows = rows
+        self._sent_emb = np.asarray(embs, dtype=np.float64)
+        return (f"sentence index built at query time: "
+                f"this build predates the shipped sentence "
+                f"index ({len(rows)} sentences embedded "
+                f"with the bound embedder)")
+
+    def sentence_snapshot(self):
+        """(rows, embeddings) of the sentence universe,
+        or None when no index is prepared. Rows carry
+        text / doc_id / chunk_id; embeddings align by
+        position."""
+        if self._sent_rows is None or self._sent_emb is None:
+            return None
+        return [dict(r) for r in self._sent_rows], self._sent_emb
 
     def batch_filter(self) -> dict:
         """The chunk-filter pinning retrieval to this
@@ -633,6 +699,8 @@ class Neo4jServingStore(_ArtifactRecords):
         self._corpus = ""
         self._stamp: dict | None = None
         self._serving: dict | None = None
+        self._sent_rows: list[dict] | None = None
+        self._sent_emb: np.ndarray | None = None
         from .neo4j_store import Neo4jClient
         if isinstance(getattr(self.gs, "c", None), Neo4jClient):
             records = self._resolve_store_graph(root)
@@ -760,8 +828,66 @@ class Neo4jServingStore(_ArtifactRecords):
             "documents": self._documents_count,
             "chunks": None,
             "embeddings": None,
+            "sentences": len(self._sent_rows)
+            if self._sent_rows is not None else None,
             "serving": self._serving,
         }
+
+    # -- sentence index ---------------------------------------
+    def prepare_sentence_index(self, embedder) -> str | None:
+        """Make the sentence snapshot available: the
+        store's projected (:Sentence) nodes when the
+        build shipped a sentence index (no spend — the
+        projection replayed the recorded embeddings);
+        otherwise the identical universe built at query
+        time from the store's chunks with the bound
+        embedder, memoized, with the returned note
+        saying so. StoreError when the store can answer
+        neither way."""
+        if self._sent_rows is not None:
+            return None
+        if hasattr(self.gs, "sentence_snapshot"):
+            snap = self._guard(
+                "sentence snapshot",
+                lambda: self.gs.sentence_snapshot(
+                    self._batch_id))
+            if snap is not None:
+                self._sent_rows, self._sent_emb = snap
+                return None
+        if not hasattr(self.gs, "all_chunks"):
+            raise StoreError(
+                "the Neo4j serving store cannot serve a "
+                "sentence index: it holds no projected "
+                "sentences and exposes no chunk texts to "
+                "build one from")
+        rows = self._guard(
+            "chunk texts for the sentence index",
+            lambda: self.gs.all_chunks(self._batch_id))
+        if not rows:
+            raise StoreError(
+                "the Neo4j serving store holds no chunks "
+                "for its graph — there is no sentence "
+                "universe to serve")
+        meta = [{"doc_id": r["doc_id"],
+                 "chunk_idx": r["idx"],
+                 "batch_id": r["batch_id"]}
+                for r in rows]
+        srows = build_sentence_rows(
+            [r["text"] for r in rows], meta)
+        embs = embedder.embed([r["text"] for r in srows])
+        self._sent_rows = srows
+        self._sent_emb = np.asarray(embs, dtype=np.float64)
+        return (f"sentence index built at query time: "
+                f"this build predates the shipped sentence "
+                f"index ({len(srows)} sentences embedded "
+                f"with the bound embedder)")
+
+    def sentence_snapshot(self):
+        """(rows, embeddings) of the sentence universe,
+        or None when no index is prepared."""
+        if self._sent_rows is None or self._sent_emb is None:
+            return None
+        return [dict(r) for r in self._sent_rows], self._sent_emb
 
     def batch_filter(self) -> dict:
         return {"batch_id": self._batch_id} \
@@ -868,6 +994,55 @@ def open_store(source=None, batch: str | None = None,
     return FileServingStore(src, root=root)
 
 
+def _rank_triples(triples, query: str, k: int,
+                  token_sets=None) -> list[dict]:
+    """The graph arm's per-triple ranking: content-token
+    overlap ≥ 2 against ``subject relation object``,
+    weighted by p_true and the tier-2 discount. Shared by
+    :func:`hybrid_search` (the displayed triples) and
+    :func:`sentence_search` (the candidate pool)."""
+    if token_sets is None:
+        token_sets = [set(query_stack.tokenize(
+            f"{t['subject']} {t['relation']} {t['object']}"))
+            for t in triples]
+    qtoks = {t for t in query_stack.tokenize(query)
+             if t not in query_stack.STOP
+             and query_stack.is_content_token(t)}
+    scores: dict[int, float] = {}
+    for i, (t, ttoks) in enumerate(
+            zip(triples, token_sets, strict=True)):
+        overlap = len(qtoks & ttoks)
+        if overlap >= 2:
+            w = (t["p_true"] or 0.3) * (
+                1.0 if t["tier"] == 1
+                else query_stack.TIER2_EDGE_DISCOUNT)
+            scores[i] = w * overlap
+    return [{**triples[i], "score": round(s, 6)}
+            for i, s in sorted(scores.items(),
+                               key=lambda kv: -kv[1])[:int(k)]]
+
+
+def _zscores(values: list[float]) -> list[float]:
+    """Population z-scores; a constant input scores 0."""
+    n = len(values)
+    if n == 0:
+        return []
+    mean = sum(values) / n
+    var = sum((v - mean) ** 2 for v in values) / n
+    sd = math.sqrt(var)
+    if sd == 0.0:
+        return [0.0] * n
+    return [(v - mean) / sd for v in values]
+
+
+def _cosine(a, b) -> float:
+    va = np.asarray(a, dtype=np.float64)
+    vb = np.asarray(b, dtype=np.float64)
+    na = float(np.linalg.norm(va)) or 1.0
+    nb = float(np.linalg.norm(vb)) or 1.0
+    return float(va @ vb / (na * nb))
+
+
 # ----------------------------------------------------------------------
 # hybrid search — the R16 library API
 # ----------------------------------------------------------------------
@@ -970,22 +1145,8 @@ def hybrid_search(store, query: str, k: int = 10,
         triples, token_sets, query)
     if graph_docs:
         arms.append("graph")
-    triple_scores: dict[int, float] = {}
-    qtoks = {t for t in query_stack.tokenize(query)
-             if t not in query_stack.STOP
-             and query_stack.is_content_token(t)}
-    for i, (t, ttoks) in enumerate(
-            zip(triples, token_sets, strict=True)):
-        overlap = len(qtoks & ttoks)
-        if overlap >= 2:
-            w = (t["p_true"] or 0.3) * (
-                1.0 if t["tier"] == 1
-                else query_stack.TIER2_EDGE_DISCOUNT)
-            triple_scores[i] = w * overlap
-    ranked_triples = [
-        {**triples[i], "score": round(s, 6)}
-        for i, s in sorted(triple_scores.items(),
-                           key=lambda kv: -kv[1])[:int(k)]]
+    ranked_triples = _rank_triples(triples, query, k,
+                                   token_sets=token_sets)
 
     return {
         "query": query,
@@ -997,6 +1158,457 @@ def hybrid_search(store, query: str, k: int = 10,
         "graph_documents": graph_docs[:int(k)],
         "triples": ranked_triples,
     }
+
+
+# ----------------------------------------------------------------------
+# sentence-level serving — the default search path
+# ----------------------------------------------------------------------
+#: Token budget a sentence-serving result fills to. One
+#: budget for every query, so results stay comparable
+#: across questions and arms.
+SENTENCE_BUDGET_TOKENS = 4000
+
+#: Triples whose evidence quotes seed the graph pool.
+_POOL_TRIPLES = 12
+
+#: Chunk-arm rows anchoring the chunk layer. The fill
+#: only ever reaches the top of the ranking; the cap
+#: bounds the per-query work, it does not trim the fill.
+_SENTENCE_CANDIDATE_CHUNKS = 60
+
+#: Direct-index sentences entering the candidate set.
+_DIRECT_TOP = 200
+
+#: Merged units the rerank step reorders — the whole
+#: fill population (units past the head never fill).
+_RERANK_POOL = 80
+
+#: Beam channel caps, exactly as measured: triples kept
+#: per frontier entity / per hop, quote-sentence units
+#: the channel may add, traversal depth.
+_BEAM_PER_ENTITY = 8
+_BEAM_PER_HOP = 24
+_BEAM_UNIT_CAP = 16
+_BEAM_HOPS = 2
+
+
+class SentenceServingUnavailable(StoreError):
+    """Sentence serving cannot run on this store or
+    binding. The CLI catches it and falls back to chunk
+    serving (naming the fallback in the result); library
+    callers get the named refusal."""
+
+
+def _link_entities(triples, query: str):
+    """Deterministic entity linking for the beam channel:
+    entity surfaces (normalized) appearing in the
+    normalized question, longest names first,
+    non-overlapping spans. Returns (linked entity keys,
+    {entity key: [triples]}) — the traversal's adjacency,
+    keyed by surface identity."""
+    by_key: dict[str, list[dict]] = {}
+    for t in triples:
+        for side in ("subject", "object"):
+            name = (t.get(side) or "").strip()
+            if name:
+                by_key.setdefault(ent_key(name), []).append(t)
+    q = " " + ent_key(query) + " "
+    found, taken = [], []
+    for key in sorted(by_key, key=len, reverse=True):
+        if len(key) < 4:
+            continue
+        pat = " " + key + " "
+        i = q.find(pat)
+        while i >= 0:
+            span = (i, i + len(pat))
+            if not any(span[0] < b and a < span[1]
+                       for a, b in taken):
+                taken.append(span)
+                found.append(key)
+                break
+            i = q.find(pat, i + 1)
+    return found, by_key
+
+
+def _quote_sentences(store, triples_sel, embedder, filt,
+                     chunk_cos, chunk_texts, cand_chunks,
+                     cap):
+    """Triple quote → owning chunk → its sentences
+    carrying the quote. The owning chunk is the triple's
+    own document chunk most similar to the quote (the
+    build's chunks are fixed windows, so containment is
+    by similarity, not offset); the quote itself stands
+    in when it does not anchor. Owner chunks register
+    their cosine / text and join ``cand_chunks`` — the
+    scoring layer's population grows exactly the way the
+    measured stack's did."""
+    from .proposer import split_sentences
+    pool, seen_pool = [], set()
+    for t in triples_sel:
+        quote = (t.get("quote") or "").strip()
+        if not quote:
+            continue
+        qf = dict(filt)
+        if t.get("doc_id"):
+            qf["doc_id"] = t["doc_id"]
+        qvec_quote = embedder.embed([quote])[0]
+        owners = store.search_chunks(
+            vector=[float(x) for x in qvec_quote],
+            filters=qf, k=1)
+        owner_id = owners[0]["chunk_id"] if owners else ""
+        if owners and owner_id not in chunk_cos:
+            chunk_cos[owner_id] = float(
+                owners[0].get("vector_score", 0.0))
+            chunk_texts[owner_id] = owners[0]["text"]
+            cand_chunks.append(owners[0])
+        texts: list[str] = []
+        if owners:
+            nq = _ws_norm(quote)
+            for s in split_sentences(owners[0]["text"]):
+                if _ws_norm(s) in nq or nq in _ws_norm(s):
+                    texts.append(s)
+        if not texts:
+            texts = [quote]
+        for s in texts:
+            key = _ws_norm(s)
+            if key and key not in seen_pool:
+                seen_pool.add(key)
+                pool.append({"text": s, "doc_id": t["doc_id"],
+                             "chunk_id": owner_id})
+        if len(pool) >= cap:
+            break
+    return pool[:cap]
+
+
+def _beam_units(store, by_key, linked, qvec,
+                embedder, filt, chunk_cos, chunk_texts,
+                cand_chunks):
+    """The beam traversal channel, with the measured
+    definition: 2 hops over the entity graph from the
+    linked entities; each hop prunes the frontier
+    entities' triples by triple-verbalization cosine
+    (top ``_BEAM_PER_ENTITY`` per entity, at most
+    ``_BEAM_PER_HOP`` per hop); the frontier extends to
+    the surviving triples' endpoints. The survivors'
+    quote sentences (at most ``_BEAM_UNIT_CAP``) join
+    the candidate population as via="beam" units.
+    Verbalization cosines are computed for frontier
+    triples only — the only scores the pruning reads."""
+    if not linked:
+        return []
+    chosen: list[dict] = []
+    chosen_ids: set[int] = set()
+    frontier = list(linked)
+    seen_ent = set(linked)
+    for _hop in range(_BEAM_HOPS):
+        hop_triples: list[dict] = []
+        seen_t: set[int] = set()
+        for ek in frontier:
+            for t in by_key.get(ek, []):
+                if id(t) not in chosen_ids \
+                        and id(t) not in seen_t:
+                    seen_t.add(id(t))
+                    hop_triples.append(t)
+        if not hop_triples:
+            break
+        verbs = [f"{t.get('subject')} {t.get('relation')} "
+                 f"{t.get('object')}" for t in hop_triples]
+        sims = {id(t): _cosine(qvec, e) for t, e in zip(
+            hop_triples, embedder.embed(verbs), strict=True)}
+        picked: list[dict] = []
+        for ek in frontier:
+            ts = [t for t in by_key.get(ek, [])
+                  if id(t) in sims and id(t) not in chosen_ids]
+            ts.sort(key=lambda t: -sims[id(t)])
+            picked.extend(ts[:_BEAM_PER_ENTITY])
+        seen_p: set[int] = set()
+        uniq: list[dict] = []
+        for t in picked:
+            if id(t) not in seen_p:
+                seen_p.add(id(t))
+                uniq.append(t)
+        uniq.sort(key=lambda t: -sims[id(t)])
+        uniq = uniq[:_BEAM_PER_HOP]
+        for t in uniq:
+            chosen_ids.add(id(t))
+            chosen.append(t)
+        nxt: list[str] = []
+        for t in uniq:
+            for side in ("subject", "object"):
+                kk = ent_key(t.get(side))
+                if kk and kk not in seen_ent:
+                    seen_ent.add(kk)
+                    nxt.append(kk)
+        frontier = nxt
+        if not frontier:
+            break
+    if not chosen:
+        return []
+    raw = _quote_sentences(store, chosen, embedder, filt,
+                           chunk_cos, chunk_texts, cand_chunks,
+                           cap=_BEAM_UNIT_CAP)
+    return [dict(u, via="beam", kind="sentence") for u in raw]
+
+
+def _fill_units(ordered, budget: int) -> list[dict]:
+    """Whole-unit fill under the token budget: a unit
+    whose sentences a taken unit already covers is
+    skipped, a unit that does not fit is skipped, and
+    the scan keeps going (the measured fill semantics).
+    Nothing is cut mid-sentence."""
+    from .proposer import split_sentences
+    units: list[dict] = []
+    covered: set[str] = set()
+    used = 0
+    for u in ordered:
+        if u["kind"] == "chunk":
+            parts = {_ws_norm(s)
+                     for s in split_sentences(u["text"])}
+            if parts and parts <= covered:
+                continue
+        elif _ws_norm(u["text"]) in covered:
+            continue
+        cost = len(query_stack.tokenize(u["text"]))
+        if used + cost > int(budget):
+            continue
+        used += cost
+        units.append({**u, "score": round(u["merge"], 6),
+                      "tokens": cost})
+        if u["kind"] == "chunk":
+            covered |= {_ws_norm(s)
+                        for s in split_sentences(u["text"])}
+        else:
+            covered.add(_ws_norm(u["text"]))
+    return units
+
+
+def sentence_search(store, query: str, k: int = 10,
+                    embedder=None, reranker=None,
+                    budget_tokens: int =
+                    SENTENCE_BUDGET_TOKENS,
+                    fetch_k: int | None = None) -> dict:
+    """Sentence-level evidence serving — the measured
+    final form, wired onto the store contract:
+
+    1. **Direct arm** — the build's sentence index
+       (every sentence of every chunk, embedded at
+       build time with the build's embedder) contributes
+       its top 200 sentences by query cosine. Chunk arms
+       are candidate suppliers here, never a gate.
+    2. **Graph pool** — the top triples under the graph
+       arm's own ranking contribute the sentences that
+       carry their evidence quotes.
+    3. **Beam channel** — a pruned 2-hop traversal from
+       the question's linked entities adds its quote
+       sentences as a protected side channel
+       (:func:`_beam_units`; the channel that measured
+       a positive net contribution where pool mixing
+       alone did not).
+    4. **Two-layer score** — every candidate sentence
+       scores z(sentence cosine) + z(owning-chunk
+       cosine), each z within its own layer's candidate
+       population; **Z2 merge** — sentences carry 2 x
+       their combined score, chunks their z(chunk
+       cosine), in one ranked list.
+    5. **Rerank + fill** — the merged head (top 80) is
+       reordered by the rerank step when one is active
+       (``reranker``: an object with ``score(query,
+       texts)``; None → the reference local cross-encoder
+       when its extra is installed; False → off), then
+       whole units fill the token budget.
+
+    The form is embedding-shaped, so ``embedder`` is
+    required: a missing binding, or a store that serves
+    no sentence index, refuses by name
+    (:class:`SentenceServingUnavailable`) rather than
+    silently degrading to another serving form. Returns
+    the hybrid result's shape plus ``units``."""
+    query = (query or "").strip()
+    if not query:
+        raise ValueError("empty search query")
+    if embedder is None:
+        raise SentenceServingUnavailable(
+            "sentence serving needs an embedder: bind one "
+            "with --embed (the connection layer's default "
+            "embedder) — the sentence form has no lexical "
+            "fallback")
+    prepare = getattr(store, "prepare_sentence_index", None)
+    snapshot = getattr(store, "sentence_snapshot", None)
+    if prepare is None or snapshot is None:
+        raise SentenceServingUnavailable(
+            "this store serves no sentence index")
+    notes: list[str] = []
+    built = prepare(embedder)
+    if built:
+        notes.append(built)
+    snap = snapshot()
+    if snap is None:
+        raise SentenceServingUnavailable(
+            "this store serves no sentence index")
+    sent_rows, sent_emb = snap
+    sent_emb = np.asarray(sent_emb, dtype=np.float64)
+
+    filt = store.batch_filter()
+    fetch = int(fetch_k) if fetch_k else query_stack.CHUNK_FETCH_K
+    qvec = np.asarray(embedder.embed([query])[0],
+                      dtype=np.float64)
+
+    # chunk front: lexical + vector arms, top chunks by
+    # vector score — the chunk layer's population.
+    toks = [t for t in query_stack.tokenize(query)
+            if query_stack.is_content_token(t)]
+    rows: dict[str, dict] = {}
+    if toks:
+        for r in store.search_chunks(
+                text=" OR ".join(toks), filters=filt, k=fetch):
+            rows[r["chunk_id"]] = r
+    for r in store.search_chunks(
+            vector=[float(x) for x in qvec], filters=filt,
+            k=fetch):
+        rows.setdefault(r["chunk_id"], r)
+        rows[r["chunk_id"]] = {**rows[r["chunk_id"]], **r}
+    cand_chunks = sorted(
+        rows.values(),
+        key=lambda r: -(r.get("vector_score", -2.0)))
+    cand_chunks = cand_chunks[:_SENTENCE_CANDIDATE_CHUNKS]
+    chunk_cos: dict[str, float] = {}
+    chunk_texts: dict[str, str] = {}
+    need = [c for c in cand_chunks if "vector_score" not in c]
+    if need:
+        es = embedder.embed([c["text"] for c in need])
+        for c, e in zip(need, es, strict=True):
+            chunk_cos[c["chunk_id"]] = _cosine(qvec, e)
+    for c in cand_chunks:
+        chunk_texts[c["chunk_id"]] = c["text"]
+        if "vector_score" in c:
+            chunk_cos[c["chunk_id"]] = float(c["vector_score"])
+
+    shipped_emb = getattr(store, "_embeddings", None)
+
+    def chunk_cos_of(cid: str) -> float:
+        if shipped_emb and cid in shipped_emb:
+            return _cosine(qvec, shipped_emb[cid])
+        text = chunk_texts.get(cid)
+        if text:
+            return _cosine(qvec, embedder.embed([text])[0])
+        return 0.0
+
+    # direct arm: top sentences of the index by cosine
+    sims = np.zeros(0)
+    direct: list[dict] = []
+    sent_by_key: dict[str, int] = {}
+    for i, r in enumerate(sent_rows):
+        sent_by_key.setdefault(_ws_norm(r["text"]), i)
+    if sent_rows:
+        enorm = np.linalg.norm(sent_emb, axis=1)
+        enorm = np.where(enorm == 0, 1.0, enorm)
+        qn = float(np.linalg.norm(qvec)) or 1.0
+        sims = (sent_emb @ qvec) / (enorm * qn)
+        for i in np.argsort(-sims)[:_DIRECT_TOP]:
+            r = sent_rows[int(i)]
+            direct.append({"text": r["text"],
+                           "doc_id": r["doc_id"],
+                           "chunk_id": r["chunk_id"],
+                           "_cos": float(sims[int(i)])})
+
+    # graph pool + beam channel
+    triples = store.triples()
+    ranked_triples = _rank_triples(
+        triples, query, max(int(k), _POOL_TRIPLES))
+    pool = [dict(u, via="graph", kind="sentence")
+            for u in _quote_sentences(
+                store, ranked_triples[:_POOL_TRIPLES],
+                embedder, filt, chunk_cos, chunk_texts,
+                cand_chunks, cap=10 ** 9)]
+    linked, by_key = _link_entities(triples, query)
+    beam = _beam_units(store, by_key, linked, qvec,
+                       embedder, filt, chunk_cos, chunk_texts,
+                       cand_chunks)
+
+    cands: list[dict] = list(pool) + list(beam)
+    seen = {_ws_norm(c["text"]) for c in cands}
+    for d in direct:
+        key = _ws_norm(d["text"])
+        if key not in seen:
+            seen.add(key)
+            cands.append(dict(d, via="direct",
+                              kind="sentence"))
+    arms = ["sentences"]
+    if pool:
+        arms.append("graph-pool")
+    if beam:
+        arms.append("beam")
+    base = {"query": query, "store": store.describe(),
+            "arms": arms, "notes": notes,
+            "entities": store.find_entities(query, limit=5),
+            "triples": ranked_triples[:int(k)]}
+    if not cands:
+        return {**base, "units": [], "documents": []}
+
+    # two-layer score + Z2 merge
+    for c in cands:
+        cid = c["chunk_id"]
+        if cid and cid not in chunk_cos:
+            chunk_cos[cid] = chunk_cos_of(cid)
+    zpop = list(chunk_cos)
+    sent_cos: list[float] = []
+    for c in cands:
+        if "_cos" in c:
+            sent_cos.append(c["_cos"])
+        else:
+            i = sent_by_key.get(_ws_norm(c["text"]))
+            if i is not None:
+                sent_cos.append(float(sims[int(i)]))
+            else:
+                sent_cos.append(_cosine(
+                    qvec, embedder.embed([c["text"]])[0]))
+    z_sent = _zscores(sent_cos)
+    z_chunk = dict(zip(zpop, _zscores(
+        [chunk_cos[cid] for cid in zpop]), strict=True))
+    for c, zs in zip(cands, z_sent, strict=True):
+        c["score"] = zs + z_chunk.get(c["chunk_id"], 0.0)
+    merged: list[dict] = [
+        {"kind": "sentence", "text": c["text"],
+         "doc_id": c["doc_id"], "chunk_id": c["chunk_id"],
+         "via": c["via"], "merge": 2.0 * c["score"]}
+        for c in cands]
+    merged += [
+        {"kind": "chunk", "text": c["text"],
+         "doc_id": c["doc_id"], "chunk_id": c["chunk_id"],
+         "via": "chunk",
+         "merge": z_chunk.get(c["chunk_id"], 0.0)}
+        for c in cand_chunks]
+    merged.sort(key=lambda u: -u["merge"])
+    head = merged[:_RERANK_POOL]
+
+    # rerank step: reorders the head; the fill reads the
+    # reranked order and nothing past the head.
+    rr = reranker
+    if rr is None:
+        from .reranker import try_reranker
+        rr = try_reranker()
+    if rr is False:
+        notes.append("rerank step off (disabled by the "
+                     "caller) — units fill in merge order")
+    elif rr is None:
+        notes.append(
+            "rerank step inactive: the local cross-encoder "
+            "(the `rerank` extra) is not installed — units "
+            "fill in merge order")
+    else:
+        scores = rr.score(query, [u["text"] for u in head])
+        for u, sc in zip(head, scores, strict=True):
+            u["merge"] = float(sc)
+        head.sort(key=lambda u: -u["merge"])
+
+    units = _fill_units(head, int(budget_tokens))
+    by_doc: dict[str, dict] = {}
+    for u in units:
+        d = by_doc.setdefault(
+            u["doc_id"], {"doc_id": u["doc_id"], "units": 0})
+        d["units"] += 1
+    return {**base, "units": units,
+            "documents": list(by_doc.values())}
 
 
 def try_embedder() -> object | None:
@@ -1037,16 +1649,31 @@ def render_results(result: dict) -> str:
         lines.append("Entities")
         for e in result["entities"]:
             lines.append(f"  - {e['name']}")
-    lines.append("Documents")
-    if result["documents"]:
-        for i, d in enumerate(result["documents"], 1):
-            lines.append(
-                f"  {i}. {d['doc_id']}  (score {d['score']})")
-            for c in d["chunks"][:2]:
-                excerpt = " ".join(c["text"].split())[:160]
+    if "units" in result:
+        # sentence serving: the budgeted evidence units,
+        # in fill order — what a reader actually receives
+        lines.append("Evidence units")
+        if result["units"]:
+            for i, u in enumerate(result["units"], 1):
+                lines.append(
+                    f"  {i}. [{u['via']}/{u['kind']}] "
+                    f"(score {u['score']}, {u['tokens']} "
+                    f"tokens, {u['doc_id']})")
+                excerpt = " ".join(u["text"].split())[:200]
                 lines.append(f"     {excerpt}")
+        else:
+            lines.append("  (no unit matched)")
     else:
-        lines.append("  (no chunk matched)")
+        lines.append("Documents")
+        if result["documents"]:
+            for i, d in enumerate(result["documents"], 1):
+                lines.append(
+                    f"  {i}. {d['doc_id']}  (score {d['score']})")
+                for c in d["chunks"][:2]:
+                    excerpt = " ".join(c["text"].split())[:160]
+                    lines.append(f"     {excerpt}")
+        else:
+            lines.append("  (no chunk matched)")
     lines.append("Triples")
     if result["triples"]:
         for t in result["triples"]:
@@ -1067,10 +1694,12 @@ def main(argv=None) -> int:
     [--embed] [--json]``."""
     ap = argparse.ArgumentParser(
         prog="ontosmith search",
-        description="Hybrid search over a built graph "
-                    ": lexical + vector + "
-                    "graph retrieval over the build's "
-                    "chunks and triples")
+        description="Search a built graph: sentence-"
+                    "level evidence serving by default "
+                    "(direct sentence index + graph pool "
+                    "+ beam traversal channel), with "
+                    "chunk-level hybrid search as the "
+                    "internal fallback")
     ap.add_argument("query", help="the search question")
     ap.add_argument("--source", default=None,
                     help="batch directory, records "
@@ -1107,8 +1736,20 @@ def main(argv=None) -> int:
             embedder = default_embedder()
         else:
             embedder = try_embedder()
-        result = hybrid_search(store, args.query, k=args.k,
-                               embedder=embedder)
+        try:
+            result = sentence_search(store, args.query,
+                                     k=args.k,
+                                     embedder=embedder)
+        except SentenceServingUnavailable as e:
+            # the named internal fallback: chunk serving
+            # still answers, and the result says so
+            result = hybrid_search(store, args.query,
+                                   k=args.k,
+                                   embedder=embedder)
+            result["notes"] = [
+                f"sentence serving unavailable ({e}); "
+                f"fell back to chunk-level hybrid search",
+                *result["notes"]]
     except (ValueError, connections.BindingKeyError) as e:
         print(f"search refused: {e}", file=sys.stderr)
         return 1

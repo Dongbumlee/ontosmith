@@ -80,6 +80,11 @@ neo4j = ["neo4j"]
 # retirement; the LLM proposer is the only source.)
 # Graph image / community-detection harness surface.
 viz = ["matplotlib", "networkx", "python-louvain"]
+# Local cross-encoder rerank for sentence serving
+# (pipeline/reranker.py): the serving rerank step runs
+# only when this extra is installed; without it the
+# step is inactive and results say so.
+rerank = ["sentence-transformers"]
 
 [project.scripts]
 ontosmith = "pipeline.__main__:main"

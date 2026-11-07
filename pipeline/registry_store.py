@@ -113,7 +113,10 @@ class RegistryStore:
     def tier2_index(self, batch_id: str) -> dict | None:
         """tier2_index.pkl → {embeddings (n, dims) ndarray, meta
         [{doc_id, chunk_idx, tag, tier, batch_id}], chunks [text],
-        model}. None when the batch has no INDEX output."""
+        sentences [{text, doc_id, chunk_id}], sentence_embeddings
+        (m, dims) ndarray, model}. The sentence keys are absent
+        on builds that predate the shipped sentence index.
+        None when the batch has no INDEX output."""
         p = self.batch_dir(batch_id) / "tier2_index.pkl"
         if not p.exists():
             return None

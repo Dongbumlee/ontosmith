@@ -67,6 +67,8 @@ class _InMemoryNeo4jClient(Neo4jClient):
         self.chunks: dict[str, dict] = {}
         self.documents: dict[str, dict] = {}
         self.has_chunk: set[tuple[str, str]] = set()
+        self.sentences: dict[str, dict] = {}
+        self.has_sentence: set[tuple[str, str]] = set()
         self.mentions: set[tuple[str, str]] = set()
         self.stamp: dict | None = None
 
@@ -150,6 +152,22 @@ class _InMemoryNeo4jClient(Neo4jClient):
                     "embedding": row["embedding"]}
                 self.has_chunk.add((row["doc_id"], row["chunk_id"]))
             return [{"row": [len(p["rows"])]}]
+        if "MERGE (s:Sentence {sentence_id: row.sentence_id})" in s:
+            n = 0
+            for row in p["rows"]:
+                if row["chunk_id"] not in self.chunks:
+                    continue
+                self.sentences[row["sentence_id"]] = {
+                    "doc_id": row["doc_id"],
+                    "chunk_id": row["chunk_id"],
+                    "text": row["text"],
+                    "batch_id": row["batch_id"],
+                    "corpus": row["corpus"],
+                    "embedding": row["embedding"]}
+                self.has_sentence.add(
+                    (row["chunk_id"], row["sentence_id"]))
+                n += 1
+            return [{"row": [n]}]
         if "MERGE (c)-[:MENTIONS]->(e)" in s:
             n = 0
             for row in p["rows"]:
@@ -180,6 +198,16 @@ class _InMemoryNeo4jClient(Neo4jClient):
                               if c not in dead}
             self.mentions = {(c, e) for c, e in self.mentions
                              if c not in dead}
+            return []
+        if "DETACH DELETE s" in s and "coalesce(s.batch_id" in s:
+            keep = p["keep"]
+            dead = {sid for sid, sv in self.sentences.items()
+                    if (sv["batch_id"] or "") != keep}
+            for sid in dead:
+                del self.sentences[sid]
+            self.has_sentence = {(c, sv) for c, sv in
+                                 self.has_sentence
+                                 if sv not in dead}
             return []
         if "DELETE d" in s and "HAS_CHUNK" in s:
             linked = {d for d, _ in self.has_chunk}
@@ -305,6 +333,19 @@ class _InMemoryNeo4jClient(Neo4jClient):
             return [{"row": [cid, c["doc_id"], c["idx"],
                              c["tier"], c["tag"], c["text"], sc]}
                     for sc, cid, c in scored[:p.get("k", 10)]]
+        if "RETURN s.text, s.doc_id, s.chunk_id" in s:
+            return [{"row": [sv["text"], sv["doc_id"],
+                             sv["chunk_id"], sv["embedding"]]}
+                    for sv in self.sentences.values()
+                    if sv["batch_id"] == p["batch"]]
+        if "RETURN c.chunk_id, c.doc_id, c.idx" in s:
+            items = [(cid, c) for cid, c in self.chunks.items()
+                     if c["batch_id"] == p["batch"]]
+            items.sort(key=lambda kv: (kv[1]["doc_id"],
+                                       kv[1]["idx"]))
+            return [{"row": [cid, c["doc_id"], c["idx"],
+                             c["text"]]}
+                    for cid, c in items]
         raise AssertionError(f"unhandled Cypher in fake: {s[:120]}")
 
     @staticmethod

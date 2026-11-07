@@ -234,7 +234,7 @@ to Neo4j over HTTP and needs the server, not the extra.)
 | Four domain packs + Core baseline | Domain ontologies as data — schema, definitions, boundary examples, thresholds, measured conformance record (below) |
 | Verification cores | `ontosmith verify` — raw *and* audit-corrected scoring, ceiling-adjusted recall, failure anatomy, counted cost projections |
 | Evidence appendix | The flagship record's adjudication samples and verdicts, shipped for replay (`benchmarks/appendix/`) |
-| Serving | Hybrid retrieval (vector + lexical + graph) via `ontosmith search` and a sample API — over the build's Neo4j store; the shipped demo's recorded artifacts also serve from files (lexical + graph arms only — no vector arm) |
+| Serving | Sentence-level evidence retrieval via `ontosmith search` (direct sentence index + graph pool + beam traversal channel, optional local rerank) and hybrid retrieval (vector + lexical + graph) via a sample API — over the build's Neo4j store; the shipped demo's recorded artifacts also serve from files (lexical + graph arms only — no vector arm) |
 | Demo + guide | A smoke corpus, a fetchable demo subset, and the hands-on guide that walks the whole loop in four tracks |
 
 ## Where do I start?
@@ -285,8 +285,11 @@ of each.
    tooling with the product: audit your own gold, score
    your own builds raw *and* corrected, with the failure
    anatomy attached.
-6. **Serve** — `ontosmith search` and the sample API
-   (`ontosmith serve`) answer hybrid retrieval
+6. **Serve** — `ontosmith search` answers with
+   sentence-level evidence (a direct sentence index,
+   the graph's evidence quotes, and a beam traversal
+   channel, filled under one token budget); the sample
+   API (`ontosmith serve`) answers hybrid retrieval
    (vector + lexical + graph) over chunks and triples.
    A build is served from its Neo4j store; the shipped
    demo's recorded artifacts also serve from files —
@@ -535,7 +538,7 @@ little before pinning it into a pack.
 | `ontology` | draft / validate / approve / emit a pack |
 | `identity-freeze` | freeze per-point identity-seat decisions into a global decisions file |
 | **Serve** | |
-| `search` | hybrid search over a built graph |
+| `search` | sentence-level evidence search over a built graph |
 | `serve` | sample HTTP API (search / entity / neighborhood / triple-with-evidence) + the demo app at / |
 | `quickstart` | first run: build a graph from one text file and serve it |
 

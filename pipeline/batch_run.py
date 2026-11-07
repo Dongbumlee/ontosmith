@@ -26,6 +26,7 @@ from .batch import (
     write_manifest,
 )
 from .heartbeat import beat as _heartbeat_beat
+from .sentence_index import build_sentence_rows
 
 
 def _log(batch_id: str, msg: str) -> None:
@@ -2403,6 +2404,11 @@ def stage_index(b: Batch, root: Path, stages: list[str],
 
     The chunk universe is the whole build (every document,
     tagged by its best routed tier) — see _chunk_documents.
+    The artifact also carries the build's sentence index:
+    every sentence of every chunk (the measured sentence
+    universe, see pipeline/sentence_index.py), embedded
+    with the same embedder — sentence serving's direct
+    arm reads it at query time instead of re-deriving it.
     The artifact keeps its historical name
     (tier2_index.pkl): stored batches and the serving
     readers resolve it by that name; its scope is no longer
@@ -2444,13 +2450,18 @@ def stage_index(b: Batch, root: Path, stages: list[str],
         return
     embedder = _index_embedder(b.config.embed_model)
     embs = embedder.embed(chunks)
+    sent_rows = build_sentence_rows(chunks, meta)
+    sent_embs = embedder.embed([r["text"] for r in sent_rows])
     with open(d / "tier2_index.pkl", "wb") as f:
         pickle.dump({"embeddings": embs, "meta": meta,
                      "chunks": chunks,
+                     "sentences": sent_rows,
+                     "sentence_embeddings": sent_embs,
                      "model": b.config.embed_model}, f)
     emb_usage = embedder.usage
     n_docs = len({m["doc_id"] for m in meta})
     b.metrics["index"] = {"chunks": len(chunks),
+                         "sentences": len(sent_rows),
                          "documents": n_docs,
                          "documents_total": len(texts),
                          "dims": int(embs.shape[1]),
@@ -2466,6 +2477,8 @@ def stage_index(b: Batch, root: Path, stages: list[str],
         if serving["projected"] is not None:
             b.metrics["index"]["store_chunks_projected"] = \
                 serving["projected"]["chunks"]
+            b.metrics["index"]["store_sentences_projected"] = \
+                serving["projected"].get("sentences", 0)
         _log(b.batch_id,
              f"INDEX: serving schema ensured; "
              f"{serving['chunks']} chunks in store for this "

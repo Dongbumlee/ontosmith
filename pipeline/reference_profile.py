@@ -83,6 +83,12 @@ ESCALATION_MODEL = "anthropic/claude-sonnet-5.5"
 EMBED_MODEL = "openai/text-embedding-3-large"
 #: Output dimensionality of EMBED_MODEL (index schema constant).
 EMBED_DIMS = 3072
+#: Rerank binding for sentence serving: a LOCAL cross-encoder
+#: (no provider seat — it runs in-process when the optional
+#: ``rerank`` extra is installed). The measured occupant of
+#: the rerank step in the serving measurements; like the
+#: other bindings here it changes only with a re-measurement.
+RERANK_MODEL = "BAAI/bge-reranker-base"
 #: NER binding for the pipeline candidate path.
 NER_MODEL = "urchade/gliner_medium-v2.1"
 
