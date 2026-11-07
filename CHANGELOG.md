@@ -7,6 +7,51 @@ and the project adheres to
 
 ## [Unreleased]
 
+### Added
+
+- **Sentence-level evidence serving is the `search`
+  default** — the INDEX stage now ships a sentence
+  index with every build: every sentence of every
+  chunk, split and deduplicated by the measured
+  sentence-universe definition and embedded with the
+  build's own embedder, stored beside the chunk index
+  (and projected as `(:Sentence)` nodes in the Neo4j
+  store). `ontosmith search` serves from it by
+  default: a direct channel (the index's closest
+  sentences), the graph pool (sentences carrying the
+  top triples' evidence quotes), and a beam channel —
+  a pruned two-hop traversal from the question's
+  linked entities (top 8 triples per frontier entity,
+  at most 24 per hop, at most 16 quote units) — scored
+  in two layers, merged into one ranked list, and
+  filled as whole units under a 4,000-token budget.
+  Builds that predate the shipped index get the same
+  universe built at query time, with the result
+  naming that it did. When sentence serving cannot
+  run — no embedder bound, or a store serving no
+  sentence index — the command falls back to
+  chunk-level hybrid search and names the fallback in
+  the result; the library raises
+  `SentenceServingUnavailable` instead.
+- **Optional rerank step for sentence serving** —
+  with the new `rerank` extra installed
+  (`pip install ontosmith[rerank]`), the merged head
+  is reordered by a local cross-encoder
+  (BAAI/bge-reranker-base, loaded on the machine, no
+  API call) before the fill. Without the extra the
+  step is inactive and the result says so; library
+  callers can inject their own reranker object or
+  disable the step.
+
+### Changed
+
+- The hybrid search's per-triple graph ranking now
+  lives in one shared helper used by both the hybrid
+  form and the sentence-serving pool (the inline copy
+  inside `hybrid_search` was removed). The sample
+  API's contract is unchanged: it serves the hybrid
+  form, as before.
+
 ## [0.1.8] - 2026-11-06
 
 ### Added

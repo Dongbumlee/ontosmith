@@ -599,7 +599,7 @@ options:
 
 ## Serve
 
-### `ontosmith search` — Hybrid search over a built graph (chunks + triples)
+### `ontosmith search` — Sentence-level evidence search over a built graph
 
 `ontosmith search --help`:
 
@@ -608,8 +608,9 @@ usage: ontosmith search [-h] [--source SOURCE] [--batch BATCH]
                         [--store {auto,file,neo4j}] [--k K] [--embed] [--json]
                         query
 
-Hybrid search over a built graph : lexical + vector + graph retrieval over the
-build's chunks and triples
+Search a built graph: sentence-level evidence serving by default (direct
+sentence index + graph pool + beam traversal channel), with chunk-level hybrid
+search as the internal fallback
 
 positional arguments:
   query                 the search question
@@ -639,8 +640,9 @@ usage: ontosmith search [-h] [--source SOURCE] [--batch BATCH]
                         [--store {auto,file,neo4j}] [--k K] [--embed] [--json]
                         query
 
-Hybrid search over a built graph : lexical + vector + graph retrieval over the
-build's chunks and triples
+Search a built graph: sentence-level evidence serving by default (direct
+sentence index + graph pool + beam traversal channel), with chunk-level hybrid
+search as the internal fallback
 
 positional arguments:
   query                 the search question
@@ -670,8 +672,9 @@ usage: ontosmith search [-h] [--source SOURCE] [--batch BATCH]
                         [--store {auto,file,neo4j}] [--k K] [--embed] [--json]
                         query
 
-Hybrid search over a built graph : lexical + vector + graph retrieval over the
-build's chunks and triples
+Search a built graph: sentence-level evidence serving by default (direct
+sentence index + graph pool + beam traversal channel), with chunk-level hybrid
+search as the internal fallback
 
 positional arguments:
   query                 the search question
@@ -701,8 +704,9 @@ usage: ontosmith search [-h] [--source SOURCE] [--batch BATCH]
                         [--store {auto,file,neo4j}] [--k K] [--embed] [--json]
                         query
 
-Hybrid search over a built graph : lexical + vector + graph retrieval over the
-build's chunks and triples
+Search a built graph: sentence-level evidence serving by default (direct
+sentence index + graph pool + beam traversal channel), with chunk-level hybrid
+search as the internal fallback
 
 positional arguments:
   query                 the search question

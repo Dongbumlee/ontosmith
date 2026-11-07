@@ -47,6 +47,7 @@ $ python -m pipeline search "What is Mr. Darcy's income?"
 Search  "What is Mr. Darcy's income?"
   store   file · …/examples (737 triples, 4 documents)
   arms    lexical · graph
+  note    sentence serving unavailable (sentence serving needs an embedder: …); fell back to chunk-level hybrid search
 Entities
   - Miss Darcy
   - Mr. Darcy
@@ -63,7 +64,29 @@ Triples
 corpus files, which share the examples directory, as
 its documents; the demo's own text is not shipped —
 see the note at the top. The triple list is trimmed
-here; the command prints it in full.)
+here; the command prints it in full. The note line
+is the fallback being named: this keyless run binds
+no embedder, so the default sentence-level serving
+cannot run and the chunk-level form answers instead —
+see below.)
+
+By default the search serves **sentence-level
+evidence**. The build's INDEX stage ships a sentence
+index — every sentence of every chunk, embedded with
+the build's embedder — and three channels draw from
+the store: the **direct** channel (the index's closest
+sentences to the question), the **graph pool** (the
+sentences carrying the top triples' evidence quotes),
+and a **beam channel** — a pruned two-hop traversal
+from the question's linked entities that adds its
+quote sentences as a protected side path. Candidates
+are scored in two layers (sentence similarity, then
+owning-chunk similarity), merged into one ranked
+list, reordered by a local cross-encoder rerank when
+the `rerank` extra is installed, and filled as whole
+units under a 4,000-token budget. A build that
+predates the shipped index gets the same sentence
+universe built at query time, with a note saying so.
 
 What a search returns, in order:
 
@@ -71,18 +94,29 @@ What a search returns, in order:
   to graph entities deterministically (exact,
   token-set, then substring match over canonical
   names and registry aliases — no model call).
-- **Documents** — the hybrid ranking: a lexical
-  (full-text) arm and, when the store carries
-  embeddings, a vector arm, fused per document with
-  reciprocal-rank fusion — the same definitions the
-  evaluation harness (`harness/`) measures.
+- **Evidence units** — the budgeted fill, in order:
+  each unit is one sentence (or one chunk) with the
+  channel that brought it in (`direct` / `graph` /
+  `beam` / `chunk`), its score, and its token cost.
+  This is what a reader actually receives.
 - **Triples** — the graph arm: accepted triples whose
   subject/relation/object overlap the question,
   ranked by overlap weighted with each triple's
   judged probability, each with its evidence quote
   and source document.
-- **Graph documents** (in `--json`) — the documents
-  behind those triples, ranked the same way.
+
+When sentence serving cannot run — no embedder can
+be bound, or the store serves no sentence index —
+the command falls back to chunk-level hybrid search
+and the result names the fallback in its notes (the
+card above). That form returns **Documents** instead
+of evidence units: the hybrid ranking — a lexical
+(full-text) arm and, when the store carries
+embeddings, a vector arm, fused per document with
+reciprocal-rank fusion, the same definitions the
+evaluation harness (`harness/`) measures — plus, in
+`--json`, **graph documents**: the documents behind
+the ranked triples, ordered the same way.
 
 The card names the arms that actually ran
 (`arms    lexical · graph` above). An arm that
@@ -173,10 +207,18 @@ result["triples"][0]["relation"]        # 'estate_has_income_of'
 result["graph_documents"][0]            # 'ch-14'
 ```
 
+`hybrid_search` is the chunk-level form — the one the
+sample API serves. The CLI's default path is the
+library's `sentence_search` (same store contract; an
+embedder is required, and a store that serves no
+sentence index refuses by name —
+`SentenceServingUnavailable` — rather than degrading
+silently).
+
 An embedder (the connections layer's embedding seat)
 is used only when the store actually carries chunk
-embeddings — the search never spends an embedding
-call a store cannot answer from.
+embeddings — the hybrid search never spends an
+embedding call a store cannot answer from.
 
 ## The sample API: `ontosmith serve`
 
@@ -238,8 +280,9 @@ $ curl -s -o /dev/null -w "%{http_code} %{content_type}\n" http://127.0.0.1:8765
 
 What it does, and only this:
 
-- **Search box.** The same hybrid search as the CLI,
-  organized the way the CLI's card is: linked
+- **Search box.** The sample API's hybrid search —
+  the chunk-level form the CLI falls back to —
+  organized the way the API's result is: linked
   entities, ranked documents, evidence-carrying
   triples — with the arms that ran named at the top
   and every skipped-arm note printed verbatim,
