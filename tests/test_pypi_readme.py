@@ -68,9 +68,9 @@ BADGE_IMAGE_URLS = {
 # wherever the reader is (GitHub or PyPI), the films
 # live at these URLs, not under the repo base.
 EXTERNAL_LINK_URLS = {
-    "https://www.youtube.com/watch?v=9ZLRsAkoGCU",
-    "https://www.youtube.com/watch?v=2MGCl3e04_E",
-    "https://www.youtube.com/watch?v=GxZW2cgKKM4",
+    "https://www.youtube.com/watch?v=rqmRABJTFk0",
+    "https://www.youtube.com/watch?v=un5ZtFq9ieQ",
+    "https://www.youtube.com/watch?v=7vxcUyiZjTY",
     "https://dongbumlee.github.io/ontosmith/#watch",
 }
 
