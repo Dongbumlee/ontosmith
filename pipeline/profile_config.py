@@ -256,6 +256,25 @@ CONSUMED_KEYS: dict[str, str] = {
                     "proposer.entity_sweep_enabled / "
                     "proposer.propose_sweep_for_doc; absent "
                     "= off, byte-identical legacy path)",
+    "pair_probe_gate": "CANDIDATES probe gate: an additive "
+                       "pair channel inside the "
+                       "free-proposer branch — the gate "
+                       "builds the document's pair census "
+                       "over the free channel's own endpoints "
+                       "(the proposer roster), judges a "
+                       "random probe sample first, and runs "
+                       "the full census only when the "
+                       "probe's hit rate clears the policy "
+                       "floor (pipeline/probe_gate.py); pair "
+                       "records merge behind the free channel. "
+                       "Requires a declared relation "
+                       "inventory — an open-inventory profile "
+                       "leaves the gate inert (stage_candidates "
+                       "-> profile_config."
+                       "pair_probe_gate_enabled / "
+                       "pair_proposer.propose_pairs_subset; "
+                       "absent = off, byte-identical legacy "
+                       "path)",
     "slot_framing": "CANDIDATES clause-slot prompt opening line "
                     "(stage_candidates -> "
                     "proposer.propose_slots_for_doc)",
@@ -1669,6 +1688,27 @@ def entity_sweep_enabled(cfg: dict | None) -> bool:
         raise ValueError(
             f"entity_sweep must be a boolean, got {v!r} "
             "(fail closed)")
+    return v
+
+
+def pair_probe_gate_enabled(cfg: dict | None) -> bool:
+    """The family's probe-gate declaration: the additive
+    pair channel inside the free-proposer branch (the pair
+    census runs over the free channel's own endpoints and is
+    opened per document by a probe sample —
+    pipeline/probe_gate.py).
+
+    Absent = off: CANDIDATES is byte-identical to the
+    pre-gate behavior. A declared value must be a boolean —
+    anything else fails closed, like the other recipe
+    declarations."""
+    v = (cfg or {}).get("pair_probe_gate")
+    if v is None:
+        return False
+    if not isinstance(v, bool):
+        raise ValueError(
+            f"pair_probe_gate must be a boolean, got {v!r} "
+            f"(fail closed)")
     return v
 
 
