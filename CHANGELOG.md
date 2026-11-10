@@ -7,6 +7,20 @@ and the project adheres to
 
 ## [Unreleased]
 
+### Changed
+
+- **The complement pass is the free proposer's
+  default** — the residual pass (one final pass shown
+  the earlier draws' items per chunk, extracting only
+  what they do not cover) is now declared on in the
+  core baseline, so a pack-resolved run takes it
+  unless the pack declares `proposer_complement_draw`
+  false. The pair-enumeration path is unaffected: that
+  branch never runs the free proposer. Batches frozen
+  before this change keep their recorded configuration
+  — the default applies at resolution, not
+  retroactively.
+
 ## [0.1.9] - 2026-11-07
 
 ### Added

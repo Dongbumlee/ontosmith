@@ -21,7 +21,7 @@ from contextlib import redirect_stdout
 from pathlib import Path
 from unittest import mock
 
-from pipeline import batch_run, proposer
+from pipeline import batch_run, pair_proposer, proposer
 from pipeline.batch import Batch, BatchConfig, BatchStatus, batch_dir, save_batch
 from pipeline.profile_config import proposer_complement_draw, proposer_draw_framings
 
@@ -174,6 +174,73 @@ class TestDrawUnionAtStage(unittest.TestCase):
         prop = b.metrics["candidates"]["proposer"]
         self.assertEqual(prop["draws"], 3)
         self.assertEqual(prop["per_draw_proposed"], [1, 2, 1])
+
+
+class TestComplementInertUnderPairEnumeration(
+        unittest.TestCase):
+    """The core complement default reaches a
+    pair-enumeration pack's resolved config — and stops
+    there: the CANDIDATES pair branch replaces the free
+    proposer wholesale, so the complement pass (a
+    free-proposer pass) can never run under it. Pinned at
+    the stage: with pair_enumeration on and the complement
+    switch on, the free proposer is never called and the
+    pair census runs (here over a one-mention roster,
+    which enumerates no pairs and asks nothing)."""
+
+    def setUp(self):
+        self.root = Path(tempfile.mkdtemp())
+        self.addCleanup(shutil.rmtree, self.root, True)
+
+    def test_pair_branch_never_calls_free_proposer(self):
+        cfg = BatchConfig(max_cost_usd=None)
+        b = Batch(batch_id="pair-enum-complement",
+                  run_id="run-0001", source="src",
+                  collection="coll", doc_ids=["d1"],
+                  config=cfg, status=BatchStatus.NER_DONE,
+                  profile_family="pair-test")
+        d = batch_dir(self.root, b.batch_id)
+        d.mkdir(parents=True)
+        text = "Alpha founded Beta in 1901."
+        (d / "texts.jsonl").write_text(json.dumps(
+            {"doc_id": "d1", "text": text,
+             "source_path": "d1.txt"}) + "\n")
+        (d / "setup_config.resolved.json").write_text(
+            json.dumps({
+                "pair_enumeration": True,
+                "pair_window": "sentence",
+                "proposer_complement_draw": True}))
+        (d / "roster.jsonl").write_text(json.dumps(
+            {"doc_id": "d1",
+             "mentions": [{"surface": "Alpha",
+                           "type": "PER"}]}) + "\n")
+        save_batch(b, self.root)
+        out = io.StringIO()
+        with mock.patch.dict(
+                os.environ,
+                {"OPENROUTER_API_KEY": "stub-key"}), \
+                mock.patch.object(
+                    proposer, "propose_triples_for_doc",
+                    side_effect=AssertionError(
+                        "free proposer called under pair "
+                        "enumeration")), \
+                mock.patch.object(
+                    pair_proposer, "_chat",
+                    side_effect=AssertionError(
+                        "pair judge called with no "
+                        "enumerated pairs")), \
+                redirect_stdout(out):
+            batch_run.stage_candidates(
+                b, self.root, ["INGEST", "NER"])
+        pair_metrics = b.metrics["candidates"]["pair_enum"]
+        self.assertEqual(pair_metrics["enumerated"], 0)
+        prop = b.metrics["candidates"]["proposer"]
+        self.assertEqual(prop["proposed"], 0)
+        cands_path = d / "candidates.jsonl"
+        cands = ([json.loads(line) for line in
+                  open(cands_path)] if cands_path.exists()
+                 else [])
+        self.assertEqual(cands, [])
 
 
 if __name__ == "__main__":
