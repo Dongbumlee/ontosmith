@@ -7,6 +7,20 @@ and the project adheres to
 
 ## [Unreleased]
 
+### Changed
+
+- **Search results flag name-only graph matches** —
+  each returned triple now carries its query-overlap
+  decomposition (`name_overlap` / `term_overlap`).
+  Triples that matched on entity names alone are
+  tagged `name_only`, listed after term-matched
+  triples, and counted in the result's notes (when
+  none matched on terms, the note says the graph
+  arm returned mentions, not answers). Ranking is
+  unchanged; the MCP `search` tool surfaces the tag
+  and places name-only triples in a trailing
+  section.
+
 ### Added
 
 - **MCP server surface** — `ontosmith mcp` serves the

@@ -1022,6 +1022,56 @@ def _rank_triples(triples, query: str, k: int,
                                key=lambda kv: -kv[1])[:int(k)]]
 
 
+def _content_tokens(text: str) -> set[str]:
+    return {t for t in query_stack.tokenize(text)
+            if t not in query_stack.STOP
+            and query_stack.is_content_token(t)}
+
+
+def _tag_name_only(ranked: list[dict], query: str,
+                   entity_names) -> tuple[list[dict], int]:
+    """Decompose each displayed triple's query overlap
+    into the part carried by the linked entities' name
+    tokens (``name_overlap``) and the rest — relation
+    and value terms (``term_overlap``). A triple whose
+    overlap is names alone is a mention, not an answer
+    to the query's terms: it is tagged ``name_only``
+    and moved after every term-matched triple, each
+    side keeping its rank order. Returns the reordered
+    list and the name-only count. Ranking itself is
+    untouched — this shapes the display, and the pool
+    form (sentence serving) keeps the raw ranking."""
+    name_toks: set[str] = set()
+    for name in entity_names:
+        name_toks |= _content_tokens(name)
+    qtoks = _content_tokens(query)
+    substantive: list[dict] = []
+    name_only: list[dict] = []
+    for t in ranked:
+        overlap = qtoks & _content_tokens(
+            f"{t['subject']} {t['relation']} {t['object']}")
+        name_ov = len(overlap & name_toks)
+        term_ov = len(overlap) - name_ov
+        tagged = {**t, "name_overlap": name_ov,
+                  "term_overlap": term_ov,
+                  "name_only": term_ov == 0}
+        (name_only if tagged["name_only"]
+         else substantive).append(tagged)
+    return substantive + name_only, len(name_only)
+
+
+def _name_only_note(n_only: int, total: int) -> str:
+    if total and n_only == total:
+        return ("graph arm: no triple's relation or "
+                "value terms matched the query — the "
+                f"{total} triple(s) returned match on "
+                "entity names only (mentions, not "
+                "answers)")
+    return (f"graph arm: {n_only} of {total} triples "
+            "match on entity names only and are listed "
+            "after the term-matched triples")
+
+
 def _zscores(values: list[float]) -> list[float]:
     """Population z-scores; a constant input scores 0."""
     n = len(values)
@@ -1147,13 +1197,21 @@ def hybrid_search(store, query: str, k: int = 10,
         arms.append("graph")
     ranked_triples = _rank_triples(triples, query, k,
                                    token_sets=token_sets)
+    entities = store.find_entities(query, limit=5)
+    ranked_triples, n_only = _tag_name_only(
+        ranked_triples, query,
+        [n for e in entities
+         for n in [e["name"], *e.get("aliases", [])]])
+    if n_only:
+        notes.append(_name_only_note(
+            n_only, len(ranked_triples)))
 
     return {
         "query": query,
         "store": store.describe(),
         "arms": arms,
         "notes": notes,
-        "entities": store.find_entities(query, limit=5),
+        "entities": entities,
         "documents": documents,
         "graph_documents": graph_docs[:int(k)],
         "triples": ranked_triples,
@@ -1538,10 +1596,15 @@ def sentence_search(store, query: str, k: int = 10,
         arms.append("graph-pool")
     if beam:
         arms.append("beam")
+    display_triples, n_only = _tag_name_only(
+        ranked_triples[:int(k)], query, linked)
+    if n_only:
+        notes.append(_name_only_note(
+            n_only, len(display_triples)))
     base = {"query": query, "store": store.describe(),
             "arms": arms, "notes": notes,
             "entities": store.find_entities(query, limit=5),
-            "triples": ranked_triples[:int(k)]}
+            "triples": display_triples}
     if not cands:
         return {**base, "units": [], "documents": []}
 

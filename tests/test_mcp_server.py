@@ -177,6 +177,29 @@ class _FakeEmbedder:
         return out
 
 
+def test_search_name_only_mentions_are_flagged(service):
+    # No income fact exists for Elizabeth: every
+    # returned triple matched her name alone. The
+    # envelope must flag them and say so in notes —
+    # an agent must not read mentions as answers.
+    out = service.search(
+        "What is Elizabeth Bennet's income?")
+    triples = [i for i in out["items"]
+               if i["kind"] == "triple"]
+    assert triples
+    assert all(i.get("name_only") for i in triples)
+    assert any("mentions, not answers" in n
+               for n in out.get("notes", []))
+
+
+def test_search_term_matched_triples_unflagged(service):
+    out = service.search("What is Mr. Darcy's income?")
+    triples = [i for i in out["items"]
+               if i["kind"] == "triple"]
+    assert triples
+    assert not any(i.get("name_only") for i in triples)
+
+
 def test_search_sentence_form_when_embedder_bound():
     store = _search.open_store(store="file")
     svc = mcp_server.McpService(

@@ -107,7 +107,14 @@ What a search returns, in order:
   subject/relation/object overlap the question,
   ranked by overlap weighted with each triple's
   judged probability, each with its evidence quote
-  and source document.
+  and source document. A triple whose overlap is
+  only the linked entities' names — no relation or
+  value term of the question matched — is tagged
+  `name_only` and listed after the term-matched
+  triples: a mention, not an answer. When any are
+  present, the result's notes say how many and, if
+  all of them are name-only, that no triple's
+  relation or value terms matched at all.
 
 When sentence serving cannot run — no embedder can
 be bound, or the store serves no sentence index —
