@@ -223,8 +223,14 @@ CONSUMED_KEYS: dict[str, str] = {
                               "what they do not cover "
                               "(stage_candidates -> "
                               "proposer.propose_triples_for_doc "
-                              "prior; absent/false = no "
-                              "complement pass)",
+                              "prior; the core baseline "
+                              "declares it on, so a resolved "
+                              "config runs the pass unless the "
+                              "pack declares it false; absent "
+                              "from a bare config = no "
+                              "complement pass. The "
+                              "pair-enumeration branch does "
+                              "not consume this switch)",
     "mention_layer": "CANDIDATES->GATES mention layer "
                      "(issue #54): the free proposer emits "
                      "per-endpoint mention spans + types + "
@@ -1615,8 +1621,12 @@ def proposer_complement_draw(cfg: dict | None) -> bool:
     cover. The pass is domain-neutral by construction —
     its narrowing block is generated from the document's
     own extraction state, never from a content category.
-    Absent = False. A declared value must be a boolean —
-    anything else fails closed."""
+    Absent = False — the bare-config reading; the core
+    pack baseline declares the switch on, so every
+    pack-resolved config carries the declaration and a
+    pack's explicit false is the opt-out. A declared
+    value must be a boolean — anything else fails
+    closed."""
     v = (cfg or {}).get("proposer_complement_draw")
     if v is None:
         return False

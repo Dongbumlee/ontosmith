@@ -75,7 +75,7 @@ class TestCorePackContract(unittest.TestCase):
         self.assertEqual(rec["pack_id"], "core")
         ids = [e["id"] for e in rec["entries"]]
         self.assertEqual(ids, ["GC-1", "GC-2", "GC-3", "GC-4",
-                               "GC-5"])
+                               "GC-5", "GC-6"])
         for e in rec["entries"]:
             for field in ("content", "treatment", "baseline",
                           "population", "instrument", "delta",
@@ -145,6 +145,17 @@ class TestCoreDefaults(unittest.TestCase):
         # decisions file instead.
         self.assertIs(self.cfg["identity_seat_live"], True)
 
+    def test_complement_draw_on_by_default(self):
+        # The complement pass is the free proposer's
+        # residual pass, promoted to a core default after
+        # the 2026-11-09 promotion gate measured it on the
+        # domain-pack slices: the baseline declares it on.
+        # A domain pack may declare it false on measured
+        # regression evidence — that declaration governs
+        # (TestComplementResolutionStaged).
+        self.assertIs(self.cfg["proposer_complement_draw"],
+                      True)
+
     def test_jf1_not_activated_without_inventory(self):
         # JF-F1 is an adopted core mechanism, but its symmetric
         # set is domain-pack data: the core payload declares
@@ -203,6 +214,29 @@ class TestResolution(unittest.TestCase):
         # Its run-specific cost cap overrides the baseline's.
         self.assertEqual(cfg["batch_cost_cap_usd"], 2.0)
 
+    def test_complement_default_inherited_by_domain_packs(self):
+        # Neither pack declares the complement switch:
+        # the core default governs both resolutions.
+        for pack in ("legal-contract", "fibo-contracts"):
+            cfg = resolve_setup_config(ROOT, ROOT / "packs"
+                                       / pack)
+            self.assertIs(cfg["proposer_complement_draw"],
+                          True, pack)
+
+    def test_pair_enumeration_pack_inherits_complement_inert(
+            self):
+        # Bio Medical resolves with the core complement
+        # default present in the merged config — and the
+        # declaration is inert there: the pack selects the
+        # pair-enumeration branch, which never consumes the
+        # switch (the stage-level proof is
+        # tests/test_multi_draw.py
+        # TestComplementInertUnderPairEnumeration).
+        cfg = resolve_setup_config(ROOT, ROOT / "packs"
+                                   / "bio-medical")
+        self.assertTrue(cfg["pair_enumeration"])
+        self.assertIs(cfg["proposer_complement_draw"], True)
+
 
 class TestFailClosed(unittest.TestCase):
     def _stage_tree(self, tmp: Path) -> Path:
@@ -257,6 +291,111 @@ class TestFailClosed(unittest.TestCase):
                 resolve_setup_config(root, bad)
             self.assertIn("pair_judge_symmetric_source",
                           str(cm.exception))
+
+
+# Sentinel for _stage below: drop the key from the staged
+# core payload instead of setting it.
+_DROP = object()
+
+
+class TestComplementResolutionStaged(unittest.TestCase):
+    """The complement default's resolution semantics, on a
+    staged tree. The staged core copy is re-pinned to its
+    own bytes so the staged tree is self-consistent
+    whatever the in-tree pack's version state — these
+    tests price the RESOLUTION rules (core default,
+    declared-governs, explicit opt-out), never the
+    in-tree pin (TestCorePackContract prices that)."""
+
+    def _stage(self, tmp: Path, *, core_overrides=None,
+               pack_payload=None) -> Path:
+        root = tmp / "root"
+        core_dir = root / "packs" / "core"
+        shutil.copytree(CORE, core_dir)
+        payload_path = (core_dir / "profile"
+                        / "setup_config.json")
+        if core_overrides:
+            data = json.loads(payload_path.read_text())
+            for key, value in core_overrides.items():
+                if value is _DROP:
+                    data.pop(key, None)
+                else:
+                    data[key] = value
+            payload_path.write_text(
+                json.dumps(data, indent=2) + "\n")
+        manifest = json.loads((core_dir / "pack.json")
+                              .read_text())
+        manifest["payload"]["sha256"] = hashlib.sha256(
+            payload_path.read_bytes()).hexdigest()
+        (core_dir / "pack.json").write_text(
+            json.dumps(manifest))
+        if pack_payload is not None:
+            pdir = root / "packs" / "staged-pack"
+            (pdir / "profile").mkdir(parents=True)
+            pbytes = json.dumps(pack_payload).encode()
+            (pdir / "profile" / "setup_config.json") \
+                .write_bytes(pbytes)
+            (pdir / "pack.json").write_text(json.dumps({
+                "pack_format": 1, "pack_id": "staged-pack",
+                "pack_version": "0.1.0",
+                "profile_family": pack_payload.get(
+                    "family", "staged"),
+                "status": "in_force",
+                "display_name": "Staged Pack",
+                "assembled": "2026-11-09",
+                "conformance_record": "conformance.json",
+                "payload": {
+                    "kind": "setup_config",
+                    "path": "packs/staged-pack/profile/"
+                            "setup_config.json",
+                    "sha256": hashlib.sha256(
+                        pbytes).hexdigest(),
+                },
+            }))
+        return root
+
+    def test_core_default_reaches_undeclared_pack(self):
+        with tempfile.TemporaryDirectory() as td:
+            root = self._stage(
+                Path(td), pack_payload={"family": "staged"})
+            cfg = resolve_setup_config(
+                root, root / "packs" / "staged-pack")
+            self.assertIs(cfg["proposer_complement_draw"],
+                          True)
+
+    def test_explicit_off_overrides_core_default(self):
+        # The escape hatch: a pack declaring the switch
+        # false on measured regression evidence runs
+        # without the complement pass.
+        with tempfile.TemporaryDirectory() as td:
+            root = self._stage(
+                Path(td),
+                pack_payload={
+                    "family": "staged",
+                    "proposer_complement_draw": False})
+            cfg = resolve_setup_config(
+                root, root / "packs" / "staged-pack")
+            self.assertIs(cfg["proposer_complement_draw"],
+                          False)
+
+    def test_declared_on_pack_governs_core_default(self):
+        # Equivalence for packs that already declare the
+        # switch on (Open Domain's posture): their
+        # resolution does not depend on the core default
+        # at all — flipping the staged core default off
+        # leaves a declaring pack on.
+        with tempfile.TemporaryDirectory() as td:
+            root = self._stage(
+                Path(td),
+                core_overrides={
+                    "proposer_complement_draw": _DROP},
+                pack_payload={
+                    "family": "staged",
+                    "proposer_complement_draw": True})
+            cfg = resolve_setup_config(
+                root, root / "packs" / "staged-pack")
+            self.assertIs(cfg["proposer_complement_draw"],
+                          True)
 
 
 if __name__ == "__main__":

@@ -357,6 +357,11 @@ def stage_candidates(b: Batch, root: Path, stages: list[str]) -> None:
     # repeats cannot reach the systematic blind spots.
     draw_framings = [triple_framing,
                      *proposer_draw_framings(setup_cfg)]
+    # The complement pass's default lives in the core
+    # baseline payload (declared on there); a pack
+    # declaring it false opts out. Inert under pair
+    # enumeration — the draws run only in the free-proposer
+    # branch below.
     complement_on = proposer_complement_draw(setup_cfg)
     pass_count = len(draw_framings) + (1 if complement_on
                                        else 0)
