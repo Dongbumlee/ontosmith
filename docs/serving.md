@@ -333,8 +333,11 @@ example build.
 Five read-only tools, structured parameters only —
 no query language crosses the boundary:
 
-- `search` — hybrid retrieval: graph-arm triples
-  interleaved by rank with document-arm passages.
+- `search` — retrieval as the product serves it:
+  the sentence form (RAG sentence arm + graph pool
+  + beam) when an embedder is bound, else the
+  hybrid document form — the result's `arms` and
+  `notes` say which form answered.
 - `entity` — resolve a name to the canonical entity
   (ambiguity returns candidates, never a silent pick).
 - `neighborhood` — one entity's relations as triples.

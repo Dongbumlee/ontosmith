@@ -31,6 +31,7 @@ from __future__ import annotations
 import argparse
 import sys
 from collections import deque
+from typing import ClassVar
 
 from pipeline import mcp_envelope as env
 from pipeline import search as _search
@@ -150,12 +151,76 @@ class McpService:
 
     # -- tools ------------------------------------------
 
+    #: sentence_search unit ``via`` → the design's
+    #: arm enum (vector | graph | both). The unit also
+    #: keeps its product channel name in ``via``.
+    _VIA_ARM: ClassVar[dict[str, str]] = {
+        "direct": "vector", "chunk": "vector",
+        "graph": "graph", "beam": "graph"}
+
+    def _retrieve(self, query: str, k: int):
+        """Run the product's retrieval for ``search``:
+        (result dict, text-item specs). The sentence
+        form first when an embedder is bound; on its
+        named refusal, the hybrid document form, with
+        the refusal carried into the result's notes."""
+        if self.embedder is not None:
+            try:
+                res = _search.sentence_search(
+                    self.store, query, k=k,
+                    embedder=self.embedder)
+                specs = [{
+                    "kind": ("sentence"
+                             if u["kind"] == "sentence"
+                             else "text"),
+                    "text": u["text"],
+                    "doc_id": u["doc_id"],
+                    "score": round(u["merge"], 6),
+                    "arm": self._VIA_ARM[u["via"]],
+                    "via": u["via"],
+                } for u in res["units"]]
+                return res, specs
+            except _search.SentenceServingUnavailable \
+                    as e:
+                reason = str(e)
+            except ValueError as e:
+                raise McpToolError(str(e)) from e
+        else:
+            reason = "no embedder is bound"
+        try:
+            res = _search.hybrid_search(
+                self.store, query, k=k,
+                embedder=self.embedder)
+        except ValueError as e:
+            raise McpToolError(str(e)) from e
+        res["notes"] = [
+            *res["notes"],
+            f"sentence serving unavailable: {reason} "
+            "— served the hybrid document form"]
+        text_arm = ("vector" if "vector" in res["arms"]
+                    else "lexical")
+        specs = [{
+            "kind": "text",
+            "text": chunk["text"],
+            "doc_id": doc["doc_id"],
+            "score": doc["score"],
+            "arm": text_arm,
+        } for doc in res["documents"]
+            for chunk in doc["chunks"]]
+        return res, specs
+
     def search(self, query: str, k: int = 8,
                max_tokens: int = 2000,
                cursor: str | None = None) -> dict:
-        """Hybrid retrieval: graph-arm triples (claims
-        with evidence) interleaved by rank with the
-        document arm's text evidence."""
+        """Retrieval over both arms, as the product
+        serves it: the sentence form (RAG: direct
+        sentence arm + graph pool + beam, Z2-merged)
+        when an embedder is bound and the store can
+        serve it, with the ranked triples claim-bound
+        alongside; otherwise the hybrid document form.
+        The result's ``arms`` and ``notes`` always say
+        which form answered — a fallback is reported,
+        never silent."""
         if not (query or "").strip():
             raise McpToolError(
                 "parameter query must be a non-empty "
@@ -165,12 +230,7 @@ class McpService:
         max_tokens = _check_int(
             "max_tokens", max_tokens, 200, 20000)
         offset = env.decode_cursor(cursor)
-        try:
-            res = _search.hybrid_search(
-                self.store, query, k=k,
-                embedder=self.embedder)
-        except ValueError as e:
-            raise McpToolError(str(e)) from e
+        res, text_items_spec = self._retrieve(query, k)
         builder = env.EnvelopeBuilder()
         triple_items: list[dict] = []
         for rec in res["triples"]:
@@ -180,19 +240,19 @@ class McpService:
                 key, builder, score=rec.get("score"),
                 arm="graph"))
         text_items: list[dict] = []
-        text_arm = ("vector" if "vector" in res["arms"]
-                    else "lexical")
-        for doc in res["documents"]:
-            for chunk in doc["chunks"]:
-                ref = builder.doc_ref(doc["doc_id"])
-                text_items.append({
-                    "kind": "text",
-                    "text": chunk["text"],
-                    "doc": ref,
-                    "cite": builder.cite_key(ref),
-                    "score": doc["score"],
-                    "arm": text_arm,
-                })
+        for spec in text_items_spec:
+            ref = builder.doc_ref(spec["doc_id"])
+            item = {
+                "kind": spec["kind"],
+                "text": spec["text"],
+                "doc": ref,
+                "cite": builder.cite_key(ref),
+                "score": spec["score"],
+                "arm": spec["arm"],
+            }
+            if spec.get("via"):
+                item["via"] = spec["via"]
+            text_items.append(item)
         # Cross-arm dedup (design §7): a chunk whose
         # text carries a returned triple's evidence
         # sentence is the same evidence — the triple

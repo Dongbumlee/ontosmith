@@ -158,6 +158,41 @@ def test_search_envelope_and_arms(service):
         assert item["evidence"]
 
 
+class _FakeEmbedder:
+    """Deterministic bag-of-words embedder: enough
+    for the sentence form to run end to end with no
+    API key and no spend."""
+
+    DIM = 256
+
+    def embed(self, texts):
+        import numpy as np
+        out = []
+        for text in texts:
+            vec = np.zeros(self.DIM)
+            for tok in text.lower().split():
+                vec[hash(tok) % self.DIM] += 1.0
+            norm = float(np.linalg.norm(vec)) or 1.0
+            out.append(vec / norm)
+        return out
+
+
+def test_search_sentence_form_when_embedder_bound():
+    store = _search.open_store(store="file")
+    svc = mcp_server.McpService(
+        store, embedder=_FakeEmbedder())
+    out = svc.search("ceramics studio founded")
+    assert "sentences" in out["arms"]
+    assert not any("hybrid document form" in n
+                   for n in out.get("notes", []))
+    units = [i for i in out["items"]
+             if i["kind"] in ("sentence", "text")]
+    assert units
+    assert all("via" in u for u in units)
+    assert {u["arm"] for u in units} <= {
+        "vector", "graph", "both"}
+
+
 def test_budget_cursor_resumes(service):
     first = service.neighborhood(
         "Jane Bennet", depth=2, limit=100,
