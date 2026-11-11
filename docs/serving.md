@@ -1,10 +1,11 @@
 # Serving: search and the sample API
 
 A built graph is only useful if you can ask it
-questions. OntoSmith serves one through two faces of
+questions. OntoSmith serves one through three faces of
 the same surface — a `search` command (and its library
-form) and a small sample HTTP API — plus a minimal
-demo app over that API, the test-by-using surface.
+form), a small sample HTTP API, and an MCP server for
+AI callers — plus a minimal demo app over that API,
+the test-by-using surface.
 A build's graph lives in **Neo4j** (the graph store —
 [connections.md](connections.md)), and serving a build
 reads it from there.
@@ -318,6 +319,41 @@ An embedded rendered
 explorer belongs to the fuller app (v1.1); on the
 file store, the walker above is the exploration
 path. The app is read-only, like the API under it.
+
+## The MCP surface: `ontosmith mcp`
+
+The graph's consumer is often an AI agent, so the
+same serving stack is also exposed over the Model
+Context Protocol (stdio transport; the `mcp` extra —
+`pip install "ontosmith[mcp]"`). The store binding is
+the serve surface's (`--source` / `--batch` /
+`--store`); with no source it serves the shipped
+example build.
+
+Five read-only tools, structured parameters only —
+no query language crosses the boundary:
+
+- `search` — hybrid retrieval: graph-arm triples
+  interleaved by rank with document-arm passages.
+- `entity` — resolve a name to the canonical entity
+  (ambiguity returns candidates, never a silent pick).
+- `neighborhood` — one entity's relations as triples.
+- `connect` — shortest evidence-backed paths between
+  two entities.
+- `triple` — audit one triple: full evidence set and
+  provenance chain.
+
+Every tool returns one envelope: source documents
+hoisted into a `docs` map and referenced by short
+ids, items that bind each claim to its evidence
+sentences with citation keys (`d1:s3`) the caller can
+cite back, a hard token budget whose truncation is
+always signalled with a resume cursor, and honest
+totals. Conflicting triples are returned flagged on
+both sides; derived facts are marked derived. There
+is deliberately no `ask` tool — the caller's model
+composes the answer from returned evidence, which
+keeps the surface honest and model-agnostic.
 
 ## What serving does *not* do
 

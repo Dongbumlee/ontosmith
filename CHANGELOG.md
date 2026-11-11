@@ -7,6 +7,22 @@ and the project adheres to
 
 ## [Unreleased]
 
+### Added
+
+- **MCP server surface** — `ontosmith mcp` serves the
+  built graph to AI callers over the Model Context
+  Protocol (stdio; new `mcp` extra). Five read-only
+  tools — `search`, `entity`, `neighborhood`,
+  `connect`, `triple` — over the same store binding
+  as `serve`. Every tool returns one envelope:
+  source documents hoisted and referenced by short
+  ids, claim–evidence items with citation keys, a
+  hard token budget with signalled truncation and a
+  resume cursor, conflicts flagged on both sides
+  rather than resolved. No `ask` tool and no query
+  language: the caller's model composes answers from
+  the returned evidence.
+
 ## [0.1.10] - 2026-11-10
 
 ### Added

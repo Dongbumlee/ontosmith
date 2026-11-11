@@ -57,6 +57,10 @@ COMMANDS: dict[str, tuple[str, str, str, tuple[str, ...]]] = {
     "serve": ("api.server", "Serve",
               "Sample API server: search / entity / "
               "neighborhood / triple endpoints", ()),
+    "mcp": ("pipeline.mcp_server", "Serve",
+            "MCP server for AI callers: search / entity "
+            "/ neighborhood / connect / triple "
+            "(read-only)", ()),
     "quickstart": ("pipeline.quickstart", "Serve",
                    "First run: build a graph from one text "
                    "file and serve it", ()),
