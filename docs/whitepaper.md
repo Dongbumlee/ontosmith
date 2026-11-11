@@ -426,22 +426,20 @@ published.
 
 ### 4.3 Serving
 
-The **registry is the source of truth**; the graph in
-**Neo4j** is a rebuildable projection of it (traversal,
-native vector index, Lucene full-text). Retrieval is
-sentence-level by default: every sentence of the corpus
-is indexed directly at build time, a query pools the
-direct index's top results with units the graph reaches
-(traversal, plus a beam channel out from linked
-entities), and a rerank pass orders the merged pool;
-every unit carries the channel that served it. The older
-chunk-level hybrid retrieval (vector + lexical + graph
-over chunks) remains underneath as a fallback for builds
-whose sentence index cannot be served, and says so in
-its results when it serves. This separation is deliberate: the store can be
-rebuilt, replaced, or re-projected without touching the
-evidence-bearing record, and every served triple can be
-inspected back to its evidence span and provenance chain.
+The **registry is the source of truth**; the graph in **Neo4j** is
+a rebuildable projection of it (traversal, native vector index,
+Lucene full-text). Retrieval is sentence-level by default: every
+sentence of the corpus is indexed directly at build time, a query
+pools the direct index's top results with units the graph reaches
+(traversal, plus a beam channel out from linked entities), and a
+rerank pass orders the merged pool; every unit carries the channel
+that served it. The older chunk-level hybrid retrieval (vector +
+lexical + graph over chunks) remains underneath as a fallback for
+builds whose sentence index cannot be served, and says so in its
+results when it serves. This separation is deliberate: the store
+can be rebuilt, replaced, or re-projected without touching the
+evidence-bearing record, and every served triple can be inspected
+back to its evidence span and provenance chain.
 
 The same-QA comparison the product cares about — graph +
 hybrid vs. plain hybrid retrieval — is measured, with its
