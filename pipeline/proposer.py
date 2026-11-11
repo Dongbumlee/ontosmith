@@ -199,6 +199,24 @@ Rules:
 - quote: the SHORTEST verbatim phrase from the excerpt that states
   the fact (a clause, not a whole paragraph). Character-for-
   character; never paraphrase.
+- Endpoint surfaces: copy the name as the text itself writes
+  it where the fact is stated. Do not fuse a full name and
+  its abbreviation into one endpoint ("Full Name (ABBR)");
+  when the text uses both forms, propose each form as its
+  own item. Do not expand, shorten, or normalize a name.
+- One item states one fact. When a sentence states two
+  facts, emit two items; do not merge them into a single
+  combined item.
+- Also check where the document states facts in fixed
+  form — headings and preambles (who, when, where),
+  definition clauses, tables and lists (items, quantities,
+  amounts), and signature blocks (names, titles) — and
+  propose those facts too, not only the ones the narrative
+  sentences carry.
+- Before finishing the excerpt, scan it once more for
+  facts you passed over: duties, conditions, exceptions,
+  amounts, dates, and quantities stated anywhere in the
+  text are in scope, not only where a topic first appears.
 - Only facts the excerpt states. If none, return [].
 
 Excerpt:
@@ -250,6 +268,24 @@ Rules:
   the excerpt that names the entity the mention refers to
   (character-for-character; it may sit outside the quote).
   When the type is "named", use "".
+- Endpoint surfaces: copy the name as the text itself writes
+  it where the fact is stated. Do not fuse a full name and
+  its abbreviation into one endpoint ("Full Name (ABBR)");
+  when the text uses both forms, propose each form as its
+  own item. Do not expand, shorten, or normalize a name.
+- One item states one fact. When a sentence states two
+  facts, emit two items; do not merge them into a single
+  combined item.
+- Also check where the document states facts in fixed
+  form — headings and preambles (who, when, where),
+  definition clauses, tables and lists (items, quantities,
+  amounts), and signature blocks (names, titles) — and
+  propose those facts too, not only the ones the narrative
+  sentences carry.
+- Before finishing the excerpt, scan it once more for
+  facts you passed over: duties, conditions, exceptions,
+  amounts, dates, and quantities stated anywhere in the
+  text are in scope, not only where a topic first appears.
 - Only facts the excerpt states. If none, return [].
 
 Excerpt:
@@ -293,6 +329,24 @@ Rules:
   exact words from the excerpt it was derived from,
   character-for-character. When the endpoint appears in
   the excerpt as stated, use "".
+- Endpoint surfaces: copy the name as the text itself writes
+  it where the fact is stated. Do not fuse a full name and
+  its abbreviation into one endpoint ("Full Name (ABBR)");
+  when the text uses both forms, propose each form as its
+  own item. Do not expand, shorten, or normalize a name.
+- One item states one fact. When a sentence states two
+  facts, emit two items; do not merge them into a single
+  combined item.
+- Also check where the document states facts in fixed
+  form — headings and preambles (who, when, where),
+  definition clauses, tables and lists (items, quantities,
+  amounts), and signature blocks (names, titles) — and
+  propose those facts too, not only the ones the narrative
+  sentences carry.
+- Before finishing the excerpt, scan it once more for
+  facts you passed over: duties, conditions, exceptions,
+  amounts, dates, and quantities stated anywhere in the
+  text are in scope, not only where a topic first appears.
 - Only facts the excerpt states. If none, return [].
 
 Excerpt:
