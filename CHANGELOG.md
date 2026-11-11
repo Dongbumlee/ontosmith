@@ -7,6 +7,8 @@ and the project adheres to
 
 ## [Unreleased]
 
+## [0.1.10] - 2026-11-10
+
 ### Added
 
 - **Probe gate channel** — a profile may declare
@@ -38,6 +40,22 @@ and the project adheres to
   before this change keep their recorded configuration
   — the default applies at resolution, not
   retroactively.
+
+- **The proposer prompts carry one discipline set** —
+  all three triple-prompt templates now state the same
+  four genre-neutral rules: copy endpoint names exactly
+  as the text writes them (never fuse a full name and
+  its abbreviation into one endpoint, never expand or
+  normalize a name); one item states one fact; check
+  the fixed-form locations — headings and preambles,
+  definition clauses, tables and lists, signature
+  blocks — not only narrative sentences; and rescan
+  the excerpt once before finishing for passed-over
+  duties, conditions, exceptions, amounts, dates, and
+  quantities. Each rule answers a measured proposer
+  failure class (surface drift, merged facts,
+  unvisited fixed-form facts, coverage misses) and the
+  set was validated as a whole, not piecemeal.
 
 ## [0.1.9] - 2026-11-07
 
