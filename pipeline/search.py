@@ -1596,14 +1596,24 @@ def sentence_search(store, query: str, k: int = 10,
         arms.append("graph-pool")
     if beam:
         arms.append("beam")
+    # The name-only tag links names the way the
+    # hybrid form does — find_entities over names AND
+    # aliases — not by the beam channel's exact-span
+    # linking: a query that drops a title ("Elizabeth
+    # Bennet" for "Miss Elizabeth Bennet") must still
+    # tag name-only matches, or the flag silently
+    # clears on exactly the queries that need it.
+    entities = store.find_entities(query, limit=5)
     display_triples, n_only = _tag_name_only(
-        ranked_triples[:int(k)], query, linked)
+        ranked_triples[:int(k)], query,
+        [n for e in entities
+         for n in [e["name"], *e.get("aliases", [])]])
     if n_only:
         notes.append(_name_only_note(
             n_only, len(display_triples)))
     base = {"query": query, "store": store.describe(),
             "arms": arms, "notes": notes,
-            "entities": store.find_entities(query, limit=5),
+            "entities": entities,
             "triples": display_triples}
     if not cands:
         return {**base, "units": [], "documents": []}

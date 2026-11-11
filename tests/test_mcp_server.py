@@ -200,6 +200,24 @@ def test_search_term_matched_triples_unflagged(service):
     assert not any(i.get("name_only") for i in triples)
 
 
+def test_search_sentence_form_name_only_tagged():
+    # The query drops the title ("Elizabeth Bennet"
+    # for "Miss Elizabeth Bennet") — the name-only
+    # tag must still fire in the sentence form, via
+    # the alias-aware linker, not exact-span linking.
+    store = _search.open_store(store="file")
+    svc = mcp_server.McpService(
+        store, embedder=_FakeEmbedder())
+    out = svc.search(
+        "What is Elizabeth Bennet's income?")
+    triples = [i for i in out["items"]
+               if i["kind"] == "triple"]
+    assert triples
+    assert all(i.get("name_only") for i in triples)
+    assert any("mentions, not answers" in n
+               for n in out.get("notes", []))
+
+
 def test_search_sentence_form_when_embedder_bound():
     store = _search.open_store(store="file")
     svc = mcp_server.McpService(
