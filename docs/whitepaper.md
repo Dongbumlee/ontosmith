@@ -1106,7 +1106,10 @@ snapshot per batch, and says so.
   the user-facing surfaces on top of them — a search
   entry point, a sample API, and a minimal demo app —
   ship in v1 in deliberately small form; the fuller
-  application is a later release's work.
+  application is a later release's work. Release 0.2.0
+  adds an MCP server for AI callers to that list — five
+  read-only tools over the same retrieval, in the same
+  deliberately small form.
 - **The pack format is this project's own.** Packs are
   versioned JSON under a published format contract
   (PACK_DESIGN.md, `pack.schema.json`) — not an OWL, RDFS,
