@@ -10,8 +10,8 @@ a vector index, and full-text search in one store,
 which is why it was chosen (alternatives were reviewed
 and declined on exactly this point).
 
-Neither is optional
-for a build. Everything else is local. This page says
+Neither is optional for a build. Everything else is
+local. This page says
 which seats the LLM connection plugs into, how a
 binding is declared, which models we recommend for each
 seat (and why), how to set Neo4j up, and what runs with
@@ -32,9 +32,8 @@ your connection fills the seats:
 | **Embedder** | Indexing and question embedding for candidate search and retrieval | Embeddings endpoint |
 
 NER is not a seat: the batch NER stage is a contract
-stage that writes empty mention rows (the local
-GLiNER spotter was retired with the pipeline
-candidate source, 2026-10-29) and binds nothing.
+stage that writes empty mention rows and binds
+nothing.
 
 Domain packs (a domain's ontology as data) declare
 only these tiers. Model names,
@@ -87,8 +86,7 @@ fill a copy in and validate it with
 write the identical file, and the worked examples in
 the template are the canonical examples.
 
-Load the
-file into your environment
+Load the file into your environment
 (`set -a; . ./ontosmith-bindings.env; set +a`) and
 the declarations below take effect; setting the
 variables directly in the environment is the same
@@ -328,8 +326,7 @@ record was measured with:
 | Embedder | `openai/text-embedding-3-large` |
 
 NER is not a seat (see the seat table above): the
-local GLiNER spotter was retired on 2026-10-29, and
-the LLM proposer is the only candidate source.
+LLM proposer is the only candidate source.
 
 Two honest qualifiers:
 
@@ -511,14 +508,14 @@ Python driver is Apache 2.0.
 
 There is no local embedding fallback. Where an embedder
 is actually required — `search --embed`, `serve
---embed`, candidate search over a Neo4j registry, a
-build's INDEX stage — an embedder seat whose key is
-unset stops with the named `BindingKeyError` refusal
-(above), declared or not, rather than quietly embedding
-with a weaker local model: a local model was measured
-against the hosted embedder and missed candidates it
-catches, and the record was measured with the hosted
-one.
+--embed`, `mcp --embed`, candidate search over a
+Neo4j registry, a build's INDEX stage — an embedder
+seat whose key is unset stops with the named
+`BindingKeyError` refusal (above), declared or not,
+rather than quietly embedding with a weaker local
+model: a local model was measured against the hosted
+embedder and missed candidates it catches, and the
+record was measured with the hosted one.
 
 Surfaces that need no embedder — lexical + graph
 search without `--embed`, and everything under "What
@@ -542,6 +539,9 @@ exists:
 - `ontosmith batch create` — freezes the configuration
   and the stop-line; `batch run` is the step that spends
   — and the step that needs Neo4j running (above).
+- `ontosmith mcp` over the shipped demo or a file
+  read-back — the lexical and graph arms run keyless;
+  the sentence form joins when an embedder is bound.
 
 Start there. Connect a provider when you are ready to
 build — on the [hands-on guide's](hands-on.md) Track 1,

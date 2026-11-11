@@ -379,7 +379,10 @@ footer a{color:var(--cream)}
        under a changed ontology replaces it, named in the run, never silent. Search serves
        sentence-level evidence by default — the direct sentence index, the graph pool, and a
        beam traversal channel — and falls back to hybrid lexical, graph, and vector fusion
-       when sentence serving cannot run; a build with no embeddings still answers on two arms.</p>
+       when sentence serving cannot run; a build with no embeddings still answers on two arms.
+       The same surface is served to AI callers over the Model Context Protocol
+       (<code>ontosmith mcp</code>, the <code>mcp</code> extra): five read-only tools whose
+       results bind every claim to its evidence, under a token budget.</p>
     <div class="term">
 <span class="c"># declare the connection first: the wizard walks the seats and writes your bindings</span><br>
 <span class="p">$</span> ontosmith configure<br>
@@ -389,7 +392,9 @@ footer a{color:var(--cream)}
 <span class="p">$</span> ontosmith batch run &lt;batch_id&gt;<br>
 <span class="c"># serve it, then search with the evidence attached</span><br>
 <span class="p">$</span> ontosmith serve --batch &lt;batch_id&gt;<br>
-<span class="p">$</span> ontosmith search --batch &lt;batch_id&gt; "termination notice period"
+<span class="p">$</span> ontosmith search --batch &lt;batch_id&gt; "termination notice period"<br>
+<span class="c"># or hand the same graph to an AI caller over MCP (the mcp extra)</span><br>
+<span class="p">$</span> ontosmith mcp --batch &lt;batch_id&gt;
     </div>
   </div>
 </section>

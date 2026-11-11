@@ -8,7 +8,7 @@
 
 **An ontology-driven knowledge-graph builder: design the
 ontology, build the graph under it, and serve it — search,
-API, and app — from one pipeline.**
+API, app, and MCP — from one pipeline.**
 
 *Powered by Jev — the decision (judge) model inside
 OntoSmith — and built on Neo4j, the graph store
@@ -51,11 +51,12 @@ type by type by the decision model. An entity type may
 also declare value attributes (a date, an amount, a
 term): typed values a document states about an entity,
 normalized by deterministic code and judged like every
-other fact before they are written as node properties. It is deliberately
-*not* a formal ontology: there is no class hierarchy,
-no inheritance, and no logical axioms — OntoSmith is
-not an OWL ontology editor, and it runs no inference
-or reasoning over the graph. The flatness is the point:
+other fact before they are written as node properties.
+It is deliberately *not* a formal ontology: there is
+no class hierarchy, no inheritance, and no logical
+axioms — OntoSmith is not an OWL ontology editor, and
+it runs no inference or reasoning over the graph. The
+flatness is the point:
 judged per-type decisions are what make a build's
 quality measurable, and hierarchy would blur exactly
 those decisions. The job this shape is production-shaped
@@ -177,10 +178,8 @@ prerequisites, gathered in one place:
    earlier passes extracted and asked only for
    facts not yet covered — the shipped open-domain
    pack declares the residual pass, so its builds
-   propose in two passes. (A GLiNER+spaCy
-   pipeline candidate source and its `ontosmith[nlp]`
-   extra existed until 2026-10-29 and were retired —
-   the LLM proposer is the only candidate source.)
+   propose in two passes. The LLM proposer is the
+   only candidate source.
 3. **Neo4j running** — the build needs it: it is the
    graph store WRITE, INDEX, and VERIFY work in.
    Install it, set its password, and export
@@ -219,7 +218,8 @@ stage starts, with the error naming the seat and the
 variable to set.
 
 Optional surfaces install as extras:
-`pip install "ontosmith[viz]"`.
+`pip install "ontosmith[viz]"`, `"ontosmith[mcp]"`
+(the MCP server for AI callers).
 (The `"ontosmith[neo4j]"` extra installs the official
 driver the export utilities use; the build itself talks
 to Neo4j over HTTP and needs the server, not the extra.)
@@ -234,7 +234,7 @@ to Neo4j over HTTP and needs the server, not the extra.)
 | Four domain packs + Core baseline | Domain ontologies as data — schema, definitions, boundary examples, thresholds, measured conformance record (below) |
 | Verification cores | `ontosmith verify` — raw *and* audit-corrected scoring, ceiling-adjusted recall, failure anatomy, counted cost projections |
 | Evidence appendix | The flagship record's adjudication samples and verdicts, shipped for replay (`benchmarks/appendix/`) |
-| Serving | Sentence-level evidence retrieval via `ontosmith search` (direct sentence index + graph pool + beam traversal channel, optional local rerank) and hybrid retrieval (vector + lexical + graph) via a sample API — over the build's Neo4j store; the shipped demo's recorded artifacts also serve from files (lexical + graph arms only — no vector arm) |
+| Serving | Sentence-level evidence retrieval via `ontosmith search` (direct sentence index + graph pool + beam traversal channel, optional local rerank), hybrid retrieval (vector + lexical + graph) via a sample API, and the same retrieval for AI callers via an MCP server (`ontosmith mcp`, five read-only tools, the `mcp` extra) — over the build's Neo4j store; the shipped demo's recorded artifacts also serve from files (lexical + graph arms keyless; the sentence form when an embedder is bound) |
 | Demo + guide | A smoke corpus, a fetchable demo subset, and the hands-on guide that walks the whole loop in four tracks |
 
 ## Where do I start?
@@ -250,7 +250,7 @@ to Neo4j over HTTP and needs the server, not the extra.)
 | Design an ontology for my domain | `ontosmith ontology` — the loop below; [hands-on](https://github.com/Dongbumlee/ontosmith/blob/main/docs/hands-on.md) Track 3 |
 | Import an ontology my domain already has | `ontosmith ontology import` — BYO schema; [hands-on](https://github.com/Dongbumlee/ontosmith/blob/main/docs/hands-on.md) Track 4 |
 | Audit my own benchmark gold | `ontosmith verify` — [hands-on appendix](https://github.com/Dongbumlee/ontosmith/blob/main/docs/hands-on-appendix.md) |
-| Serve and query a built graph | [docs/serving.md](https://github.com/Dongbumlee/ontosmith/blob/main/docs/serving.md) — `ontosmith search` / `serve` + the demo app at `/` over the build's Neo4j store (the shipped demo serves from its recorded files, no store needed) |
+| Serve and query a built graph | [docs/serving.md](https://github.com/Dongbumlee/ontosmith/blob/main/docs/serving.md) — `ontosmith search` / `serve` + the demo app at `/`, and `ontosmith mcp` for AI callers, over the build's Neo4j store (the shipped demo serves from its recorded files, no store needed) |
 | Contribute | [CONTRIBUTING.md](https://github.com/Dongbumlee/ontosmith/blob/main/CONTRIBUTING.md) |
 
 ## The loop
@@ -290,11 +290,15 @@ of each.
    the graph's evidence quotes, and a beam traversal
    channel, filled under one token budget); the sample
    API (`ontosmith serve`) answers hybrid retrieval
-   (vector + lexical + graph) over chunks and triples.
-   A build is served from its Neo4j store; the shipped
-   demo's recorded artifacts also serve from files —
-   the keyless read-back path, lexical + graph arms
-   only.
+   (vector + lexical + graph) over chunks and triples;
+   and `ontosmith mcp` serves the same retrieval to
+   AI callers over the Model Context Protocol — five
+   read-only tools whose results bind every claim to
+   its evidence. A build is served from its Neo4j
+   store; the shipped demo's recorded artifacts also
+   serve from files — keyless, the lexical + graph
+   arms; with an embedder bound, the sentence form
+   over an index built at query time.
 
 ## The method
 
@@ -492,11 +496,12 @@ ledger instead of re-spending.
 
 ## Quality
 
-How well does it work? The measured record — scores with
-their scope and method, the failure anatomy, and the
-pre-registered criterion that failed — lives in the
-project [whitepaper](https://github.com/Dongbumlee/ontosmith/blob/main/docs/whitepaper.md) (§5); the evidence data and the replay
-that recomputes it ship in [`benchmarks/`](https://github.com/Dongbumlee/ontosmith/tree/main/benchmarks).
+How well does it work? The measured record — scores
+with their scope and method, the failure anatomy, and
+the pre-registered criterion that failed — lives in
+the project [whitepaper](https://github.com/Dongbumlee/ontosmith/blob/main/docs/whitepaper.md) (§5);
+the evidence data and the replay that recomputes it
+ship in [`benchmarks/`](https://github.com/Dongbumlee/ontosmith/tree/main/benchmarks).
 
 > **What the numbers do and don't say.** The corrected
 > scores describe one measured build — the 3,902-triple
@@ -540,6 +545,7 @@ little before pinning it into a pack.
 | **Serve** | |
 | `search` | sentence-level evidence search over a built graph |
 | `serve` | sample HTTP API (search / entity / neighborhood / triple-with-evidence) + the demo app at / |
+| `mcp` | MCP server (stdio): search / entity / neighborhood / connect / triple for AI callers — the `mcp` extra |
 | `quickstart` | first run: build a graph from one text file and serve it |
 
 ## The store — Neo4j
@@ -560,10 +566,12 @@ it answers from the one graph that is there.
 
 Asking questions
 of *recorded* artifacts needs no store: the search
-command and sample API also run over a file-backed
-store that reads a finished batch's records (or the
-shipped demo) directly — the demo/read-back path,
-whose search runs the lexical and graph arms only
+command, sample API, and MCP server also run over a
+file-backed store that reads a finished batch's
+records (or the shipped demo) directly — the
+demo/read-back path, whose keyless search runs the
+lexical and graph arms, and whose sentence form
+runs when an embedder is bound
 ([docs/serving.md](https://github.com/Dongbumlee/ontosmith/blob/main/docs/serving.md)).
 
 ## Status

@@ -188,7 +188,7 @@ run: python -m pipeline batch run redocred-dev-subset-40docs
 ```
 
 Creation froze the executed configuration into the
-batch (core baseline + pack overlay, pin-verified) and
+batch (core baseline + pack overlay, pin-verified).
 Nothing has been spent.
 
 > **Note — creating under a custom binding.** This
@@ -218,11 +218,11 @@ $ ontosmith batch run redocred-dev-subset-40docs
 This is the one step that spends. It runs the staged
 pipeline (ingest → NER/roster → candidates → gates →
 route → write → index → verify) under the reference
-preset. Bind a different
-endpoint or model set — declared with `ontosmith
-configure` and loaded from the `ontosmith-bindings.env`
-it writes, as in Track 1 §3 — and the same step runs
-under your custom binding instead.
+preset. Bind a different endpoint or model set —
+declared with `ontosmith configure` and loaded from
+the `ontosmith-bindings.env` it writes, as in
+Track 1 §3 — and the same step runs under your
+custom binding instead.
 
 The run's spend is recorded in the batch's ledger
 as it goes. A stopped run resumes with
