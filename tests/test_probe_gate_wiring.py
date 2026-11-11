@@ -28,8 +28,7 @@ from pathlib import Path
 from unittest import mock
 
 from pipeline import batch_run, pair_proposer, proposer
-from pipeline.batch import (Batch, BatchConfig, BatchStatus,
-                            batch_dir, save_batch)
+from pipeline.batch import Batch, BatchConfig, BatchStatus, batch_dir, save_batch
 from pipeline.profile_config import pair_probe_gate_enabled
 
 
@@ -190,7 +189,7 @@ class TestProbeGateAtStage(unittest.TestCase):
             {"subject": "Alpha", "relation": "employs",
              "object": "Beta",
              "quote": "Alpha employed Beta in 1901"}]
-        b, d, pair_calls = _stage(
+        b, _d, pair_calls = _stage(
             self.root, "probe-inert", text,
             {"pair_probe_gate": True},
             free_items,
@@ -207,7 +206,7 @@ class TestProbeGateAtStage(unittest.TestCase):
             {"subject": "Alpha", "relation": "employs",
              "object": "Beta",
              "quote": "Alpha employed Beta in 1901"}]
-        b, d, pair_calls = _stage(
+        b, _d, pair_calls = _stage(
             self.root, "probe-off", text, {},
             free_items,
             {"relation": "employs", "quote": "x"})
