@@ -216,7 +216,7 @@ Rules:
 - Before finishing the excerpt, scan it once more for
   facts you passed over: duties, conditions, exceptions,
   amounts, dates, and quantities stated anywhere in the
-  text are in scope, not only a topic's first mention.
+  text are in scope, not only where a topic first appears.
 - Only facts the excerpt states. If none, return [].
 
 Excerpt:
@@ -285,7 +285,7 @@ Rules:
 - Before finishing the excerpt, scan it once more for
   facts you passed over: duties, conditions, exceptions,
   amounts, dates, and quantities stated anywhere in the
-  text are in scope, not only a topic's first mention.
+  text are in scope, not only where a topic first appears.
 - Only facts the excerpt states. If none, return [].
 
 Excerpt:
@@ -346,7 +346,7 @@ Rules:
 - Before finishing the excerpt, scan it once more for
   facts you passed over: duties, conditions, exceptions,
   amounts, dates, and quantities stated anywhere in the
-  text are in scope, not only a topic's first mention.
+  text are in scope, not only where a topic first appears.
 - Only facts the excerpt states. If none, return [].
 
 Excerpt:
