@@ -7,6 +7,24 @@ and the project adheres to
 
 ## [Unreleased]
 
+### Added
+
+- **Probe gate channel** — a profile may declare
+  `pair_probe_gate` to add a pair channel inside the
+  free-proposer branch: after the free channel runs, the
+  pair census is built over the free channel's own
+  endpoints (minus the pairs it already recorded), a
+  random probe sample is judged first, and the full
+  census runs only for documents whose probe hit rate
+  clears the policy floor (40 pairs, ≥5% — global policy
+  constants in `pipeline/probe_gate.py`, measured across
+  corpora before wiring). Judged items pass the same
+  guards and merge behind the free channel as
+  `pair-probe` records. The gate requires a declared
+  relation inventory; an open-inventory profile leaves
+  it inert, counted in the stage metrics. No pack
+  declares it yet — adoption is per pack, on measurement.
+
 ### Changed
 
 - **The complement pass is the free proposer's

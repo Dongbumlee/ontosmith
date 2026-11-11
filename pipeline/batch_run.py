@@ -304,6 +304,7 @@ def stage_candidates(b: Batch, root: Path, stages: list[str]) -> None:
         entity_sweep_enabled,
         mention_layer_enabled,
         pair_judge_generic_relation,
+        pair_probe_gate_enabled,
         proposer_complement_draw,
         proposer_draw_framings,
         proposer_framing,
@@ -343,6 +344,36 @@ def stage_candidates(b: Batch, root: Path, stages: list[str]) -> None:
              "re-asked per anchor after the chunk pass; "
              "sweep candidates merge behind the chunk "
              "channel)")
+    # The probe gate: the profile's declaration adds an
+    # additive pair channel inside the free-proposer branch
+    # below — after the free channel (draws + complement +
+    # sweep) has run, the pair census is built over the free
+    # channel's own endpoints, a random probe sample is
+    # judged first, and the full census runs only for
+    # documents whose probe hit rate clears the policy floor
+    # (pipeline/probe_gate.py). The gate needs the pair
+    # judge's closed relation inventory (derived the same
+    # way as the pair-enumeration branch derives it); an
+    # open-inventory profile leaves the gate inert, counted
+    # in the stage metrics. Absent = off and this stage is
+    # byte-identical to the pre-gate behavior. Inert under
+    # pair enumeration — that branch replaces the free
+    # proposer wholesale.
+    probe_on = pair_probe_gate_enabled(setup_cfg)
+    probe_inventory: set[str] = set()
+    if probe_on:
+        _sf = (setup_cfg or {}).get("schema_front") or {}
+        probe_inventory = {
+            str(r["type"]) for r in _sf.get("relation_inventory")
+            or [] if isinstance(r, dict) and r.get("type")} or {
+            str(x) for x in (setup_cfg or {}).get("relation_types")
+            or []}
+        _log(b.batch_id,
+             "CANDIDATES: probe gate ON (pair census over the "
+             "free channel's endpoints, probe-gated per "
+             f"document; inventory={len(probe_inventory)} "
+             "relations"
+             f"{'' if probe_inventory else ' — INERT: no closed relation inventory declared'})")
     # Domain framing: the family's declared framing
     # for the proposer / pair-judge base templates, threaded as
     # data; None (profile declares none) selects the builders'
@@ -732,6 +763,17 @@ def stage_candidates(b: Batch, root: Path, stages: list[str]) -> None:
                    "windows_dropped": 0,
                    "census_entities": 0, "census_extracted": 0,
                    "census_unattested": 0}
+    # Probe-gate accounting, checkpointed with the sweep
+    # stats so a resumed run keeps the true totals. All
+    # counters stay 0 — and no metrics block is emitted —
+    # when the profile does not declare the gate.
+    probe_cost = 0.0
+    probe_stats = {"docs": 0, "docs_open": 0, "docs_inert": 0,
+                   "census_pairs": 0, "fresh_pairs": 0,
+                   "probe_judged": 0, "probe_hits": 0,
+                   "rest_judged": 0, "proposed": 0,
+                   "duplicates": 0, "merged": 0, "blocked": 0,
+                   "calls": 0, "errors": 0}
     # A corrupted-checkpoint reset is stamped into the stage
     # metrics below (ckpt_reset) — never silent.
     ckpt_reset: dict | None = None
@@ -772,6 +814,13 @@ def stage_candidates(b: Batch, root: Path, stages: list[str]) -> None:
                     sweep_stats[k] = int(
                         ckpt.get("sweep_stats", {}).get(
                             k, sweep_stats[k]))
+            _ckpt_probe_cost = ckpt.get("probe_cost_usd", 0.0)
+            probe_cost = (None if _ckpt_probe_cost is None
+                          else float(_ckpt_probe_cost))
+            for k in probe_stats:
+                probe_stats[k] = int(
+                    ckpt.get("probe_stats", {}).get(
+                        k, probe_stats[k]))
             # Load existing candidates
             if (d / "candidates.jsonl").exists():
                 with open(d / "candidates.jsonl") as f:
@@ -1178,6 +1227,163 @@ def stage_candidates(b: Batch, root: Path, stages: list[str]) -> None:
                             bl["reason"]] = sweep_stats[
                                 "blocked_reasons"].get(
                                     bl["reason"], 0) + 1
+            if probe_on:
+                # Probe gate: the additive pair channel over
+                # the free channel's own endpoints. The roster
+                # is every endpoint of this document's records
+                # so far (kept + blocked, every channel that
+                # ran before this one in the doc loop — the
+                # sweep's presence population); the census is
+                # the sentence-window enumeration over that
+                # roster, minus the pairs the free channel
+                # already recorded in either direction. A
+                # random probe sample (probe_gate.select_probe)
+                # is judged first; the remainder is judged
+                # only when the probe's hit rate clears the
+                # policy floor (probe_gate.probe_decision).
+                # Judged items pass the SAME guard and merge
+                # behind the free channel: a key equal to an
+                # existing record's key is a counted duplicate
+                # and the free record wins. Verdicts join the
+                # sidecar pool with a channel mark, so the
+                # probe/full accounting is reproducible from
+                # artifacts alone. An open-inventory profile
+                # (no closed relation inventory for the pair
+                # judge) leaves the gate inert per document —
+                # counted, never silent.
+                from . import pair_proposer as _pp
+                from . import probe_gate as _pg
+                probe_stats["docs"] += 1
+                if not probe_inventory:
+                    probe_stats["docs_inert"] += 1
+                else:
+                    roster_map: dict[str, dict] = {}
+                    for rec in doc_llm + doc_blocked:
+                        for side, tside in (
+                                ("subject", "subject_type"),
+                                ("object", "object_type")):
+                            surf = rec.get(side) or ""
+                            nk = _pp.norm_surface(surf)
+                            if nk and nk not in roster_map:
+                                roster_map[nk] = {
+                                    "surface": surf,
+                                    "type": rec.get(tside) or ""}
+                    census = _pp.enumerate_pairs(
+                        text, list(roster_map.values()),
+                        window="sentence",
+                        abbrev_guard=pair_abbrev_guard)
+                    recorded: set[tuple[str, str]] = set()
+                    doc_keys: set[tuple[str, str, str]] = set()
+                    for rec in doc_llm + doc_blocked:
+                        ns = _pp.norm_surface(rec["subject"])
+                        no = _pp.norm_surface(rec["object"])
+                        recorded.add((ns, no))
+                        recorded.add((no, ns))
+                        doc_keys.add((
+                            _prop.norm_ws(rec["subject"]),
+                            rec["relation"],
+                            _prop.norm_ws(rec["object"])))
+                    fresh = [
+                        p for p in census
+                        if _pp.norm_surface(p["subject"])
+                        != _pp.norm_surface(p["object"])
+                        and (_pp.norm_surface(p["subject"]),
+                             _pp.norm_surface(p["object"]))
+                        not in recorded]
+                    probe_stats["census_pairs"] += len(census)
+                    probe_stats["fresh_pairs"] += len(fresh)
+                    if fresh:
+                        judged_items: list[dict] = []
+
+                        def _probe_judge(subset):
+                            res = _pp.propose_pairs_subset(
+                                doc_id, text, subset, key,
+                                model=b.config.llm_model,
+                                guidance=guidance,
+                                relation_inventory=probe_inventory,
+                                judge_context=pair_judge_context,
+                                judge_instruction=(
+                                    pair_judge_instruction),
+                                generic_relation=(
+                                    pair_generic_relation),
+                                abbrev_guard=pair_abbrev_guard)
+                            nonlocal probe_cost, proposer_cost
+                            proposer_cost = _conn_add_cost(
+                                proposer_cost, res["cost"])
+                            probe_cost = _conn_add_cost(
+                                probe_cost, res["cost"])
+                            probe_stats["calls"] += res["calls"]
+                            probe_stats["errors"] += res["errors"]
+                            pair_verdicts.extend(
+                                {**v, "channel": "probe"}
+                                for v in res["verdicts"])
+                            judged_items.extend(res["items"])
+                            return res
+
+                        sample = _pg.select_probe(fresh)
+                        probe_stats["probe_judged"] += len(sample)
+                        pres = _probe_judge(sample)
+                        decision = _pg.probe_decision(
+                            [v["relation"] for v in pres["verdicts"]])
+                        probe_stats["probe_hits"] += decision["hits"]
+                        if decision["open"]:
+                            probe_stats["docs_open"] += 1
+                            sample_ids = {id(p) for p in sample}
+                            rest = [p for p in fresh
+                                    if id(p) not in sample_ids]
+                            probe_stats["rest_judged"] += len(rest)
+                            if rest:
+                                _probe_judge(rest)
+                        probe_stats["proposed"] += len(judged_items)
+                        if judged_items:
+                            gk, gb = _guard(
+                                judged_items, text,
+                                role_words=role_words,
+                                entity_types=endpoint_types or None,
+                                quote_punct_insensitive=(
+                                    quote_punct_insensitive),
+                                identity_seat=doc_seat)
+                            for it in gk:
+                                k = (_prop.norm_ws(it["subject"]),
+                                     it["relation"],
+                                     _prop.norm_ws(it["object"]))
+                                if k in doc_keys:
+                                    probe_stats["duplicates"] += 1
+                                    continue
+                                doc_keys.add(k)
+                                rec = {
+                                    "doc_id": doc_id,
+                                    "subject": it["subject"],
+                                    "relation": it["relation"],
+                                    "object": it["object"],
+                                    "context": _prop.quote_window(
+                                        text, it["quote"]),
+                                    "method": "pair-probe",
+                                    "quote": it["quote"],
+                                    "attest": it["attest"]}
+                                for tk in ("subject_type",
+                                           "object_type"):
+                                    if it.get(tk):
+                                        rec[tk] = it[tk]
+                                doc_llm.append(rec)
+                                probe_stats["merged"] += 1
+                            for bl in gb:
+                                rec = {
+                                    "doc_id": doc_id,
+                                    "subject": bl["subject"],
+                                    "relation": bl["relation"],
+                                    "object": bl["object"],
+                                    "context": _prop.quote_window(
+                                        text, bl["quote"]),
+                                    "method": "pair-probe",
+                                    "quote": bl["quote"],
+                                    "reason": bl["reason"]}
+                                for tk in ("subject_type",
+                                           "object_type"):
+                                    if bl.get(tk):
+                                        rec[tk] = bl[tk]
+                                doc_blocked.append(rec)
+                                probe_stats["blocked"] += 1
             if slot_categories:
                 sres = _prop.propose_slots_for_doc(
                     doc_id, text, slot_categories, key,
@@ -1238,7 +1444,9 @@ def stage_candidates(b: Batch, root: Path, stages: list[str]) -> None:
                 "proposer_per_draw": per_draw_proposed,
                 "pair_stats": pair_stats,
                 "sweep_stats": sweep_stats,
-                "sweep_cost_usd": _round_cost(sweep_cost)}))
+                "sweep_cost_usd": _round_cost(sweep_cost),
+                "probe_stats": probe_stats,
+                "probe_cost_usd": _round_cost(probe_cost)}))
             _log(b.batch_id, f"CANDIDATES: {idx+1}/{len(doc_ids)} docs, "
                     f"{len(candidates)} candidates")
             _beat(b, root, "CANDIDATES", len(done_docs), len(doc_ids))
@@ -1362,6 +1570,22 @@ def stage_candidates(b: Batch, root: Path, stages: list[str]) -> None:
         b.metrics["candidates"]["sweep"] = {
             **sweep_stats,
             "cost_usd": _round_cost(sweep_cost)}
+    if probe_on:
+        # The probe gate's own accounting block: how many
+        # documents the gate saw, how many it opened, the
+        # census/probe/full judging volumes and where the
+        # judged items landed (merged behind the free channel,
+        # counted duplicates, guard blocks). Its spend is
+        # folded into the proposer ledger above; the block
+        # also carries it separately so the channel is priced
+        # on its own. docs_inert counts documents the gate
+        # could not serve (open-inventory profile).
+        from . import probe_gate as _pg
+        b.metrics["candidates"]["probe_gate"] = {
+            **probe_stats,
+            "cost_usd": _round_cost(probe_cost),
+            "probe_n": _pg.PROBE_N,
+            "min_hit_rate": _pg.PROBE_MIN_HIT_RATE}
     # Ledger: the stage's actual API spend is the proposer's
     # (usage returned per call and summed above). Proposer
     # spend IS checkpointed (above), so a resumed run keeps

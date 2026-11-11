@@ -735,6 +735,68 @@ def propose_pairs_for_doc(doc_id: str, text: str,
     inventory = set(relation_inventory or set())
     pairs = enumerate_pairs(text, mentions, window=window,
                             abbrev_guard=abbrev_guard)
+    judged = _judge_pairs(
+        doc_id, text, pairs, key, model=model, guidance=guidance,
+        inventory=inventory, judge_context=judge_context,
+        judge_instruction=judge_instruction,
+        generic_relation=generic_relation, jf1=jf1,
+        symmetric_relations=symmetric_relations,
+        restat_inventory=restat_inventory,
+        evidence_sentence_in_items=evidence_sentence_in_items)
+    return {**judged, "enumerated": len(pairs)}
+
+
+def propose_pairs_subset(doc_id: str, text: str, pairs: list[dict],
+                         key: str, model: str = DEFAULT_MODEL,
+                         guidance: str = "",
+                         relation_inventory: set[str] | None = None,
+                         judge_context: str = "sentence",
+                         judge_instruction: str = "standard",
+                         generic_relation: str | None = None,
+                         abbrev_guard: bool = False) -> dict:
+    """Judge an explicit census subset (the probe gate's entry).
+
+    `pairs` are census entries in :func:`enumerate_pairs` form,
+    already filtered by the caller (the gate excludes pairs the
+    free channel already recorded, samples the probe, and later
+    passes the remainder). Judging is the shared core
+    (:func:`_judge_pairs`), so prompts, parsing, emission and
+    verdict records are identical to the full-census path; the
+    legacy answer format only (JF-F1 stays a pair-enumeration
+    pack configuration). Returns the same shape as
+    :func:`propose_pairs_for_doc` with enumerated == len(pairs).
+    """
+    judged = _judge_pairs(
+        doc_id, text, list(pairs), key, model=model,
+        guidance=guidance,
+        inventory=set(relation_inventory or set()),
+        judge_context=judge_context,
+        judge_instruction=judge_instruction,
+        generic_relation=generic_relation)
+    return {**judged, "enumerated": len(pairs)}
+
+
+def _judge_pairs(doc_id: str, text: str, pairs: list[dict],
+                 key: str, model: str = DEFAULT_MODEL,
+                 guidance: str = "",
+                 inventory: set[str] | None = None,
+                 judge_context: str = "sentence",
+                 judge_instruction: str = "standard",
+                 generic_relation: str | None = None,
+                 jf1: bool = False,
+                 symmetric_relations: set[str] | None = None,
+                 restat_inventory: list[str] | None = None,
+                 evidence_sentence_in_items: bool = False
+                 ) -> dict:
+    """Judge an explicit pair list — the shared judging core.
+
+    The census is the caller's; everything from the pair prompt
+    to the FIX-P verdict record lives here exactly as the
+    full-census path ran it. Returns {items, cost, calls,
+    errors, answered, outcomes, verdicts} (no enumerated —
+    the caller owns the census count).
+    """
+    inventory = inventory or set()
 
     def work(pair):
         direction = None
@@ -834,6 +896,6 @@ def propose_pairs_for_doc(doc_id: str, text: str,
     return {"items": items,
             "cost": None if cost is None else round(cost, 4),
             "calls": calls,
-            "errors": errors, "enumerated": len(pairs),
+            "errors": errors,
             "answered": len(items), "outcomes": outcomes,
             "verdicts": verdicts}
