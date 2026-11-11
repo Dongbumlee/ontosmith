@@ -193,6 +193,72 @@ def test_search_sentence_form_when_embedder_bound():
         "vector", "graph", "both"}
 
 
+def _both_sides_store(tmp_path):
+    """A one-document batch whose chunk carries a
+    triple's quote PLUS a further sentence, so a
+    query can hit the graph arm and the text arm at
+    once — the shipped example build cannot (its
+    graph is one corpus, its chunks another)."""
+    import json
+    import pickle
+
+    import numpy as np
+
+    from pipeline import query_stack
+
+    text = ("Acme Corp acquired Beta LLC in 2021. "
+            "The Acme Corp board approved the Beta "
+            "LLC acquisition unanimously.")
+    bdir = tmp_path / "fixbatch"
+    bdir.mkdir()
+    (bdir / "batch.json").write_text(json.dumps({
+        "batch_id": "fixbatch", "run_id": "r1",
+        "source": "fixture", "collection": "fixture",
+        "doc_ids": ["doc-a"], "config": {},
+        "metrics": {}}))
+    (bdir / "texts.jsonl").write_text(
+        json.dumps({"doc_id": "doc-a", "text": text})
+        + "\n")
+    (bdir / "routed.jsonl").write_text(json.dumps({
+        "subject": "Acme Corp", "relation": "acquired",
+        "object": "Beta LLC", "doc_id": "doc-a",
+        "quote": "Acme Corp acquired Beta LLC in "
+                 "2021.",
+        "p_true": 0.97, "tier": 1}) + "\n")
+    (bdir / "written_triples.jsonl").write_text(
+        json.dumps({"subject_id": "ent-1",
+                    "relation": "acquired",
+                    "object_id": "ent-2",
+                    "doc_id": "doc-a"}) + "\n")
+    chunker = query_stack.FixedWindowChunker()
+    meta, chunks = [], []
+    for idx, ch in chunker.chunk(text):
+        meta.append({"doc_id": "doc-a", "chunk_idx": idx,
+                     "tag": "VERIFIED", "tier": 1,
+                     "batch_id": "fixbatch"})
+        chunks.append(ch)
+    index = {"embeddings": np.array([[1.0, 0.0]]),
+             "meta": meta, "chunks": chunks,
+             "model": "fixture"}
+    with open(bdir / "tier2_index.pkl", "wb") as f:
+        pickle.dump(index, f)
+    return _search.open_store(source=str(bdir))
+
+
+def test_search_returns_both_arms_in_one_result(
+        tmp_path):
+    svc = mcp_server.McpService(
+        _both_sides_store(tmp_path))
+    out = svc.search("Acme Corp acquired Beta")
+    kinds = {i["kind"] for i in out["items"]}
+    assert kinds == {"triple", "text"}
+    # The passage carries a sentence beyond the
+    # triple's quote, so it is NOT deduped away.
+    passage = next(i for i in out["items"]
+                   if i["kind"] == "text")
+    assert "board approved" in passage["text"]
+
+
 def test_budget_cursor_resumes(service):
     first = service.neighborhood(
         "Jane Bennet", depth=2, limit=100,

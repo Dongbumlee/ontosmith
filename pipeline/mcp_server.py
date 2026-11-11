@@ -253,18 +253,23 @@ class McpService:
             if spec.get("via"):
                 item["via"] = spec["via"]
             text_items.append(item)
-        # Cross-arm dedup (design §7): a chunk whose
-        # text carries a returned triple's evidence
-        # sentence is the same evidence — the triple
-        # item keeps it, marked "both", and the chunk
-        # item is dropped.
+        # Cross-arm dedup (design §7): a text item
+        # that IS a returned triple's evidence — the
+        # quote makes up essentially the whole passage
+        # — is the same evidence: the triple item
+        # keeps it, marked "both", and the text item
+        # is dropped. A passage that merely CONTAINS
+        # the quote carries more than the claim's
+        # evidence, so it stays as its own item.
         quotes = {
             ev["text"] for item in triple_items
             for ev in item["evidence"]}
         kept_text = []
         for item in text_items:
             carriers = [q for q in quotes
-                        if q and q in item["text"]]
+                        if q and q in item["text"]
+                        and len(q) >= 0.9 * len(
+                            item["text"])]
             if carriers:
                 for t_item in triple_items:
                     if any(ev["text"] in carriers
