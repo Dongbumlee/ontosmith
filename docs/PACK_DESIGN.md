@@ -307,10 +307,10 @@ instrument shows both), `gate`, and `verdict` + `status`
 `measured_pilot`, `measured_not_adopted`, `closed`,
 `emitted_unmeasured`} (the schema's enum, §1.6).
 
-A
-negative result is recorded with the same standing as a
-positive one — the record is the pack's memory of what
-NOT to re-propose without new evidence. A pack emitted
+A negative result is recorded with the same standing
+as a positive one — the record is the pack's memory
+of what NOT to re-propose without new evidence. A
+pack emitted
 by the ontology builder starts with a single entry whose
 status is `emitted_unmeasured`: the artifact exists, no
 measurement has priced it, and the entry says exactly

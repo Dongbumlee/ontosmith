@@ -15,9 +15,12 @@ reads recorded artifacts directly — the shipped demo,
 or a finished batch's on-disk records. That is the
 keyless demo / read-back path, and the demo's records
 form is **degraded by design**: it carries no
-embeddings, so the **vector arm never runs** on it —
-lexical and graph arms only, exactly as the `arms`
-line of every result says. A batch read-back is not
+embeddings, so on the hybrid form the **vector arm
+never runs** on it — lexical and graph arms only,
+exactly as the `arms` line of every result says.
+Bind an embedder and the sentence form runs on it
+too, building its sentence index at query time (the
+result's notes say so). A batch read-back is not
 degraded that way: it loads the build's shipped chunk
 and sentence indexes, embeddings included. Either way
 the file store is a way to inspect recordings, not a
@@ -175,10 +178,9 @@ Serving resolves that graph from the stamp: there is
 no scope to specify, and no question of which build
 you are searching — the store can only hold one.
 
-A
-`--batch` or `--source` beside `--store neo4j` names
-the build you *expect*; if the store's current graph
-is a different build's, serving refuses by name
+A `--batch` or `--source` beside `--store neo4j`
+names the build you *expect*; if the store's current
+graph is a different build's, serving refuses by name
 (build the named one to make its graph the store's,
 or drop the name and serve what is there). A store
 with no stamped graph — empty, or holding content no
@@ -190,9 +192,7 @@ so no arm can range over a replaced graph's documents.
 The file store reads a batch's routed attestations,
 source texts and chunk index, or a records directory
 (`triples.jsonl` + `corpus/*.txt`, the example's
-shape — chunked deterministically at load).
-
-Entity
+shape — chunked deterministically at load). Entity
 identity comes from the build's registry when one is
 present next to the source. A store that cannot
 answer — a missing source, an unreachable Neo4j —
@@ -322,10 +322,10 @@ same host as the Bolt endpoint (port 7474 next to
 ever reach the page (the password is a separate
 binding the API never exposes).
 
-An embedded rendered
-explorer belongs to the fuller app (v1.1); on the
-file store, the walker above is the exploration
-path. The app is read-only, like the API under it.
+An embedded rendered explorer belongs to a fuller
+app; on the file store, the walker above is the
+exploration path. The app is read-only, like the
+API under it.
 
 ## The MCP surface: `ontosmith mcp`
 
@@ -360,8 +360,12 @@ sentences with citation keys (`d1:s3`) the caller can
 cite back, a hard token budget whose truncation is
 always signalled with a resume cursor, and honest
 totals. Conflicting triples are returned flagged on
-both sides; derived facts are marked derived. There
-is deliberately no `ask` tool — the caller's model
+both sides; derived facts are marked derived. In
+`search`, triples that matched on entity names only
+(the `name_only` tag above) sit in a trailing
+section after the ranked results, so an agent never
+mistakes a mention for an answer. There is
+deliberately no `ask` tool — the caller's model
 composes the answer from returned evidence, which
 keeps the surface honest and model-agnostic.
 

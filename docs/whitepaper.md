@@ -34,10 +34,9 @@ pairs into candidate triples; and deterministic gates and the
 Jev decision model decide what is true enough to write. Every
 written triple carries its evidence span and provenance.
 
-Operating
-points are adopted only through pre-registered measurement
-gates; configurations that miss their gate stay off, and the
-rejections are part of the published record.
+Operating points are adopted only through pre-registered
+measurement gates; configurations that miss their gate stay off,
+and the rejections are part of the published record.
 
 This paper describes the system (§3–§4), then reports the
 measured quality of its flagship build (§5): over all 500
@@ -97,18 +96,16 @@ publish the measurement, failures included.
 
 ## 2. Approach
 
-**Design the ontology.** Every build runs under a *pack*:
-a domain's ontology as data — schema, definitions, boundary
-examples, thresholds, and the pack's measured conformance
-record — versioned, hash-pinned, and fail-closed on load.
-Domain content lives only in packs, never in code branches.
-A pack is drafted from a corpus profile by the ontology
-builder — or imported from an external ontology through
-the same builder (§3.4) — validated deterministically, and
-emitted only after explicit human approval; an emitted
-pack is marked
-`emitted_unmeasured` until a registered measurement adopts
-it.
+**Design the ontology.** Every build runs under a *pack*: a
+domain's ontology as data — schema, definitions, boundary
+examples, thresholds, and the pack's measured conformance record —
+versioned, hash-pinned, and fail-closed on load. Domain content
+lives only in packs, never in code branches. A pack is drafted
+from a corpus profile by the ontology builder — or imported from
+an external ontology through the same builder (§3.4) — validated
+deterministically, and emitted only after explicit human approval;
+an emitted pack is marked `emitted_unmeasured` until a registered
+measurement adopts it.
 
 **Build under it.** The pipeline censuses the corpus first
 (deterministically, at zero model cost), enumerates
@@ -271,9 +268,9 @@ judged. It is not an axiomatised ontology in the
 description-logic sense — v1 ships no class subsumption,
 no disjointness axioms, and no entailment regime — and
 the word should not be read as claiming those properties.
-What the artifact governs is admission: which types a
-claim may use, and what each type means, stated once and
-judged against consistently.
+What the artifact governs is admission: which types a claim may
+use, and what each type means, stated once and judged against
+consistently.
 
 The landscape also has a formal pole: Open Ontologies,
 for example, brings plan-and-apply change management
@@ -381,30 +378,25 @@ component, not a seat chosen by a published head-to-head
 bake-off; no Jev-versus-frontier judgment comparison is
 in this record, and none should be inferred from it.
 
-*Note, 2026-10-23 — the binding layer generalized; the
-record did not move.* The declaration path is now a
-front door (`ontosmith configure`, interactive or from
-a template file) that writes the per-seat binding as
-its artifact, with zero-spend probes and a binding
-stamp. Each seat additionally declares a provider
-**dialect**: the preset's dialect may emit
-provider-only request fields; a custom binding
-defaults to the portable OpenAI-compatible subset, so
-those fields are never sent to a route that did not
-declare them.
+*Note, 2026-10-23 — the binding layer generalized; the record did
+not move.* The declaration path is now a front door (`ontosmith
+configure`, interactive or from a template file) that writes the
+per-seat binding as its artifact, with zero-spend probes and a
+binding stamp. Each seat additionally declares a provider
+**dialect**: the preset's dialect may emit provider-only request
+fields; a custom binding defaults to the portable
+OpenAI-compatible subset, so those fields are never sent to a
+route that did not declare them.
 
-Cost accounting is stamped with its
-basis — provider-reported, estimated from
-user-declared rates, or not-provided — and an unknown
-cost is recorded as unknown (no rate is ever invented
-in code); a USD stop-line set over a seat that cannot
-meter cost refuses by name instead of silently never
-tripping.
+Cost accounting is stamped with its basis — provider-reported,
+estimated from user-declared rates, or not-provided — and an
+unknown cost is recorded as unknown (no rate is ever invented in
+code); a USD stop-line set over a seat that cannot meter cost
+refuses by name instead of silently never tripping.
 
-Model-name pattern matching for request
-shape is replaced by declared capabilities, with
-model-id derivation retained only as the undeclared
-default.
+Model-name pattern matching for request shape is replaced by
+declared capabilities, with model-id derivation retained only as
+the undeclared default.
 
 What
 deliberately did **not** change: the reference
@@ -418,40 +410,36 @@ written.
 
 ### 4.2 Cost guardrails
 
-Every run's spend is accounted, whether or not it is
-capped. Before a run, the tooling prints a **counted
-projection** — candidate pairs counted from the user's
-own rosters, priced at caller-supplied rates
-(`--unit-cost`); the tool takes prices from the caller
-and never reads a rate from the bound models. A USD
+Every run's spend is accounted, whether or not it is capped.
+Before a run, the tooling prints a **counted projection** —
+candidate pairs counted from the user's own rosters, priced at
+caller-supplied rates (`--unit-cost`); the tool takes prices from
+the caller and never reads a rate from the bound models. A USD
 **stop-line** exists only when one is set (the
-`ONTOSMITH_MAX_COST_USD` environment variable): with a
-cap set, a run that would cross it refuses the unit that
-crosses it and resumes from its ledger instead of
-re-spending. §5.6 gives
-the flagship run's projection, ledger, and the governing
-provider-observed total — published at aggregate level,
-with the method; the full ledger itself is internal
-provenance and is not published.
+`ONTOSMITH_MAX_COST_USD` environment variable): with a cap set, a
+run that would cross it refuses the unit that crosses it and
+resumes from its ledger instead of re-spending. §5.6 gives the
+flagship run's projection, ledger, and the governing
+provider-observed total — published at aggregate level, with the
+method; the full ledger itself is internal provenance and is not
+published.
 
 ### 4.3 Serving
 
-The **registry is the source of truth**; the graph in
-**Neo4j** is a rebuildable projection of it (traversal,
-native vector index, Lucene full-text). Retrieval is
-sentence-level by default: every sentence of the corpus
-is indexed directly at build time, a query pools the
-direct index's top results with units the graph reaches
-(traversal, plus a beam channel out from linked
-entities), and a rerank pass orders the merged pool;
-every unit carries the channel that served it. The older
-chunk-level hybrid retrieval (vector + lexical + graph
-over chunks) remains underneath as a fallback for builds
-whose sentence index cannot be served, and says so in
-its results when it serves. This separation is deliberate: the store can be
-rebuilt, replaced, or re-projected without touching the
-evidence-bearing record, and every served triple can be
-inspected back to its evidence span and provenance chain.
+The **registry is the source of truth**; the graph in **Neo4j** is
+a rebuildable projection of it (traversal, native vector index,
+Lucene full-text). Retrieval is sentence-level by default: every
+sentence of the corpus is indexed directly at build time, a query
+pools the direct index's top results with units the graph reaches
+(traversal, plus a beam channel out from linked entities), and a
+rerank pass orders the merged pool; every unit carries the channel
+that served it. The older chunk-level hybrid retrieval (vector +
+lexical + graph over chunks) remains underneath as a fallback for
+builds whose sentence index cannot be served, and says so in its
+results when it serves. This separation is deliberate: the store
+can be rebuilt, replaced, or re-projected without touching the
+evidence-bearing record, and every served triple can be inspected
+back to its evidence span and provenance chain.
 
 The same-QA comparison the product cares about — graph +
 hybrid vs. plain hybrid retrieval — is measured, with its
@@ -527,17 +515,15 @@ adjudication contract (§5.4) — so of every 100 Tier-1
 triples the fitted configuration emits, ≈ 91 count as
 supported in one of those two senses.
 
-The estimator
-prices exact gold matches at face value; if the matched
-stratum is instead priced at the support rate the same
-contract measured among the re-checked matched triples
-(§5.3's matched stratum, ≈ 0.884), the same estimate
-reads ≈ 0.845. The raw 0.57 benchmark precision is
-mostly gold's false-negative mass — the failure mode
-Re-DocRED was built to repair — repriced by how much of
-that mass survives an explicit as-typed reading. Recall
-is the honest weak side, and the next section shows
-exactly where it went.
+The estimator prices exact gold matches at face value; if the
+matched stratum is instead priced at the support rate the same
+contract measured among the re-checked matched triples (§5.3's
+matched stratum, ≈ 0.884), the same estimate reads ≈ 0.845. The
+raw 0.57 benchmark precision is mostly gold's false-negative mass
+— the failure mode Re-DocRED was built to repair — repriced by how
+much of that mass survives an explicit as-typed reading. Recall is
+the honest weak side, and the next section shows exactly where it
+went.
 
 ### 5.3 Failure anatomy (FULL-500, gold census)
 
@@ -671,23 +657,20 @@ same counts, Cohen's κ ≈ 0.45 — at this verdict base
 rate the raw agreement figure overstates concordance,
 and both numbers are reported.)
 
-The
-disagreements were one-directional (35 of 37 flips ran
-supported → not-supported) and concentrated in six
-recurring surface situations the contract had never
-defined. Those situations were settled by the rulings
-above; all 565 flagged items were then re-judged blind
-under the ruled contract by the stricter judge family —
-186 verdicts changed (177 of them supported →
-not-supported; the demonym ruling changed none of the 22
-items it decided) — and the record was re-priced through
-the identical estimator, which first reproduces the
-original figures from the original verdicts.
+The disagreements were one-directional (35 of 37 flips ran
+supported → not-supported) and concentrated in six recurring
+surface situations the contract had never defined. Those
+situations were settled by the rulings above; all 565 flagged
+items were then re-judged blind under the ruled contract by the
+stricter judge family — 186 verdicts changed (177 of them
+supported → not-supported; the demonym ruling changed none of the
+22 items it decided) — and the record was re-priced through the
+identical estimator, which first reproduces the original figures
+from the original verdicts.
 
-The
-original panel's readings were sound where the contract
-was explicit and loose exactly where it was silent; the
-contract now ships with its rulings stated, not implied.
+The original panel's readings were sound where the contract was
+explicit and loose exactly where it was silent; the contract now
+ships with its rulings stated, not implied.
 
 **Addendum (2026-10-23) — cross-family agreement of the
 ruled contract, re-measured.** The follow-up recorded in
@@ -723,18 +706,16 @@ readings. This measurement prices agreement between two
 judge families under one contract; it re-prices
 nothing, and no figure in §5.2–§5.3 changes.
 
-Limitation: the shipped appendix does not carry the
-first recheck's item list, so overlap between this
-fresh-seeded sample and the original 200-item recheck
-sample cannot be excluded from shipped data alone; the
-seed is published above so the sample itself is
-reproducible. The run's sample, verdicts, results, and
-runner ship in the appendix
-(`benchmarks/appendix/judgments_e6/`). Spend: $1.0443
-for the completed run; ≈ $1.18 in total, of which $0.14
-went to three crashed partial attempts (two transport
-failures and one response-parse failure) — under the runner's
-$6 cap and a $5 key limit.
+Limitation: the shipped appendix does not carry the first
+recheck's item list, so overlap between this fresh-seeded sample
+and the original 200-item recheck sample cannot be excluded from
+shipped data alone; the seed is published above so the sample
+itself is reproducible. The run's sample, verdicts, results, and
+runner ship in the appendix (`benchmarks/appendix/judgments_e6/`).
+Spend: $1.0443 for the completed run; ≈ $1.18 in total, of which
+$0.14 went to three crashed partial attempts (two transport
+failures and one response-parse failure) — under the runner's $6
+cap and a $5 key limit.
 
 ### 5.5 Pre-registered criteria and gate records
 
@@ -787,16 +768,15 @@ chosen by its registered cell, not by preference:
 | Judging cost | $18.0029 realized (candidate judging; the full run ledger is $18.6802) | $35.06 projected at the realized per-pair rate |
 | Ceiling-adjusted recall | 0.2028 measured | 0.1884 estimated |
 
-The fit-slice conversion cell behind the adoption measured
-η_new 0.1403 against its registered gate, with the new
-Tier-1 additions' corrected precision at 1.0000 on the
-cell's adjudicated sample. The shipped default's recall
-figure is the projection made at adoption, under the
-adjudication of its day; the ruled re-price (§5.4) has
-since raised the measured sentence-window figure past
-it, and the projection stands as recorded rather than
-recomputed. The narrower sentence window
-remains available as the cheaper option.
+The fit-slice conversion cell behind the adoption measured η_new
+0.1403 against its registered gate, with the new Tier-1 additions'
+corrected precision at 1.0000 on the cell's adjudicated sample.
+The shipped default's recall figure is the projection made at
+adoption, under the adjudication of its day; the ruled re-price
+(§5.4) has since raised the measured sentence-window figure past
+it, and the projection stands as recorded rather than recomputed.
+The narrower sentence window remains available as the cheaper
+option.
 
 **Cost (aggregate).** The full per-stage ledger and
 any program totals are internal provenance and are not
@@ -840,9 +820,8 @@ context × evidence-forced instruction), roster v2,
 sentence-window enumeration, and the Jev gates
 (`typesafe/jev-1.13`, pinned thresholds).
 
-Output: 2,058
-Tier-1 rows; 5,505 candidate pairs judged, 0 errors. The
-run's ledgered spend was $4.0026.
+Output: 2,058 Tier-1 rows; 5,505 candidate pairs judged, 0 errors.
+The run's ledgered spend was $4.0026.
 
 **Pilot criteria — all closed, as recorded.** The
 criteria were carried unchanged since round 3 and read
@@ -876,16 +855,14 @@ overall × 2.45).
 
 **Method in brief.**
 
-- *Schema first (conformance CR-1).* Putting the schema
-  in front of the proposer moved endpoint grounding
-  (grounding: an extracted row counts as grounded when
-  its endpoints are anchored to roster entities and its
-  evidence to a verbatim document span)
-  14.8% → 74.6%, recall 0.0620 → 0.2091, grounded
-  precision 0.7048 → 0.7619 — the single largest quality
-  step in this pilot, and the empirical reason the
-  ontology is a designed artifact in this product, not a
-  prompt afterthought.
+- *Schema first (conformance CR-1).* Putting the schema in front
+  of the proposer moved endpoint grounding (grounding: an
+  extracted row counts as grounded when its endpoints are anchored
+  to roster entities and its evidence to a verbatim document span)
+  14.8% → 74.6%, recall 0.0620 → 0.2091, grounded precision 0.7048
+  → 0.7619 — the single largest quality step in this pilot, and
+  the empirical reason the ontology is a designed artifact in this
+  product, not a prompt afterthought.
 - *Judge fitting (CR-2).* The J3 judge (abstract context +
   evidence-forced instruction; the two components
   independent and additive) raised conversion η
@@ -1013,13 +990,12 @@ pack's flagship record.
 
 ## 6. Design direction: ontology evolution, governance, and document lifecycle
 
-> **Status of this section.** What follows is a **design
-> direction under deliberation**,
-> not shipped v1 behavior and not a roadmap commitment.
-> It is included because a builder that freezes its
-> ontology forever would be answering the wrong question —
-> and because parts of the machinery already exist and are
-> named in §3. Unbuilt machinery is called unbuilt.
+> **Status of this section.** What follows is a **design direction
+> under deliberation**, not shipped v1 behavior and not a roadmap
+> commitment. It is included because a builder that freezes its
+> ontology forever would be answering the wrong question — and
+> because parts of the machinery already exist and are named in
+> §3. Unbuilt machinery is called unbuilt.
 
 An ontology is not a constant. Domains drift: new entity
 and relation types appear, definitions are refined, and a
@@ -1044,26 +1020,24 @@ new version rather than a silent edit; the conformance
 record remembers negative results so a rejected fitting is
 not re-proposed.
 
-A laboratory prototype also exists for
-the data-driven half — mining high-purity patterns from a
-built graph to *propose* schema extensions, gated by the
-decision model with a human review band (on its 60-item
-gate set: 27/30 true proposals admitted, 26/30 disjoint
-controls rejected, all errors near the boundary). It is a
-validated prototype, deliberately **not** autonomous
-ontology mutation, and it is not in v1.
+A laboratory prototype also exists for the data-driven half —
+mining high-purity patterns from a built graph to *propose* schema
+extensions, gated by the decision model with a human review band
+(on its 60-item gate set: 27/30 true proposals admitted, 26/30
+disjoint controls rejected, all errors near the boundary). It is a
+validated prototype, deliberately **not** autonomous ontology
+mutation, and it is not in v1.
 
-**Governance, in the lightweight form the evidence
-supports.** There are no per-version graph snapshots and
-no multi-version coexistence: the graph is one living
-artifact that tracks the latest schema. What versioning
-means here is smaller and cheaper — (i) the schema file
-itself is versioned, with a change ledger (what changed,
-why, whose approval); (ii) every triple is traceable to
-the schema version it was judged under — in v1 the pack
-version is stamped per build run; per-verdict stamps are
-part of this design round; (iii) a change
-that measures badly is reverted by reverting the file.
+**Governance, in the lightweight form the evidence supports.**
+There are no per-version graph snapshots and no multi-version
+coexistence: the graph is one living artifact that tracks the
+latest schema. What versioning means here is smaller and cheaper —
+(i) the schema file itself is versioned, with a change ledger
+(what changed, why, whose approval); (ii) every triple is
+traceable to the schema version it was judged under — in v1 the
+pack version is stamped per build run; per-verdict stamps are part
+of this design round; (iii) a change that measures badly is
+reverted by reverting the file.
 
 When a schema version changes, the graph is re-derived
 under the new version: candidate pairs and evidence are
@@ -1091,16 +1065,15 @@ snapshot per batch, and says so.
 
 ## 7. Limitations and honest scope
 
-- **Recall is low, and bound twice over.** The flagship
-  build's ceiling-adjusted recall is 0.2028. Its anatomy
-  assigns the largest loss mass to enumeration coverage
-  (57.9% of gold never enumerated), and the ruled
-  adjudication prices the second bound: only about half
-  of gold is supported as typed (ĝ_B = 0.5244, §5.4), so
-  even complete enumeration could not be credited past
-  that ceiling. The shipped default
-  (max_dist=1 + REC, estimated recall 0.1884 as projected
-  at adoption) is the measured mitigation, not a cure.
+- **Recall is low, and bound twice over.** The flagship build's
+  ceiling-adjusted recall is 0.2028. Its anatomy assigns the
+  largest loss mass to enumeration coverage (57.9% of gold never
+  enumerated), and the ruled adjudication prices the second bound:
+  only about half of gold is supported as typed (ĝ_B = 0.5244,
+  §5.4), so even complete enumeration could not be credited past
+  that ceiling. The shipped default (max_dist=1 + REC, estimated
+  recall 0.1884 as projected at adoption) is the measured
+  mitigation, not a cure.
 - **One pre-registered criterion failed.** C-2 (NONE-loss
   share ≤ 0.50) measured 0.5128 and stands as FAIL; the
   fitted configuration did not move judge-side NONE-loss,

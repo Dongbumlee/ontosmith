@@ -61,11 +61,9 @@ clause slots, and the profile-declared
 pair-enumeration, sweep and mention passes)
 proposes through the one guard funnel in
 `pipeline/proposer.py`. **Install nothing extra:**
-no local NER/RER models are involved. (A local
-GLiNER+spaCy pipeline source existed until
-2026-10-29 and was retired — unmeasured and
-English-bound; the NER stage now writes empty
-contract rows and the build log says so.)
+no local NER/RER models are involved — the NER
+stage writes empty contract rows, and the build
+log says so.
 
 Install the package from PyPI — in a virtual
 environment, so the install is yours to discard
@@ -285,13 +283,12 @@ the paid stages and dies at WRITE:
 error: Neo4j at http://localhost:7474 is unreachable (…). A build requires a running Neo4j (the graph store) — start one and check NEO4J_URL / NEO4J_USER / NEO4J_PASSWORD; setup is documented in docs/connections.md (Neo4j — the graph store).
 ```
 
-The run
-executes the staged pipeline (ingest → NER/roster →
-candidates → gates → route → write → index → verify)
-under the batch's
-frozen configuration; the ledger enforces the stop-line
-— a unit that would cross the cap is never started, and
-the run resumes from its ledger instead of
+The run executes the staged pipeline (ingest →
+NER/roster → candidates → gates → route → write →
+index → verify) under the batch's frozen
+configuration; the ledger enforces the stop-line
+— a unit that would cross the cap is never started,
+and the run resumes from its ledger instead of
 re-spending. Watch it with `ontosmith batch status
 demo-4docs`.
 
@@ -357,6 +354,26 @@ not a missing-evidence warning, and the evidence and
 judgment provenance printed above it are unaffected.
 The full viewer contract is in
 [cli-reference.md](cli-reference.md).
+
+**Ask it from an AI caller (MCP).** The same build
+also serves AI callers over the Model Context
+Protocol. Install the extra and point your MCP
+client's server configuration at the same batch:
+
+```console
+$ pip install "ontosmith[mcp]"
+$ ontosmith mcp --batch demo-4docs
+```
+
+The client gets five read-only tools — `search`,
+`entity`, `neighborhood`, `connect`, `triple` —
+over the store choice `serve` makes above. Every
+result binds its claims to their evidence sentences
+with citation keys, under a token budget whose
+truncation is always signalled; there is no `ask`
+tool, so the caller's model composes answers from
+returned evidence. The surface contract is
+[serving.md](serving.md#the-mcp-surface-ontosmith-mcp).
 
 **Held pairs, settled.** A build can hold
 entity-resolution pairs it would not merge on its own
@@ -500,9 +517,9 @@ The brief's type names land as a skeleton — names
 filled in, definitions deliberately empty, and the 20
 findings are exactly the work of step 2.
 
-Omit the
-brief and the skeleton is empty instead: two
-`EMPTY_…_INVENTORY` findings and no types at all. With
+Omit the brief and the skeleton is empty instead:
+two `EMPTY_…_INVENTORY` findings and no types at
+all. With
 `--llm`, the drafting seat writes a fuller draft. The
 drafting seat **ships unbound** — bind a model first
 with `ontosmith configure` (the declaration it writes
@@ -649,12 +666,12 @@ judge. The guards are:
   recorded in the sidecar like any other loss rather
   than dropped silently.
 
-Blocks
-are never silent: the CANDIDATES stage's completion
-line names the blocked count by reason, the batch
-metrics carry the same counts, and every blocked item
-is written to `candidates_blocked.jsonl` in the batch
-directory with its reason and its evidence quote.
+Blocks are never silent: the CANDIDATES stage's
+completion line names the blocked count by reason,
+the batch metrics carry the same counts, and every
+blocked item is written to `candidates_blocked.jsonl`
+in the batch directory with its reason and its
+evidence quote.
 
 One former block deserves a paragraph of its own,
 because it used to remove relations **wholesale**.
@@ -1060,15 +1077,6 @@ build's whole loop, replayed against shipped
 artifacts and a fetched dataset subset — now in its
 own document, [hands-on-appendix.md](hands-on-appendix.md)
 (steps A1–A9; A1–A5 spend nothing and need no key).
-
-## Advanced: the pipeline candidate path
-
-There is no local-extraction install: the
-`ontosmith[nlp]` extra (GLiNER + spaCy) was removed
-with the pipeline candidate source's retirement
-(2026-10-29). Every build proposes candidates
-through the proposer seat; nothing in a build loads
-a local NLP model.
 
 ## Where to go next
 
