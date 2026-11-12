@@ -261,6 +261,54 @@ class TestHybridSearch(unittest.TestCase):
         with self.assertRaises(ValueError):
             search.hybrid_search(_example_store(), "  ")
 
+    def test_name_only_triples_tagged_and_noted(self):
+        # The query's content terms (park, car) appear
+        # in no triple; every hit matches on the
+        # entity's name alone — mentions, not answers
+        # — and the result must say so.
+        result = search.hybrid_search(
+            _example_store(),
+            "Where does Mara Alder park her car?")
+        self.assertTrue(result["triples"])
+        self.assertTrue(all(
+            t["name_only"] and t["term_overlap"] == 0
+            for t in result["triples"]))
+        self.assertTrue(any(
+            "entity names only" in n
+            for n in result["notes"]))
+
+    def test_term_matched_triples_rank_before_name_only(
+            self):
+        result = search.hybrid_search(
+            _example_store(), "Who founded Alder & Finch?")
+        top = result["triples"][0]
+        self.assertEqual(top["relation"], "founded by")
+        self.assertFalse(top["name_only"])
+        self.assertGreaterEqual(top["term_overlap"], 1)
+        flags = [t["name_only"] for t in result["triples"]]
+        self.assertEqual(flags, sorted(flags))
+
+    def test_tag_name_only_partitions_in_rank_order(self):
+        ranked = [
+            {"subject": "Jane Bennet", "relation": "knows",
+             "object": "Mary", "score": 3.0},
+            {"subject": "Mr. Darcy",
+             "relation": "has income of",
+             "object": "ten thousand", "score": 2.0},
+            {"subject": "Jane Bennet", "relation": "met",
+             "object": "Mr. Bingley", "score": 1.0},
+        ]
+        ordered, n_only = search._tag_name_only(
+            ranked, "Jane Bennet income",
+            ["Jane Bennet", "Mr. Darcy"])
+        self.assertEqual(n_only, 2)
+        self.assertEqual(
+            [t["relation"] for t in ordered],
+            ["has income of", "knows", "met"])
+        self.assertEqual(
+            [t["name_only"] for t in ordered],
+            [False, True, True])
+
     def test_vector_arm_with_stub_embedder(self):
         with tempfile.TemporaryDirectory() as td:
             root = Path(td)

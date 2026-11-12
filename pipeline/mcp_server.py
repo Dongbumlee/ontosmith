@@ -112,7 +112,8 @@ class McpService:
                      builder: env.EnvelopeBuilder,
                      *, evidence_cap: int = EVIDENCE_CAP,
                      score: float | None = None,
-                     arm: str | None = None) -> dict:
+                     arm: str | None = None,
+                     name_only: bool | None = None) -> dict:
         """One claim–evidence object (design §7): the
         triple, its evidence sentences (capped in list
         contexts), its citation keys, and its conflict
@@ -144,6 +145,8 @@ class McpService:
             item["score"] = score
         if arm is not None:
             item["arm"] = arm
+        if name_only:
+            item["name_only"] = True
         conflicts = self._conflicts(key)
         if conflicts:
             item["conflicts_with"] = conflicts
@@ -238,7 +241,8 @@ class McpService:
                    rec["object_id"])
             triple_items.append(self._triple_item(
                 key, builder, score=rec.get("score"),
-                arm="graph"))
+                arm="graph",
+                name_only=rec.get("name_only")))
         text_items: list[dict] = []
         for spec in text_items_spec:
             ref = builder.doc_ref(spec["doc_id"])
@@ -279,13 +283,23 @@ class McpService:
             kept_text.append(item)
         # Answer-shaped order: interleave the two arms
         # by rank, each arm's internal order preserved.
+        # Name-only triples (the serving layer's tag:
+        # matched on entity names, no relation or
+        # value terms) form a trailing section after
+        # the interleaved ranking — present and
+        # counted, never mistaken for answers.
+        substantive = [i for i in triple_items
+                       if not i.get("name_only")]
+        mentions = [i for i in triple_items
+                    if i.get("name_only")]
         merged: list[dict] = []
-        for i in range(max(len(triple_items),
+        for i in range(max(len(substantive),
                            len(kept_text))):
-            if i < len(triple_items):
-                merged.append(triple_items[i])
+            if i < len(substantive):
+                merged.append(substantive[i])
             if i < len(kept_text):
                 merged.append(kept_text[i])
+        merged += mentions
         total = len(merged)
         out = builder.build(
             merged[offset:], total=total, offset=offset,
