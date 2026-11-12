@@ -995,12 +995,19 @@ def open_store(source=None, batch: str | None = None,
 
 
 def _rank_triples(triples, query: str, k: int,
-                  token_sets=None) -> list[dict]:
+                  token_sets=None,
+                  rel_weight: float = 0.0) -> list[dict]:
     """The graph arm's per-triple ranking: content-token
     overlap ≥ 2 against ``subject relation object``,
     weighted by p_true and the tier-2 discount. Shared by
     :func:`hybrid_search` (the displayed triples) and
-    :func:`sentence_search` (the candidate pool)."""
+    :func:`sentence_search` (the candidate pool).
+
+    ``rel_weight`` (the serving-quality program's β)
+    adds that multiple of the relation-only overlap to
+    the score, so a triple whose relation terms the
+    query actually names outranks one carried by name
+    overlap alone. 0.0 is the historical scoring."""
     if token_sets is None:
         token_sets = [set(query_stack.tokenize(
             f"{t['subject']} {t['relation']} {t['object']}"))
@@ -1016,7 +1023,14 @@ def _rank_triples(triples, query: str, k: int,
             w = (t["p_true"] or 0.3) * (
                 1.0 if t["tier"] == 1
                 else query_stack.TIER2_EDGE_DISCOUNT)
-            scores[i] = w * overlap
+            boost = 0.0
+            if rel_weight:
+                rel_toks = {x for x in query_stack.tokenize(
+                    t["relation"])
+                    if x not in query_stack.STOP
+                    and query_stack.is_content_token(x)}
+                boost = rel_weight * len(qtoks & rel_toks)
+            scores[i] = w * (overlap + boost)
     return [{**triples[i], "score": round(s, 6)}
             for i, s in sorted(scores.items(),
                                key=lambda kv: -kv[1])[:int(k)]]
@@ -1098,7 +1112,8 @@ def _cosine(a, b) -> float:
 # ----------------------------------------------------------------------
 def hybrid_search(store, query: str, k: int = 10,
                   embedder=None,
-                  fetch_k: int | None = None) -> dict:
+                  fetch_k: int | None = None,
+                  rel_weight: float = 0.0) -> dict:
     """Hybrid retrieval over the store's build: lexical
     (+ vector, when an embedder is bound and the build
     shipped embeddings) chunk arms fused at document
@@ -1196,7 +1211,8 @@ def hybrid_search(store, query: str, k: int = 10,
     if graph_docs:
         arms.append("graph")
     ranked_triples = _rank_triples(triples, query, k,
-                                   token_sets=token_sets)
+                                   token_sets=token_sets,
+                                   rel_weight=rel_weight)
     entities = store.find_entities(query, limit=5)
     ranked_triples, n_only = _tag_name_only(
         ranked_triples, query,
@@ -1444,7 +1460,9 @@ def sentence_search(store, query: str, k: int = 10,
                     embedder=None, reranker=None,
                     budget_tokens: int =
                     SENTENCE_BUDGET_TOKENS,
-                    fetch_k: int | None = None) -> dict:
+                    fetch_k: int | None = None,
+                    floor_cos: float | None = None,
+                    rel_weight: float = 0.0) -> dict:
     """Sentence-level evidence serving — the measured
     final form, wired onto the store contract:
 
@@ -1572,7 +1590,8 @@ def sentence_search(store, query: str, k: int = 10,
     # graph pool + beam channel
     triples = store.triples()
     ranked_triples = _rank_triples(
-        triples, query, max(int(k), _POOL_TRIPLES))
+        triples, query, max(int(k), _POOL_TRIPLES),
+        rel_weight=rel_weight)
     pool = [dict(u, via="graph", kind="sentence")
             for u in _quote_sentences(
                 store, ranked_triples[:_POOL_TRIPLES],
@@ -1635,6 +1654,38 @@ def sentence_search(store, query: str, k: int = 10,
             else:
                 sent_cos.append(_cosine(
                     qvec, embedder.embed([c["text"]])[0]))
+    if floor_cos is not None:
+        # Relevance floor (serving-quality program):
+        # candidates whose own cosine to the query
+        # falls below the floor never enter the merge —
+        # the fill stops instead of padding the budget
+        # with the least-unrelated units. Withheld
+        # counts are reported in the notes, never
+        # silent. (z_chunk's population was fixed
+        # above; it still includes floored-out chunks'
+        # cosines — a normalization detail, not a
+        # ranking input for survivors' order beyond
+        # their own scores.)
+        kept = [i for i, cs in enumerate(sent_cos)
+                if cs >= floor_cos]
+        withheld = len(cands) - len(kept)
+        cands = [cands[i] for i in kept]
+        sent_cos = [sent_cos[i] for i in kept]
+
+        def _chunk_cos_of(c):
+            if "vector_score" in c:
+                return c["vector_score"]
+            return chunk_cos.get(c["chunk_id"], 0.0)
+
+        before = len(cand_chunks)
+        cand_chunks = [c for c in cand_chunks
+                       if _chunk_cos_of(c) >= floor_cos]
+        withheld += before - len(cand_chunks)
+        if withheld:
+            notes.append(
+                f"relevance floor (cosine >= "
+                f"{floor_cos}): {withheld} candidate "
+                "unit(s) below the floor withheld")
     z_sent = _zscores(sent_cos)
     z_chunk = dict(zip(zpop, _zscores(
         [chunk_cos[cid] for cid in zpop]), strict=True))
