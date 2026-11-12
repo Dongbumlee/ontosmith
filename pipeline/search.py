@@ -72,7 +72,13 @@ from .graph_store import GraphStore, chunk_id_for
 from .inspect import BATCH_ARTEFACTS
 from .registry import index_normalize
 from .registry_store import RegistryStore
-from .sentence_index import build_sentence_rows, ent_key, ws_norm
+from .sentence_index import (
+    build_sentence_rows,
+    ent_key,
+    filebacked_universe,
+    sentence_cache_dir,
+    ws_norm,
+)
 
 #: The sentence identity key (dedupe / coverage), shared
 #: with the build-time sentence universe.
@@ -297,6 +303,25 @@ def _read_records(path: Path) -> list[dict]:
 
 
 # ----------------------------------------------------------------------
+def _query_time_note(n_rows: int, backing: str) -> str:
+    """The prepare note for a query-time-built sentence
+    index — shared by both stores so the wording (and
+    what it discloses about the matrix's backing) cannot
+    drift between them."""
+    base = (f"sentence index built at query time: "
+            f"this build predates the shipped sentence "
+            f"index ({n_rows} sentences ")
+    if backing == "reused":
+        return base + ("served from the embedding "
+                       "matrix cached on disk beside "
+                       "the store)")
+    if backing == "cached":
+        return base + ("embedded with the bound "
+                       "embedder; the matrix is cached "
+                       "on disk beside the store)")
+    return base + "embedded with the bound embedder)"
+
+
 # file-backed store — the sample path (no Neo4j, no key)
 # ----------------------------------------------------------------------
 class FileServingStore(_ArtifactRecords):
@@ -494,8 +519,14 @@ class FileServingStore(_ArtifactRecords):
         its chunks with the bound embedder, memoized on
         the store; the returned note says so, so the
         result never hides that the build predates the
-        shipped index. StoreError when the store holds
-        no chunks to build from."""
+        shipped index. The matrix is file-backed beside
+        the store (sentence_index.filebacked_universe):
+        a large universe's in-memory build peaks at the
+        float32 matrix plus its float64 widening at
+        once, and a later process reuses the cached
+        matrix instead of embedding again. StoreError
+        when the store holds no chunks to build
+        from."""
         if self._sent_rows is not None:
             return None
         if not self._chunks:
@@ -509,13 +540,12 @@ class FileServingStore(_ArtifactRecords):
                 for c in self._chunks]
         rows = build_sentence_rows(
             [c["text"] for c in self._chunks], meta)
-        embs = embedder.embed([r["text"] for r in rows])
+        embs, backing = filebacked_universe(
+            embedder, [r["text"] for r in rows],
+            sentence_cache_dir(self.source))
         self._sent_rows = rows
-        self._sent_emb = np.asarray(embs, dtype=np.float64)
-        return (f"sentence index built at query time: "
-                f"this build predates the shipped sentence "
-                f"index ({len(rows)} sentences embedded "
-                f"with the bound embedder)")
+        self._sent_emb = embs
+        return _query_time_note(len(rows), backing)
 
     def sentence_snapshot(self):
         """(rows, embeddings) of the sentence universe,
@@ -842,8 +872,12 @@ class Neo4jServingStore(_ArtifactRecords):
         otherwise the identical universe built at query
         time from the store's chunks with the bound
         embedder, memoized, with the returned note
-        saying so. StoreError when the store can answer
-        neither way."""
+        saying so. The built matrix is file-backed
+        beside the store (sentence_index.
+        filebacked_universe), so its memory peak stays
+        evictable and a later process reuses it.
+        StoreError when the store can answer neither
+        way."""
         if self._sent_rows is not None:
             return None
         if hasattr(self.gs, "sentence_snapshot"):
@@ -874,13 +908,12 @@ class Neo4jServingStore(_ArtifactRecords):
                 for r in rows]
         srows = build_sentence_rows(
             [r["text"] for r in rows], meta)
-        embs = embedder.embed([r["text"] for r in srows])
+        embs, backing = filebacked_universe(
+            embedder, [r["text"] for r in srows],
+            sentence_cache_dir(self.source))
         self._sent_rows = srows
-        self._sent_emb = np.asarray(embs, dtype=np.float64)
-        return (f"sentence index built at query time: "
-                f"this build predates the shipped sentence "
-                f"index ({len(srows)} sentences embedded "
-                f"with the bound embedder)")
+        self._sent_emb = embs
+        return _query_time_note(len(srows), backing)
 
     def sentence_snapshot(self):
         """(rows, embeddings) of the sentence universe,

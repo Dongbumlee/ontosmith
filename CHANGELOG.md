@@ -37,6 +37,20 @@ and the project adheres to
   language: the caller's model composes answers from
   the returned evidence.
 
+### Fixed
+
+- **Query-time sentence index no longer peaks in
+  memory** — a build that predates the shipped
+  sentence index gets its sentence universe built at
+  query time; that matrix was materialized in memory
+  (the float32 embeddings plus their float64 widening
+  at once — about 4.7 GB for a 127k-sentence corpus),
+  which could kill serving on a modest machine at
+  first search. The matrix is now file-backed beside
+  the store (identical values, evictable pages) and
+  reused by later processes instead of being embedded
+  again; the prepare note says which backing served.
+
 ## [0.1.10] - 2026-11-10
 
 ### Added

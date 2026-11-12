@@ -178,6 +178,43 @@ class TestQueryTimeBuild(_BatchCase):
             self.store.prepare_sentence_index(self.emb))
 
 
+class _CountingEmbedder:
+    """Wraps the hash embedder, counting embedded
+    texts — the reuse pin is that a second store over
+    the same batch embeds nothing."""
+
+    def __init__(self, inner):
+        self._inner = inner
+        self.texts_seen = 0
+
+    def embed(self, texts):
+        self.texts_seen += len(texts)
+        return self._inner.embed(texts)
+
+
+class TestQueryTimeMatrixCache(_BatchCase):
+    WITH_SENTENCES = False
+
+    def test_matrix_cached_on_disk_and_reused(self):
+        first = _CountingEmbedder(self.emb)
+        note = self.store.prepare_sentence_index(first)
+        self.assertIn("cached on disk", note)
+        self.assertGreater(first.texts_seen, 0)
+        _rows, embs = self.store.sentence_snapshot()
+        self.assertIsInstance(embs, np.memmap)
+        # a fresh store over the same batch reuses the
+        # on-disk matrix: no embedding spend, same values
+        store2 = search.FileServingStore(
+            self.bdir, root=self.root)
+        second = _CountingEmbedder(self.emb)
+        note2 = store2.prepare_sentence_index(second)
+        self.assertIn("served from", note2)
+        self.assertEqual(second.texts_seen, 0)
+        _rows2, embs2 = store2.sentence_snapshot()
+        self.assertTrue(np.array_equal(
+            np.asarray(embs), np.asarray(embs2)))
+
+
 class TestSentenceSearch(_BatchCase):
 
     def test_arms_and_attribution(self):

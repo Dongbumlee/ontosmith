@@ -94,6 +94,10 @@ the `rerank` extra is installed, and filled as whole
 units under a 4,000-token budget. A build that
 predates the shipped index gets the same sentence
 universe built at query time, with a note saying so.
+The built matrix is cached on disk beside the store
+(`.sentence-index-cache/`), so a later process reuses
+it instead of embedding again — and a large universe
+never has to sit in memory all at once.
 
 What a search returns, in order:
 
