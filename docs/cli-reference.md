@@ -839,6 +839,42 @@ options:
                         seat's key is unset)
 ```
 
+### `ontosmith mcp` — MCP server for AI callers: search / entity / neighborhood / connect / triple (read-only)
+
+`ontosmith mcp --help`:
+
+```text
+usage: ontosmith mcp [-h] [--source SOURCE] [--batch BATCH]
+                     [--store {auto,file,neo4j}] [--embed]
+
+MCP server over the built graph: search / entity / neighborhood / connect /
+triple (read-only, evidence-bound)
+
+options:
+  -h, --help            show this help message and exit
+  --source SOURCE       batch directory, records directory, or records file
+                        (default: the shipped example build)
+  --batch BATCH         batch id under the state root's batches/ (alternative
+                        to --source)
+  --store {auto,file,neo4j}
+                        serving store: auto = Neo4j when NEO4J_URL is
+                        configured, else the file store (default: auto)
+  --embed               activate the search vector arm via the connection
+                        layer's default embedder
+```
+
+The MCP surface serves the built graph to AI callers
+over stdio (the `mcp` extra: `pip install
+"ontosmith[mcp]"`). Five read-only tools — `search`,
+`entity`, `neighborhood`, `connect`, `triple` — return
+one envelope: hoisted source documents, claim–evidence
+items with citation keys, a hard token budget with
+signalled truncation, and conflicts flagged rather
+than resolved. There is no `ask` tool: the caller's
+model composes answers from the returned evidence.
+See [docs/serving.md](serving.md) for the surface
+contract.
+
 ### `ontosmith quickstart` — First run: build a graph from one text file and serve it
 
 `ontosmith quickstart --help`:

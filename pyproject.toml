@@ -85,6 +85,11 @@ viz = ["matplotlib", "networkx", "python-louvain"]
 # only when this extra is installed; without it the
 # step is inactive and results say so.
 rerank = ["sentence-transformers"]
+# MCP server surface (pipeline/mcp_server.py): the
+# official MCP Python SDK, pinned to the 1.x line —
+# the 2.x SDK renamed its server API (FastMCP ->
+# MCPServer); the pin moves when the surface does.
+mcp = ["mcp>=1.2,<2"]
 
 [project.scripts]
 ontosmith = "pipeline.__main__:main"
