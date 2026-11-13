@@ -7,6 +7,8 @@ and the project adheres to
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-11-13
+
 ### Changed
 
 - **Search results flag name-only graph matches** —
@@ -20,6 +22,14 @@ and the project adheres to
   unchanged; the MCP `search` tool surfaces the tag
   and places name-only triples in a trailing
   section.
+- **Relevance floor on by default in sentence
+  search** — units whose cosine similarity to the
+  query falls below the floor (0.25) are withheld
+  from sentence-form results and counted in the
+  result's notes, so what the merge surfaces is
+  what cleared relevance, not merely what fit the
+  budget. Callers can set a different floor or
+  disable it (`floor_cos=None`).
 
 ### Added
 
@@ -50,6 +60,17 @@ and the project adheres to
   the store (identical values, evictable pages) and
   reused by later processes instead of being embedded
   again; the prepare note says which backing served.
+- **Sentence index rebuilds or refuses on embedder
+  dimension mismatch** — the query-time cache keyed
+  reuse on the sentence texts alone, so a matrix
+  cached under one embedder was served under another;
+  with different dimensions the merge died on a raw
+  matrix-product error, unnamed and without a remedy.
+  A cache hit is now validated against the bound
+  embedder (a one-text dimension probe) and rebuilt
+  on mismatch; a shipped index served under a
+  mismatched embedder refuses by name, stating both
+  dimensions and the remedy.
 
 ## [0.1.10] - 2026-11-10
 

@@ -575,12 +575,12 @@ runs when an embedder is bound
 
 ## Status
 
-Release 0.1.10, published on PyPI. The pipeline,
+Release 0.2.0, published on PyPI. The pipeline,
 profiler, ontology builder, inspect viewer,
 verification cores, packs, and the serving surface
-(search command + sample API) in this tree are
-measured, tested components, as is the minimal demo
-app served with the API.
+(search command, sample API, and the MCP server)
+in this tree are measured, tested components, as
+is the minimal demo app served with the API.
 
 ## License
 
