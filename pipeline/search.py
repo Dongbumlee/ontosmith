@@ -1575,6 +1575,23 @@ def sentence_search(store, query: str, k: int = 10,
     fetch = int(fetch_k) if fetch_k else query_stack.CHUNK_FETCH_K
     qvec = np.asarray(embedder.embed([query])[0],
                       dtype=np.float64)
+    if sent_emb.ndim == 2 and sent_emb.shape[0] and \
+            sent_emb.shape[1] != qvec.shape[0]:
+        # A shipped index carries the build embedder's
+        # vectors; serving it under a bound embedder of
+        # another dimension would die inside the merge's
+        # matrix product. Refuse by name instead — this
+        # form's contract is named refusals, not raw
+        # numeric errors. (A query-time-built index
+        # cannot land here: its cache validates the
+        # bound embedder's dimension before reuse.)
+        raise SentenceServingUnavailable(
+            "the store's sentence index was embedded "
+            f"in {sent_emb.shape[1]} dimensions, but "
+            "the bound embedder produces "
+            f"{qvec.shape[0]} — bind the embedder the "
+            "index was built with, or rebuild the "
+            "index with the bound embedder")
 
     # chunk front: lexical + vector arms, top chunks by
     # vector score — the chunk layer's population.

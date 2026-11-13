@@ -27,7 +27,12 @@ Pins, in order:
   again with floor_cos=None;
 - the named refusal without an embedder, and the CLI's
   default path (sentence serving) plus its named
-  fallback to chunk serving when no embedder resolves.
+  fallback to chunk serving when no embedder resolves;
+- a shipped index served under a bound embedder of a
+  different dimension refuses by name, and a query-time
+  cache written under another embedder is rebuilt for
+  the bound one instead of being served into a
+  dimension error.
 """
 from __future__ import annotations
 
@@ -166,6 +171,20 @@ class TestShippedSentenceIndex(_BatchCase):
         self.assertEqual(rows[0]["doc_id"], "doc-a")
         self.assertTrue(rows[0]["chunk_id"].endswith("doc-a:0"))
 
+    def test_mismatched_bound_embedder_refuses_by_name(self):
+        # the shipped index carries the build embedder's
+        # 64 dimensions; a bound embedder of another
+        # dimension gets the named refusal, never a raw
+        # matrix-product error from inside the merge
+        with self.assertRaises(
+                search.SentenceServingUnavailable) as cm:
+            search.sentence_search(
+                self.store, QUERY,
+                embedder=_NarrowEmbedder(),
+                reranker=False)
+        self.assertIn("64", str(cm.exception))
+        self.assertIn("32", str(cm.exception))
+
 
 class TestQueryTimeBuild(_BatchCase):
     WITH_SENTENCES = False
@@ -182,10 +201,18 @@ class TestQueryTimeBuild(_BatchCase):
             self.store.prepare_sentence_index(self.emb))
 
 
+class _NarrowEmbedder(_HashEmbedder):
+    """The hash embedder at half the dimension — a
+    differently-dimensioned bound embedder."""
+
+    DIMS = 32
+
+
 class _CountingEmbedder:
     """Wraps the hash embedder, counting embedded
     texts — the reuse pin is that a second store over
-    the same batch embeds nothing."""
+    the same batch embeds nothing beyond the one-text
+    dimension probe."""
 
     def __init__(self, inner):
         self._inner = inner
@@ -207,16 +234,33 @@ class TestQueryTimeMatrixCache(_BatchCase):
         _rows, embs = self.store.sentence_snapshot()
         self.assertIsInstance(embs, np.memmap)
         # a fresh store over the same batch reuses the
-        # on-disk matrix: no embedding spend, same values
+        # on-disk matrix: no embedding spend beyond the
+        # one-text dimension probe, same values
         store2 = search.FileServingStore(
             self.bdir, root=self.root)
         second = _CountingEmbedder(self.emb)
         note2 = store2.prepare_sentence_index(second)
         self.assertIn("served from", note2)
-        self.assertEqual(second.texts_seen, 0)
+        self.assertEqual(second.texts_seen, 1)
         _rows2, embs2 = store2.sentence_snapshot()
         self.assertTrue(np.array_equal(
             np.asarray(embs), np.asarray(embs2)))
+
+    def test_cache_under_other_embedder_is_rebuilt(self):
+        # the first store caches the matrix under the
+        # 64-dim hash embedder; a fresh store bound to a
+        # 32-dim embedder must rebuild the cache for its
+        # own embedder instead of serving the 64-dim
+        # matrix into a dimension error
+        self.store.prepare_sentence_index(self.emb)
+        store2 = search.FileServingStore(
+            self.bdir, root=self.root)
+        narrow = _NarrowEmbedder()
+        note = store2.prepare_sentence_index(narrow)
+        self.assertIn("cached on disk", note)
+        _rows, embs = store2.sentence_snapshot()
+        self.assertEqual(embs.shape,
+                         (4, _NarrowEmbedder.DIMS))
 
 
 class TestSentenceSearch(_BatchCase):

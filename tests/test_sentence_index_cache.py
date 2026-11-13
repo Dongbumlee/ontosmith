@@ -7,10 +7,14 @@ Pins:
   for element;
 - a first build is written to disk ("cached") and a
   second call over the same texts reuses it
-  ("reused") with zero embedder calls;
+  ("reused") with a single one-text dimension probe —
+  the universe itself is never re-embedded;
 - any change to the text list changes the fingerprint
   and forces a rebuild — a stale matrix is never
   served;
+- a matrix cached under an embedder of a different
+  dimension is rebuilt for the bound embedder, never
+  reused;
 - an unwritable cache directory falls back to the
   in-memory build ("memory") with identical values.
 """
@@ -53,6 +57,14 @@ class _CountingEmbedder:
         return out
 
 
+class _WideEmbedder(_CountingEmbedder):
+    """Same deterministic shape, twice the dimension —
+    a different embedder as far as a cached matrix is
+    concerned."""
+
+    DIMS = 16
+
+
 class TestFilebackedUniverse(unittest.TestCase):
 
     def setUp(self):
@@ -82,8 +94,34 @@ class TestFilebackedUniverse(unittest.TestCase):
         matrix, backing = filebacked_universe(
             second, TEXTS, self.dir)
         self.assertEqual(backing, "reused")
-        self.assertEqual(second.texts_seen, 0)
+        # the only spend is the one-text dimension
+        # probe that validates the reuse
+        self.assertEqual(second.texts_seen, 1)
         self.assertIsInstance(matrix, np.memmap)
+
+    def test_mismatched_dimension_rebuilds(self):
+        filebacked_universe(
+            _CountingEmbedder(), TEXTS, self.dir)
+        wide = _WideEmbedder()
+        matrix, backing = filebacked_universe(
+            wide, TEXTS, self.dir)
+        self.assertEqual(backing, "cached")
+        # the rebuild embeds the universe once, plus
+        # the one probe text that detected the mismatch
+        self.assertEqual(wide.texts_seen, len(TEXTS) + 1)
+        self.assertEqual(matrix.shape,
+                         (len(TEXTS), _WideEmbedder.DIMS))
+        direct = np.asarray(
+            _WideEmbedder().embed(TEXTS),
+            dtype=np.float64)
+        self.assertTrue(np.array_equal(
+            np.asarray(matrix), direct))
+        # and the rebuilt matrix is the one now reused
+        again = _WideEmbedder()
+        _matrix, backing = filebacked_universe(
+            again, TEXTS, self.dir)
+        self.assertEqual(backing, "reused")
+        self.assertEqual(again.texts_seen, 1)
 
     def test_changed_texts_rebuild(self):
         filebacked_universe(
