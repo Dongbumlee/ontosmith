@@ -21,6 +21,10 @@ Pins, in order:
 - the rerank step's toggle: an injected reranker
   reorders the head; reranker=False fills in merge
   order and the note says the step was caller-disabled;
+- the relevance floor's default: a candidate with no
+  cosine to the query is withheld under the product
+  default (and the withholding is noted), and serves
+  again with floor_cos=None;
 - the named refusal without an embedder, and the CLI's
   default path (sentence serving) plus its named
   fallback to chunk serving when no embedder resolves.
@@ -218,9 +222,13 @@ class TestQueryTimeMatrixCache(_BatchCase):
 class TestSentenceSearch(_BatchCase):
 
     def test_arms_and_attribution(self):
+        # arm attribution is a property of the unfloored
+        # form; the product default's floor is pinned
+        # separately in TestRelevanceFloor
         r = search.sentence_search(self.store, QUERY,
                                    embedder=self.emb,
-                                   reranker=False)
+                                   reranker=False,
+                                   floor_cos=None)
         self.assertEqual(r["arms"],
                          ["sentences", "graph-pool", "beam"])
         by_text = {u["text"]: u for u in r["units"]}
@@ -253,6 +261,32 @@ class TestSentenceSearch(_BatchCase):
                 search.SentenceServingUnavailable):
             search.sentence_search(self.store, QUERY,
                                    embedder=None)
+
+
+class TestRelevanceFloor(_BatchCase):
+    """The product default serves with the relevance
+    floor on: a candidate whose cosine to the query is
+    zero (the beam quote shares no token with the query
+    under the hash embedder) never enters the fill, the
+    withholding is reported in the notes, and an
+    explicit floor_cos=None serves it again."""
+
+    def test_default_floor_withholds_and_notes(self):
+        r = search.sentence_search(self.store, QUERY,
+                                   embedder=self.emb,
+                                   reranker=False)
+        texts = [u["text"] for u in r["units"]]
+        self.assertNotIn(BEAM_QUOTE, texts)
+        self.assertTrue(any("relevance floor" in n
+                            for n in r["notes"]))
+
+    def test_floor_disabled_serves_the_quote(self):
+        r = search.sentence_search(self.store, QUERY,
+                                   embedder=self.emb,
+                                   reranker=False,
+                                   floor_cos=None)
+        texts = [u["text"] for u in r["units"]]
+        self.assertIn(BEAM_QUOTE, texts)
 
 
 class _ReverseReranker:

@@ -1275,6 +1275,13 @@ def hybrid_search(store, query: str, k: int = 10,
 #: across questions and arms.
 SENTENCE_BUDGET_TOKENS = 4000
 
+#: Relevance floor for sentence serving: a candidate
+#: whose own cosine to the query falls below it never
+#: enters the merge (the floor step in
+#: :func:`sentence_search`). On by default; a caller
+#: passes ``floor_cos=None`` to serve without it.
+SENTENCE_FLOOR_COS = 0.25
+
 #: Triples whose evidence quotes seed the graph pool.
 _POOL_TRIPLES = 12
 
@@ -1494,7 +1501,8 @@ def sentence_search(store, query: str, k: int = 10,
                     budget_tokens: int =
                     SENTENCE_BUDGET_TOKENS,
                     fetch_k: int | None = None,
-                    floor_cos: float | None = None,
+                    floor_cos: float | None =
+                    SENTENCE_FLOOR_COS,
                     rel_weight: float = 0.0) -> dict:
     """Sentence-level evidence serving — the measured
     final form, wired onto the store contract:
@@ -1519,12 +1527,18 @@ def sentence_search(store, query: str, k: int = 10,
        population; **Z2 merge** — sentences carry 2 x
        their combined score, chunks their z(chunk
        cosine), in one ranked list.
-    5. **Rerank + fill** — the merged head (top 80) is
-       reordered by the rerank step when one is active
-       (``reranker``: an object with ``score(query,
-       texts)``; None → the reference local cross-encoder
-       when its extra is installed; False → off), then
-       whole units fill the token budget.
+    5. **Floor, rerank + fill** — candidates whose own
+       cosine falls below the relevance floor
+       (``floor_cos``; the product default is
+       :data:`SENTENCE_FLOOR_COS`, None serves without
+       it) are withheld before the merge, and the
+       withheld count is reported in the notes. The
+       merged head (top 80) is reordered by the rerank
+       step when one is active (``reranker``: an object
+       with ``score(query, texts)``; None → the
+       reference local cross-encoder when its extra is
+       installed; False → off), then whole units fill
+       the token budget.
 
     The form is embedding-shaped, so ``embedder`` is
     required: a missing binding, or a store that serves
