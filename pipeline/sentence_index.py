@@ -125,7 +125,10 @@ def filebacked_universe(
     file-backed matrix holds identical values (the
     embedder's own vectors, widened) while its pages
     stay evictable, and a later process reuses the file
-    instead of paying the embedding spend again."""
+    instead of paying the embedding spend again. Reuse
+    is validated against the bound embedder (a
+    one-text dimension probe): a matrix cached under a
+    different embedder is rebuilt, never served."""
     if not texts:
         return np.zeros((0, 0), dtype=np.float64), \
             "memory"
@@ -154,7 +157,24 @@ def _filebacked(embedder, texts: list[str],
             if mm.shape == (len(texts),
                             int(saved["dims"])) and \
                     mm.dtype == np.float64:
-                return mm, "reused"
+                # The fingerprint keys on the texts
+                # alone, so a matrix cached under a
+                # different embedder than the bound one
+                # is the same shape of stale. One probe
+                # text prices the check: reuse only when
+                # the cached dimension is the bound
+                # embedder's. On a mismatch, fall
+                # through and let the build below
+                # replace the file — the cache is a
+                # derived artifact, never a reason to
+                # serve another embedder's vectors.
+                probe = np.asarray(
+                    embedder.embed([texts[0]]))
+                if probe.ndim == 2 and \
+                        int(probe.shape[1]) == \
+                        int(saved["dims"]):
+                    return mm, "reused"
+                del mm
     cache_dir.mkdir(parents=True, exist_ok=True)
     fd, tmp_name = tempfile.mkstemp(
         dir=cache_dir, prefix=f"{stem}.", suffix=".tmp")
