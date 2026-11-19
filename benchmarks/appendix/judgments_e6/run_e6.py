@@ -176,7 +176,7 @@ def _call_once(key: str, model: str, text: str) -> dict:
 
 def judge_live(key: str, model: str, text: str) -> tuple[dict, float]:
     # Retry with backoff on any transport/API failure (added
-    # 2026-10-23 with Dongbum's approval). Packets, model and
+    # 2026-10-23, approved). Packets, model and
     # verdict handling are unchanged.
     data = None
     for attempt in range(7):
