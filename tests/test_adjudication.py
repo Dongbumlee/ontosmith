@@ -324,17 +324,17 @@ class TestStageAdjudicate(unittest.TestCase):
         })
         batch_run.stage_adjudicate(self.b, self.root, [], chat)
         d = batch_dir(self.root, "adj-test")
-        decisions = [json.loads(l)
-                     for l in open(d / "adjudication.jsonl")]
+        decisions = [json.loads(line)
+                     for line in open(d / "adjudication.jsonl")]
         self.assertEqual([r["decision"] for r in decisions],
                          ["keep", "veto"])
-        survivors = [json.loads(l) for l in
+        survivors = [json.loads(line) for line in
                      open(d / "candidates_adjudicated.jsonl")]
         self.assertEqual(len(survivors), 1)
         self.assertEqual(self.b.status, BatchStatus.ADJUDICATED)
         self.assertEqual(self.b.metrics["adjudication"]["veto"], 1)
         # Pass C's record is untouched.
-        cands = [json.loads(l) for l in open(d / "candidates.jsonl")]
+        cands = [json.loads(line) for line in open(d / "candidates.jsonl")]
         self.assertEqual(len(cands), 2)
 
     def test_gates_judges_adjudicated_survivors(self):
@@ -353,8 +353,8 @@ class TestStageAdjudicate(unittest.TestCase):
         batch_run.stage_gates(self.b, self.root, ["ADJUDICATE"],
                               decide)
         d = batch_dir(self.root, "adj-test")
-        judgments = [json.loads(l)
-                     for l in open(d / "judgments.jsonl")]
+        judgments = [json.loads(line)
+                     for line in open(d / "judgments.jsonl")]
         self.assertEqual(len(judgments), 1)
         self.assertEqual(judgments[0]["object"], "New York")
 
