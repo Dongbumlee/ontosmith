@@ -1,6 +1,6 @@
 {
  "family": "biored",
- "profile_version": 4,
+ "profile_version": 5,
  "triple_threshold": 0.25,
  "review_band": [
   0.25,
@@ -446,5 +446,7 @@
  "pair_judge_instruction": "evidence",
  "pair_judge_note": "Round 5 (#56): the pair-judge factorial winner J3 (abstract context x evidence instruction; slice eta 0.5412 -> 0.7412, guard audit upheld 0.70) selected for the pair stage. Removing these keys restores the rounds-3/4 judge (sentence x standard) byte-identically.",
  "pair_judge_generic_relation": "Association",
- "pair_judge_generic_relation_note": "PK-02 (2026-10-19): the pair judge evidence template names the inventory's generic-member relation through this declared value; the name was previously a literal in core code (pilot/pair_proposer.py). Rendered prompts are byte-identical (scripts/test_domain_boundary.py)."
+ "pair_judge_generic_relation_note": "PK-02 (2026-10-19): the pair judge evidence template names the inventory's generic-member relation through this declared value; the name was previously a literal in core code (pilot/pair_proposer.py). Rendered prompts are byte-identical (scripts/test_domain_boundary.py).",
+ "adjudication_layer": true,
+ "full_verification_gate": true
 }
