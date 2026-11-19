@@ -1,7 +1,1 @@
-{
- "pack_id": "docred",
- "pack_payload_sha256": "d3015687392af075cf1ba0bf8627b573d9ef919aad1f714369afc7fcf3619192",
- "pack_version": "0.10.0",
- "profile_family": "redocred",
- "profile_version": 1
-}
+{"pack_id": "open-domain", "pack_payload_sha256": "36a331e4c8bbeda575b6115f394ab4c0c44e405ece8ef9afc4749e5c3352a839", "pack_version": "0.10.1", "profile_family": "redocred", "profile_version": 1}
