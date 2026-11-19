@@ -449,5 +449,7 @@
    "the laws of the State of Wisconsin": "wisconsin",
    "the laws of the State of Wyoming": "wyoming"
   }
- }
+ },
+ "adjudication_layer": true,
+ "full_verification_gate": true
 }
