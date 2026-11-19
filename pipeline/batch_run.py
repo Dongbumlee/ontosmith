@@ -264,6 +264,14 @@ def _per_doc_distribution(candidates: list[dict],
             "median": statistics.median(vals), "max": vals[-1]}
 
 
+def _id_slug(s: str) -> str:
+    """Slug for record ids (finding ids): alphanumerics and
+    dashes, everything else folded to a dash."""
+    return "".join(
+        ch if ch.isalnum() or ch == "-" else "-"
+        for ch in s.lower()).strip("-")
+
+
 def _apply_canonical_vocabularies(candidates: list[dict],
                                     setup_cfg: dict | None) -> dict:
     """Recording-time normalisation (0.2.1, freeze item 3).
@@ -726,6 +734,11 @@ def stage_candidates(b: Batch, root: Path, stages: list[str]) -> None:
     # contract artifact since the pipeline source retired).
     candidates = []
     blocked_all = []  # Arm-B C3-blocked records (killed-set audit sidecar)
+    # Negative findings (0.2.1, freeze item 4): slot categories
+    # the sweep found ABSENT in a document, materialised as
+    # citable records (negative_findings.jsonl) rather than
+    # left as the absence of a candidate.
+    negative_all: list[dict] = []
     # Verdict sidecar:
     # every pair verdict the pair stage produces, persisted
     # pre-guard so the verdict -> blocked -> deduped -> kept
@@ -878,6 +891,11 @@ def stage_candidates(b: Batch, root: Path, stages: list[str]) -> None:
                 with open(d / "candidates_blocked.jsonl") as f:
                     for line in f:
                         blocked_all.append(json.loads(line))
+            if (d / "negative_findings.jsonl").exists():
+                with open(d / "negative_findings.jsonl") as f:
+                    for line in f:
+                        if line.strip():
+                            negative_all.append(json.loads(line))
             if pair_enum and (d / "pair_verdicts.jsonl").exists():
                 with open(d / "pair_verdicts.jsonl") as f:
                     for line in f:
@@ -1465,6 +1483,34 @@ def stage_candidates(b: Batch, root: Path, stages: list[str]) -> None:
                         "context": _prop.quote_window(text, bl["quote"]),
                         "method": "clause-llm", "quote": bl["quote"],
                         "reason": bl["reason"]})
+                # Absence materialisation (0.2.1, freeze item
+                # 4): a declared category the sweep neither
+                # filled nor had guard-blocked was found ABSENT
+                # in this document. That absence is itself a
+                # finding — downstream consumers (the conflict
+                # and absence reads) cannot use an absence that
+                # exists only as a missing candidate, so it is
+                # materialised as a flagged negative-finding
+                # record: a distinct record kind, citable by
+                # finding_id, never a positive triple.
+                # "Document Name" is exempt: it is the subject
+                # carrier, and its absence is resolved by the
+                # file-name fallback above — recording it as
+                # absent would state a falsehood.
+                attested_cats = {f["category"] for f in fills} | \
+                    {bl["category"] for bl in sblocked}
+                for cat in slot_categories:
+                    if cat == "Document Name" \
+                            or cat in attested_cats:
+                        continue
+                    negative_all.append({
+                        "kind": "negative_finding",
+                        "finding_id": f"nf-{_id_slug(doc_id)}-"
+                                      f"{_id_slug(cat)}",
+                        "batch_id": b.batch_id, "run_id": b.run_id,
+                        "doc_id": doc_id, "subject": doc_name,
+                        "category": cat, "status": "absent",
+                        "method": "clause-llm"})
         candidates.extend(doc_llm)
         blocked_all.extend(doc_blocked)
         # Checkpoint: save progress after each doc
@@ -1477,6 +1523,10 @@ def stage_candidates(b: Batch, root: Path, stages: list[str]) -> None:
                 with open(d / "candidates_blocked.jsonl", "w") as f:
                     for bl in blocked_all:
                         f.write(json.dumps(bl) + "\n")
+            if negative_all:
+                with open(d / "negative_findings.jsonl", "w") as f:
+                    for nf in negative_all:
+                        f.write(json.dumps(nf) + "\n")
             if pair_verdicts:
                 with open(d / "pair_verdicts.jsonl", "w") as f:
                     for v in pair_verdicts:
@@ -1518,6 +1568,14 @@ def stage_candidates(b: Batch, root: Path, stages: list[str]) -> None:
         with open(d / "candidates_blocked.jsonl", "w") as f:
             for bl in blocked_all:
                 f.write(json.dumps(bl) + "\n")
+    if negative_all:
+        with open(d / "negative_findings.jsonl", "w") as f:
+            for nf in negative_all:
+                f.write(json.dumps(nf) + "\n")
+        _log(b.batch_id,
+             f"CANDIDATES negative findings: "
+             f"{len(negative_all)} absent slot categories "
+             f"materialised (negative_findings.jsonl)")
     if pair_verdicts:
         with open(d / "pair_verdicts.jsonl", "w") as f:
             for v in pair_verdicts:
@@ -1570,6 +1628,9 @@ def stage_candidates(b: Batch, root: Path, stages: list[str]) -> None:
         b.metrics["candidates"]["canonicalization"] = {
             "mapped": canon_stats["mapped"],
             "unmapped": canon_stats["unmapped"]}
+    if slot_categories:
+        b.metrics["candidates"]["negative_findings"] = \
+            len(negative_all)
     if identity_seat_src is not None:
         b.metrics["candidates"]["identity_seat"] = {
             **identity_seat_src,

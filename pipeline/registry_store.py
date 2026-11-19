@@ -82,6 +82,21 @@ class RegistryStore:
         with open(p) as f:
             return [json.loads(line) for line in f]
 
+    def negative_findings(self, batch_id: str) -> list[dict]:
+        """negative_findings.jsonl — the batch's materialised
+        absence records (0.2.1): one row per (document,
+        declared slot category) the clause sweep found ABSENT,
+        each a flagged record of kind "negative_finding" with
+        a citable finding_id — read here, by the store layer,
+        alongside the positive triples above. Empty list when
+        the batch recorded none (no slot sweep, or a build
+        predating the record)."""
+        p = self.batch_dir(batch_id) / "negative_findings.jsonl"
+        if not p.exists():
+            return []
+        with open(p) as f:
+            return [json.loads(line) for line in f if line.strip()]
+
     def routed_rows(self, batch_id: str, tier: int | None = None) -> list[dict]:
         """routed.jsonl rows (surface names + gate provenance),
         optionally filtered to one tier."""
