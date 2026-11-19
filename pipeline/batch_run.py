@@ -1687,6 +1687,80 @@ def _fold_costs(costs: list):
     return total
 
 
+def _declared_adjudication(b: Batch, root: Path) -> bool:
+    """Whether the batch's profile declares the Pass D
+    adjudication layer (0.2.1 two-pass build). The declaration
+    is read from the same resolved setup_config every stage
+    consumes; a batch with no profile declares nothing. A
+    malformed declaration raises here (fail closed), exactly
+    as it would at the stages that consume the config."""
+    cfg = _load_setup_config(b, root)
+    if not cfg:
+        return False
+    from .profile_config import adjudication_layer_enabled
+    return adjudication_layer_enabled(cfg)
+
+
+def stage_adjudicate(b: Batch, root: Path, stages: list[str],
+                     adjudicate_fn) -> None:
+    """ADJUDICATE: Pass D (0.2.1 two-pass build).
+
+    Every candidate from CANDIDATES is adjudicated keep /
+    retype / veto under the proposal-discipline clauses
+    (pipeline/adjudication.py): decision order keep -> retype
+    -> veto, the full excerpt as truth boundary, quote
+    completeness (R5) as a shipping condition, mandatory
+    retype logging on vetoes (R4). Every decision — vetoes
+    included — is persisted to adjudication.jsonl (the batch
+    artefact the accounting reads); survivors, with their
+    final fields applied, go to candidates_adjudicated.jsonl,
+    which GATES consumes in place of candidates.jsonl.
+    candidates.jsonl itself is never mutated: Pass C's record
+    stays exactly as proposed."""
+    from . import adjudication as adj
+    d = batch_dir(root, b.batch_id)
+    candidates = [json.loads(l) for l in open(d / "candidates.jsonl")]
+    texts = {}
+    with open(d / "texts.jsonl") as f:
+        for line in f:
+            r = json.loads(line)
+            texts[r["doc_id"]] = r["text"]
+    decision_rows, survivors, total_cost = adj.adjudicate_candidates(
+        adjudicate_fn, candidates, texts, model=b.config.gate_model)
+    with open(d / "adjudication.jsonl", "w") as f:
+        for row in decision_rows:
+            f.write(json.dumps(row) + "\n")
+    with open(d / "candidates_adjudicated.jsonl", "w") as f:
+        for row in survivors:
+            f.write(json.dumps(row) + "\n")
+    counts = {"keep": 0, "retype": 0, "veto": 0}
+    remedies: dict[str, int] = {}
+    clauses: dict[str, int] = {}
+    enforcements: dict[str, int] = {}
+    for row in decision_rows:
+        counts[row["decision"]] += 1
+        remedies[row["r5_remedy"]] = remedies.get(row["r5_remedy"], 0) + 1
+        if row.get("clause") is not None:
+            key = str(row["clause"])
+            clauses[key] = clauses.get(key, 0) + 1
+        if row.get("enforcement"):
+            enforcements[row["enforcement"]] = \
+                enforcements.get(row["enforcement"], 0) + 1
+    b.metrics["adjudication"] = {
+        "candidates": len(candidates), **counts,
+        "remedies": remedies, "clauses": clauses,
+        "enforcements": enforcements,
+        "cost_usd": _round_cost(total_cost)}
+    _record_cost(b, "ADJUDICATE", _round_cost(total_cost))
+    save_batch(b, root)
+    advance(b, root, [*stages, "ADJUDICATE"],
+            to=BatchStatus.ADJUDICATED)
+    _log(b.batch_id, f"ADJUDICATE done: {len(candidates)} candidates "
+                     f"-> keep {counts['keep']}, retype "
+                     f"{counts['retype']}, veto {counts['veto']} "
+                     f"(see adjudication.jsonl)")
+
+
 def stage_gates(b: Batch, root: Path, stages: list[str],
                 decide_fn, resolution_decide_fn=None) -> None:
     """GATES: Jev noul per candidate (queue-based, resumable).
@@ -1712,7 +1786,13 @@ def stage_gates(b: Batch, root: Path, stages: list[str],
     """
     from .queue import WorkQueue
     d = batch_dir(root, b.batch_id)
-    candidates = [json.loads(l) for l in open(d / "candidates.jsonl")]
+    # Pass D (0.2.1): when the adjudication stage ran, GATES
+    # judges the adjudicated survivors — candidates.jsonl
+    # stays Pass C's untouched record.
+    cand_p = d / "candidates.jsonl"
+    if (d / "candidates_adjudicated.jsonl").exists():
+        cand_p = d / "candidates_adjudicated.jsonl"
+    candidates = [json.loads(l) for l in open(cand_p)]
     if resolution_decide_fn is None and any(
             _resolution_needs(c) for c in candidates):
         raise RuntimeError(
@@ -1929,7 +2009,7 @@ def stage_gates(b: Batch, root: Path, stages: list[str],
              f"GATES: mention resolutions judged — {res_counts}")
     _record_cost(b, "GATES", _round_cost(total_cost))
     save_batch(b, root)
-    advance(b, root, [*stages, "GATES"])
+    advance(b, root, [*stages, "GATES"], to=BatchStatus.GATED)
     _log(b.batch_id, f"GATES done: {len(judgments) - errs} ok, "
                      f"cost={'unmetered' if total_cost is None else 'metered'}, "
                      f"{errs} errors")
@@ -2525,7 +2605,7 @@ def stage_write(b: Batch, root: Path, stages: list[str],
         b.metrics["write"]["store_replaced"] = store_replaced
     _record_cost(b, "WRITE", _round_cost(er_cost))
     save_batch(b, root)
-    advance(b, root, [*stages, "WRITE"])
+    advance(b, root, [*stages, "WRITE"], to=BatchStatus.WRITTEN)
     _log(b.batch_id, f"WRITE done: {n} triples, {len(ent_ids)} entities, "
                      f"{er_merges} ER merges")
     if er_review:
@@ -3091,7 +3171,8 @@ def purge_batch_attempt(b: Batch, root: Path, graph) -> dict:
 
 
 def _preflight_bindings(b: Batch, stages: list[str],
-                          live_decide: bool) -> None:
+                          live_decide: bool, root: Path | None = None,
+                          live_layers: bool = False) -> None:
     """Refuse before any stage runs when a pending stage needs a
     seat whose key variable is unset.
 
@@ -3117,10 +3198,20 @@ def _preflight_bindings(b: Batch, stages: list[str],
         _conn.seat("proposer").require_key()
     if live_decide and "GATES" not in stages:
         _conn.seat("judge").require_key()
+    # The declared 0.2.1 layers ride the judge seat's chat
+    # route (live_layers = the caller wired the live layer
+    # functions): a pending declared ADJUDICATE needs the
+    # judge key before CANDIDATES spends, not at its first
+    # call after it.
+    if live_layers and root is not None \
+            and "ADJUDICATE" not in stages \
+            and _declared_adjudication(b, root):
+        _conn.seat("judge").require_key()
 
 
 def _preflight_cost_cap(b: Batch, stages: list[str],
-                        live_decide: bool) -> None:
+                        live_decide: bool, root: Path | None = None,
+                        live_layers: bool = False) -> None:
     """Stop-line preflight: when a USD cap is set,
     every seat this run will use must be able to meter its
     spend — otherwise the cap could never trip and the run
@@ -3140,6 +3231,10 @@ def _preflight_cost_cap(b: Batch, stages: list[str],
         seats.append("proposer")
     if live_decide and ("GATES" not in stages
                         or "WRITE" not in stages):
+        seats.append("judge")
+    if live_layers and root is not None and "judge" not in seats \
+            and "ADJUDICATE" not in stages \
+            and _declared_adjudication(b, root):
         seats.append("judge")
     if "INDEX" not in stages:
         seats.append("embedder")
@@ -3386,6 +3481,7 @@ def _finish_summary(b: Batch, root: Path, registry) -> None:
 def run_batch(b: Batch, root: Path, doc_texts: dict[str, str] | None,
               decide_fn=None, er_decide_fn=None,
               resolution_decide_fn=None,
+              adjudicate_fn=None, audit_fn=None,
               registry=None, graph=None,
               live_decide: bool = False,
               keep_run_id: bool = False) -> Batch:
@@ -3421,8 +3517,8 @@ def run_batch(b: Batch, root: Path, doc_texts: dict[str, str] | None,
         info = purge_batch_attempt(b, root, graph)
         info["purged_run_id"] = b.run_id
         stages = [s for s in stages
-                  if s in ("INGEST", "NER", "CANDIDATES", "GATES",
-                           "ROUTE")]
+                  if s in ("INGEST", "NER", "CANDIDATES",
+                           "ADJUDICATE", "GATES", "ROUTE")]
         b.metrics["retry_purge"] = info
         save_state(b, root, stages)
         _log(b.batch_id, f"retry purge: {info['edges_deleted']} "
@@ -3446,8 +3542,10 @@ def run_batch(b: Batch, root: Path, doc_texts: dict[str, str] | None,
             "INGEST": BatchStatus.INGESTED,
             "NER": BatchStatus.NER_DONE,
             "CANDIDATES": BatchStatus.CANDIDATES_DONE,
+            "ADJUDICATE": BatchStatus.ADJUDICATED,
             "GATES": BatchStatus.GATED,
             "ROUTE": BatchStatus.ROUTED,
+            "SHIP_GATE": BatchStatus.SHIP_GATED,
             "WRITE": BatchStatus.WRITTEN,
             "INDEX": BatchStatus.INDEXED,
             "VERIFY": BatchStatus.VERIFIED,
@@ -3482,12 +3580,18 @@ def run_batch(b: Batch, root: Path, doc_texts: dict[str, str] | None,
     # Preflight (before the try, so a refusal leaves the batch
     # un-failed and un-started): pending stages' seats must have
     # their keys, or the run refuses with BindingKeyError here.
-    _preflight_bindings(b, stages, live_decide and decide_fn is not None)
+    _preflight_bindings(b, stages, live_decide and decide_fn is not None,
+                        root,
+                        live_layers=live_decide
+                        and adjudicate_fn is not None)
     # Stop-line preflight, same placement and for
     # the same reason: a USD cap over cost-less seats refuses
     # by name before any stage starts.
     _preflight_cost_cap(b, stages,
-                        live_decide and decide_fn is not None)
+                        live_decide and decide_fn is not None,
+                        root,
+                        live_layers=live_decide
+                        and adjudicate_fn is not None)
     # Store preflight, same placement: a build needs
     # Neo4j serving before the first stage runs.
     _preflight_store(b, stages, graph)
@@ -3509,7 +3613,22 @@ def run_batch(b: Batch, root: Path, doc_texts: dict[str, str] | None,
             _beat(b, root, "CANDIDATES")
             stage_candidates(b, root, stages)
             stages.append("CANDIDATES")
-        if b.status == BatchStatus.CANDIDATES_DONE:
+        if b.status == BatchStatus.CANDIDATES_DONE \
+                and "ADJUDICATE" not in stages \
+                and _declared_adjudication(b, root):
+            if adjudicate_fn is None:
+                raise RuntimeError(
+                    "ADJUDICATE: the profile declares the "
+                    "adjudication layer (adjudication_layer) but "
+                    "no adjudication function was wired — "
+                    "refusing to gate unadjudicated candidates "
+                    "(fail closed)")
+            _check_cost_cap(b)
+            _beat(b, root, "ADJUDICATE")
+            stage_adjudicate(b, root, stages, adjudicate_fn)
+            stages.append("ADJUDICATE")
+        if b.status in (BatchStatus.CANDIDATES_DONE,
+                        BatchStatus.ADJUDICATED):
             assert decide_fn is not None, "decide_fn required for GATES"
             _check_cost_cap(b)
             _beat(b, root, "GATES")
