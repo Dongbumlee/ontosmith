@@ -10,13 +10,13 @@
  "emitted_by": "ontology-builder/1.0",
  "pack_format": 1,
  "pack_id": "fibo-contracts",
- "pack_version": "0.1.0",
+ "pack_version": "0.1.1",
  "payload": {
   "kind": "setup_config",
-  "note": "Emitted by the ontology builder from an approved schema draft (approval bound to the schema hash in contents_index). The pack binds the payload by pin; it never forks its content — a changed schema is a new pack version.",
+  "note": "Emitted by the ontology builder from an approved schema draft (approval bound to the schema hash in contents_index). The pack binds the payload by pin; it never forks its content — a changed schema is a new pack version. Pack 0.1.1: the payload gains two declarations over the emitted 0.1.0 payload — adjudication_layer and full_verification_gate, the 0.2.1 two-pass layers — so the family's builds run Pass D adjudication and the full-population ship gate; the schema and its approval record are unchanged, and the 0.1.0 payload bytes are preserved as profile/setup_config_v1.json.",
   "path": "packs/fibo-contracts/profile/setup_config.json",
   "profile_version": 1,
-  "sha256": "0d77115fb79acf070eb2b376ecd404802b64a6870dd176c3df16706c89e869ba"
+  "sha256": "01c2940a5c121cfb560d0b3bd5073310263910053ad337aedb030319a321eb92"
  },
  "profile_family": "fibo-cuad",
  "status": "in_force"
