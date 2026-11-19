@@ -2165,6 +2165,118 @@ def stage_route(b: Batch, root: Path, stages: list[str]) -> None:
 ER_XDOC_MERGE_MIN = 0.85
 
 
+def _declared_ship_gate(b: Batch, root: Path) -> bool:
+    """Whether the batch's profile declares the
+    full-population verification gate (0.2.1). Same
+    resolved-config source and fail-closed posture as
+    _declared_adjudication."""
+    cfg = _load_setup_config(b, root)
+    if not cfg:
+        return False
+    from .profile_config import full_verification_gate_enabled
+    return full_verification_gate_enabled(cfg)
+
+
+def stage_ship_gate(b: Batch, root: Path, stages: list[str],
+                    audit_fn) -> None:
+    """SHIP_GATE: full-population verification at the write
+    boundary (0.2.1, freeze item 2).
+
+    Every Tier-1 row in routed.jsonl — the exact population
+    bound for the store — is independently audited against
+    quote completeness (R5) by pipeline/adjudication's audit
+    (a differently-worded prompt from Pass D's; no sample —
+    the whole population). A failure gets ONE retype (the
+    auditor's validated correction, else deterministic quote
+    extension) and ONE re-audit; a second failure excludes
+    the row. Survivors are written to ship_set.jsonl, which
+    WRITE consumes in place of routed.jsonl; routed.jsonl is
+    never mutated (VERIFY's tier-count check keeps reading
+    the route record). The full trail lands in
+    verification_gate.jsonl, and the batch record carries the
+    accounting identity
+
+        candidates = vetoed + review + dropped
+                     + shipped + excluded
+
+    asserted here — a drift between the artefacts and the
+    account fails the stage loudly rather than recording a
+    build whose population does not add up. The pre-existing
+    audit_sample_n keeps its calibration role in VERIFY's
+    sampling checks; it plays no part in this gate.
+    """
+    from . import adjudication as adj
+    d = batch_dir(root, b.batch_id)
+    routed = [json.loads(l) for l in open(d / "routed.jsonl")]
+    tier1 = [j for j in routed if j.get("tier") == 1]
+    texts = {}
+    with open(d / "texts.jsonl") as f:
+        for line in f:
+            r = json.loads(line)
+            texts[r["doc_id"]] = r["text"]
+    ship_rows = []
+    records = []
+    counts = {"shipped": 0, "shipped_retyped": 0, "excluded": 0}
+    excluded_classes: dict[str, int] = {}
+    total_cost: float | None = 0.0
+    for j in tier1:
+        outcome, shipped_row, record, cost = adj.audit_store_row(
+            audit_fn, j, texts.get(j["doc_id"]) or "",
+            model=b.config.gate_model)
+        total_cost = adj.add_cost(total_cost, cost)
+        counts[outcome] += 1
+        if shipped_row is not None:
+            ship_rows.append(shipped_row)
+        else:
+            cls = record.get("excluded_class") or "other"
+            excluded_classes[cls] = excluded_classes.get(cls, 0) + 1
+        records.append(record)
+    with open(d / "ship_set.jsonl", "w") as f:
+        for row in ship_rows:
+            f.write(json.dumps(row) + "\n")
+    with open(d / "verification_gate.jsonl", "w") as f:
+        for record in records:
+            f.write(json.dumps(record) + "\n")
+    shipped_total = counts["shipped"] + counts["shipped_retyped"]
+    b.metrics["ship_gate"] = {
+        "audited": len(tier1), "shipped": shipped_total,
+        "shipped_retyped": counts["shipped_retyped"],
+        "excluded": counts["excluded"],
+        "excluded_classes": excluded_classes,
+        "cost_usd": _round_cost(total_cost)}
+    # The batch accounting identity (freeze item 2): every
+    # candidate is accounted exactly once.
+    route_m = b.metrics.get("route") or {}
+    n_candidates = len([json.loads(l)
+                        for l in open(d / "candidates.jsonl")])
+    accounting = {
+        "candidates": n_candidates,
+        "vetoed": (b.metrics.get("adjudication") or {}).get("veto", 0),
+        "review": route_m.get("tier2", 0),
+        "dropped": route_m.get("dropped", 0),
+        "shipped": shipped_total,
+        "excluded": counts["excluded"],
+    }
+    accounted = (accounting["vetoed"] + accounting["review"]
+                 + accounting["dropped"] + accounting["shipped"]
+                 + accounting["excluded"])
+    if accounted != accounting["candidates"]:
+        raise RuntimeError(
+            f"SHIP_GATE accounting does not close: {accounting} "
+            f"accounts for {accounted} of "
+            f"{accounting['candidates']} candidates")
+    b.metrics["accounting"] = accounting
+    _record_cost(b, "SHIP_GATE", _round_cost(total_cost))
+    save_batch(b, root)
+    advance(b, root, [*stages, "SHIP_GATE"],
+            to=BatchStatus.SHIP_GATED)
+    _log(b.batch_id, f"SHIP_GATE done: {len(tier1)} audited -> "
+                     f"{shipped_total} shipped "
+                     f"({counts['shipped_retyped']} retyped), "
+                     f"{counts['excluded']} excluded "
+                     f"(see verification_gate.jsonl)")
+
+
 def stage_write(b: Batch, root: Path, stages: list[str],
                 registry, graph, er_decide_fn=None) -> None:
     """WRITE: registry-first, then graph. (Consistency §10.1)
@@ -2192,8 +2304,14 @@ def stage_write(b: Batch, root: Path, stages: list[str],
     """
     from .registry import Entity, Triple
     d = batch_dir(root, b.batch_id)
+    # Ship gate (0.2.1): when SHIP_GATE ran, WRITE consumes
+    # its ship set — the audited survivors of the routed
+    # Tier-1 population — instead of routed.jsonl itself.
     tier1 = []
-    with open(d / "routed.jsonl") as f:
+    tier1_p = d / "routed.jsonl"
+    if "SHIP_GATE" in stages and (d / "ship_set.jsonl").exists():
+        tier1_p = d / "ship_set.jsonl"
+    with open(tier1_p) as f:
         for line in f:
             j = json.loads(line)
             if j.get("tier") == 1:
@@ -3162,7 +3280,8 @@ def purge_batch_attempt(b: Batch, root: Path, graph) -> dict:
         elif hasattr(graph, "_delete_batch_rels"):
             graph._delete_batch_rels(b.batch_id)
             info["edges_deleted"] = -1  # count not reported by store
-    for name in ("written_triples.jsonl", "tier2_index.pkl"):
+    for name in ("written_triples.jsonl", "tier2_index.pkl",
+                 "ship_set.jsonl", "verification_gate.jsonl"):
         p = d / name
         if p.exists():
             p.unlink()
@@ -3207,6 +3326,10 @@ def _preflight_bindings(b: Batch, stages: list[str],
             and "ADJUDICATE" not in stages \
             and _declared_adjudication(b, root):
         _conn.seat("judge").require_key()
+    if live_layers and root is not None \
+            and "SHIP_GATE" not in stages \
+            and _declared_ship_gate(b, root):
+        _conn.seat("judge").require_key()
 
 
 def _preflight_cost_cap(b: Batch, stages: list[str],
@@ -3233,8 +3356,10 @@ def _preflight_cost_cap(b: Batch, stages: list[str],
                         or "WRITE" not in stages):
         seats.append("judge")
     if live_layers and root is not None and "judge" not in seats \
-            and "ADJUDICATE" not in stages \
-            and _declared_adjudication(b, root):
+            and (("ADJUDICATE" not in stages
+                  and _declared_adjudication(b, root))
+                 or ("SHIP_GATE" not in stages
+                     and _declared_ship_gate(b, root))):
         seats.append("judge")
     if "INDEX" not in stages:
         seats.append("embedder")
@@ -3583,7 +3708,8 @@ def run_batch(b: Batch, root: Path, doc_texts: dict[str, str] | None,
     _preflight_bindings(b, stages, live_decide and decide_fn is not None,
                         root,
                         live_layers=live_decide
-                        and adjudicate_fn is not None)
+                        and (adjudicate_fn is not None
+                             or audit_fn is not None))
     # Stop-line preflight, same placement and for
     # the same reason: a USD cap over cost-less seats refuses
     # by name before any stage starts.
@@ -3591,7 +3717,8 @@ def run_batch(b: Batch, root: Path, doc_texts: dict[str, str] | None,
                         live_decide and decide_fn is not None,
                         root,
                         live_layers=live_decide
-                        and adjudicate_fn is not None)
+                        and (adjudicate_fn is not None
+                             or audit_fn is not None))
     # Store preflight, same placement: a build needs
     # Neo4j serving before the first stage runs.
     _preflight_store(b, stages, graph)
@@ -3640,7 +3767,21 @@ def run_batch(b: Batch, root: Path, doc_texts: dict[str, str] | None,
             _beat(b, root, "ROUTE")
             stage_route(b, root, stages)
             stages.append("ROUTE")
-        if b.status == BatchStatus.ROUTED:
+        if b.status == BatchStatus.ROUTED \
+                and "SHIP_GATE" not in stages \
+                and _declared_ship_gate(b, root):
+            if audit_fn is None:
+                raise RuntimeError(
+                    "SHIP_GATE: the profile declares the "
+                    "full-population verification gate "
+                    "(full_verification_gate) but no audit "
+                    "function was wired — refusing to write "
+                    "unaudited triples (fail closed)")
+            _check_cost_cap(b)
+            _beat(b, root, "SHIP_GATE")
+            stage_ship_gate(b, root, stages, audit_fn)
+            stages.append("SHIP_GATE")
+        if b.status in (BatchStatus.ROUTED, BatchStatus.SHIP_GATED):
             assert registry is not None and graph is not None
             _check_cost_cap(b)
             _beat(b, root, "WRITE")

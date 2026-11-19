@@ -442,7 +442,7 @@ def parse_decision_array(text: str) -> list[dict]:
     return items
 
 
-def _add_cost(total, cost):
+def add_cost(total, cost):
     """None-aware cost accumulation (any unmetered call makes
     the total unknown), mirroring the connection layer's rule."""
     if total is None or cost is None:
@@ -711,7 +711,7 @@ def adjudicate_candidates(chat_fn, candidates: list[dict],
             })
         prompt = build_adjudication_prompt(items)
         text_out, cost = chat_fn(prompt, model)
-        total_cost = _add_cost(total_cost, cost)
+        total_cost = add_cost(total_cost, cost)
         raw_by_id = {}
         for raw in parse_decision_array(text_out):
             cid = raw.get("candidate_id")
@@ -880,6 +880,23 @@ def audit_store_row(chat_fn, row: dict, text: str,
     # else deterministic quote extension.
     repaired = _validated_correction(verdict, row, excerpt)
     remedy = "retype_to_quote" if repaired is not None else None
+    if repaired is None and verdict is None:
+        # The deterministic check failed the row before the
+        # auditor was consulted: the failure still earns its
+        # one retype attempt, so ask the auditor for a
+        # correction now. (If the auditor passes a row the
+        # deterministic check failed, the invariant governs —
+        # the pass is ignored and named in the record; only a
+        # validated correction counts.)
+        text_out, cost = chat_fn(build_audit_prompt(row, excerpt),
+                                 model)
+        total_cost = add_cost(total_cost, cost)
+        verdict = parse_audit(text_out)
+        if verdict["verdict"] == "pass":
+            record["judge_pass_overridden"] = True
+        repaired = _validated_correction(verdict, row, excerpt)
+        if repaired is not None:
+            remedy = "retype_to_quote"
     if repaired is None:
         span = find_extending_span(
             excerpt, row.get("quote") or "", row.get("subject") or "",
@@ -896,7 +913,7 @@ def audit_store_row(chat_fn, row: dict, text: str,
         return "excluded", None, record, total_cost
     ok2, cls2, _verdict2, cost2 = _audit_once(
         chat_fn, repaired, excerpt, model)
-    total_cost = _add_cost(total_cost, cost2)
+    total_cost = add_cost(total_cost, cost2)
     record["rounds"].append(
         {"round": 2, "result": "pass" if ok2 else "fail",
          "failure_class": cls2})
