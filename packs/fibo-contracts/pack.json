@@ -2,7 +2,7 @@
  "assembled": "2026-10-27",
  "conformance_record": "conformance.json",
  "contents_index": {
-  "approval": "Approval record bound to schema hash sha256:72db0ede0a392262e8a04170f5d77c7405a90258f2643f9ccaef38ea2a5372d1 (outcome: approved (Track 4 program (BYO schema import) under Dongbum's FIBO x CUAD decision of 2026-10-26, 2026-10-27)).",
+  "approval": "Approval record bound to schema hash sha256:72db0ede0a392262e8a04170f5d77c7405a90258f2643f9ccaef38ea2a5372d1 (outcome: approved (Track 4 program (BYO schema import) under the FIBO x CUAD decision of 2026-10-26, 2026-10-27)).",
   "schema_front": "Closed entity inventory (15 types) and relation inventory (13 types) with definitions + boundary examples, drafted and approved through the ontology builder; rendered into proposer guidance by the profile channel (derive_guidance)."
  },
  "design": "docs/PACK_DESIGN.md",
