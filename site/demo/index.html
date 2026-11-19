@@ -14,7 +14,7 @@
 /* Hallmark · dismissed 58 · the screen is a working instrument: its words are interface labels, corpus facts and the graph's own evidence text, not prose sections */
 :root{
   --navy:#0f1e2b; --navy-2:#16303f; --navy-3:#1e4258; --navy-veil:rgba(15,30,43,.94);
-  --deep:#0a1620; --field:#0d1b28; --dot:#33505f;
+  --deep:#0a1620; --field:#0d1b28; --field-hi:#132c42; --field-deep:#08131d; --dot:#33505f;
   --cream:#f6f0e4; --paper:#fbf8f1; --card:#ffffff;
   --clay:#b45f43; --clay-2:#cf7355; --amber:#d99a4e; --amber-2:#eeb96f;
   --amber-55:rgba(238,185,111,.55); --amber-25:rgba(238,185,111,.25);
@@ -105,7 +105,7 @@ header nav a.cta:hover{background:var(--amber-2); text-decoration:none}
 .relitem .rn{flex:1; min-width:0; overflow-wrap:break-word}
 .relitem .rc{color:var(--caption); font-size:12px}
 
-.stage{position:relative; background:var(--field); border:1px solid var(--navy-3); border-radius:12px; overflow:hidden; min-height:520px}
+.stage{position:relative; background:radial-gradient(120% 95% at 50% 42%, var(--field-hi) 0%, var(--field) 56%, var(--field-deep) 100%); border:1px solid var(--navy-3); border-radius:12px; overflow:hidden; min-height:520px}
 .stage canvas{position:absolute; inset:0; width:100%; height:100%; display:block; cursor:grab}
 .stage canvas.drag{cursor:grabbing}
 .stage .tools{position:absolute; top:12px; right:12px; display:flex; gap:8px; z-index:5}

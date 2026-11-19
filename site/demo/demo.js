@@ -1,8 +1,11 @@
 'use strict';
 /* OntoSmith graph explorer: the full verified build (64 CUAD contracts,
- * 15,413 entities, 11,127 facts) on one canvas. Positions are precomputed
- * per document cluster; interaction isolates neighbourhoods out of the
- * dense field instead of cutting the data. */
+ * 15,413 entities, 11,127 facts) on one canvas. Positions are baked in by
+ * an offline force-directed layout: document clusters sit by their
+ * cross-document link strength, each cluster an organic island, shared
+ * entities leaning toward the documents they join. The runtime is a
+ * static renderer — interaction isolates neighbourhoods out of the dense
+ * field instead of cutting the data. */
 
 const $ = s => document.querySelector(s);
 const fmt = n => n.toLocaleString('en-US');
@@ -11,6 +14,11 @@ const stage = $('#stage'), insp = $('#insp');
 
 let G = null, EV = null, evPromise = null;
 let adj = [], docFacts = [], lower = [];
+let crossT = null;              // per triple: 1 when its endpoints home in different documents
+let sprGlow = [], sprDisc = []; // per-document glow / nebula sprites
+let sprHub = null, sprSel = null, sprHover = null;
+let discLayer = null;           // all nebula discs pre-composited in world space
+const HUB_MIN = 4;              // entities appearing in >= 4 documents render as amber hubs
 let W = 0, H = 0, DPR = 1;
 const view = { cx: 3300, cy: 2400, s: 0.1 };
 let fitS = 0.1;
@@ -25,8 +33,45 @@ const TOK = {};
 function readTokens() {
   const cs = getComputedStyle(document.documentElement);
   for (const k of ['--edge', '--edge-faint', '--edge-lit', '--node', '--node-dim',
-                   '--node-sel', '--ring', '--caption', '--cream', '--amber-2', '--clay-2'])
+                   '--node-sel', '--ring', '--caption', '--cream', '--amber', '--amber-2', '--clay-2'])
     TOK[k] = cs.getPropertyValue(k).trim();
+}
+
+/* ---------------- glow sprites ----------------
+ * Soft radial sprites are pre-rendered once per document colour (plus
+ * hub / selection / hover accents) so the frame loop never pays for
+ * shadowBlur; a node is a drawImage of its sprite under a small core. */
+function radialSprite(size, rgb, stops) {
+  const c = document.createElement('canvas'); c.width = c.height = size;
+  const x = c.getContext('2d');
+  const gr = x.createRadialGradient(size / 2, size / 2, 0, size / 2, size / 2, size / 2);
+  for (const [o, a] of stops) gr.addColorStop(o, `rgba(${rgb},${a})`);
+  x.fillStyle = gr; x.fillRect(0, 0, size, size);
+  return c;
+}
+function hexRgb(hex) {
+  const n = parseInt(hex.slice(1), 16);
+  return `${(n >> 16) & 255},${(n >> 8) & 255},${n & 255}`;
+}
+function buildSprites() {
+  sprGlow = G.docs.map(doc => radialSprite(64, hexRgb(doc.col || '#9fc0d4'),
+    [[0, 0.5], [0.4, 0.22], [1, 0]]));
+  sprDisc = G.docs.map(doc => radialSprite(256, hexRgb(doc.col || '#9fc0d4'),
+    [[0, 0.19], [0.55, 0.09], [1, 0]]));
+  sprHub = radialSprite(64, '238,185,111', [[0, 0.65], [0.4, 0.3], [1, 0]]);
+  sprSel = radialSprite(64, '207,115,85', [[0, 0.7], [0.4, 0.32], [1, 0]]);
+  sprHover = radialSprite(64, '238,185,111', [[0, 0.6], [0.4, 0.26], [1, 0]]);
+  /* The 64 nebula discs are composited once into a world-space layer;
+     a frame then costs one transformed drawImage for all of them. */
+  const K = 0.25;
+  discLayer = document.createElement('canvas');
+  discLayer.width = Math.ceil(G._meta.world[0] * K);
+  discLayer.height = Math.ceil(G._meta.world[1] * K);
+  const lx = discLayer.getContext('2d');
+  G.docs.forEach((doc, d) => {
+    const r = doc.r * 1.18 * K;
+    lx.drawImage(sprDisc[d], doc.x * K - r, doc.y * K - r, r * 2, r * 2);
+  });
 }
 const FONT = "11.5px -apple-system,'Segoe UI',Helvetica,Arial,sans-serif";
 
@@ -40,6 +85,9 @@ fetch('graph.json').then(r => r.json()).then(g => {
     docFacts[G.td[t]].push(t);
   }
   lower = G.ent.map(s => s.toLowerCase());
+  crossT = new Uint8Array(G.ts.length);
+  for (let t = 0; t < G.ts.length; t++) crossT[t] = G.edoc[G.ts[t]] !== G.edoc[G.to[t]] ? 1 : 0;
+  buildSprites();
   buildGrid();
   const m = G._meta;
   for (const k of ['documents', 'entities', 'facts', 'relations']) {
@@ -82,29 +130,42 @@ function draw() {
   const relActive = relSel.size > 0;
   const pass = t => !relActive || relSel.has(G.tr[t]);
 
-  /* cluster rings */
-  ctx2d.lineWidth = 1;
-  ctx2d.strokeStyle = TOK['--ring'];
-  for (let d = 0; d < G.docs.length; d++) {
-    const doc = G.docs[d], cxp = sx(doc.x), cyp = sy(doc.y), r = doc.r * s;
-    if (cxp + r < -40 || cxp - r > W + 40 || cyp + r < -40 || cyp - r > H + 40) continue;
-    ctx2d.beginPath(); ctx2d.arc(cxp, cyp, Math.max(2, r), 0, 6.2832); ctx2d.stroke();
+  /* nebula discs: one soft tint per document island, pre-composited —
+     each cluster reads as its own body of colour inside the field */
+  ctx2d.globalAlpha = iso ? 0.32 : 1;
+  ctx2d.drawImage(discLayer, sx(0), sy(0), G._meta.world[0] * s, G._meta.world[1] * s);
+  ctx2d.globalAlpha = 1;
+  if (iso && iso.kind === 'doc') {
+    const doc = G.docs[iso.id], r = doc.r * s * 1.18;
+    ctx2d.drawImage(sprDisc[iso.id], sx(doc.x) - r, sy(doc.y) - r, r * 2, r * 2);
+  }
+  if (iso && iso.kind === 'doc') {
+    const doc = G.docs[iso.id];
+    ctx2d.lineWidth = 1; ctx2d.strokeStyle = doc.col; ctx2d.globalAlpha = 0.4;
+    ctx2d.beginPath(); ctx2d.arc(sx(doc.x), sy(doc.y), Math.max(2, doc.r * s), 0, 6.2832); ctx2d.stroke();
+    ctx2d.globalAlpha = 1;
   }
 
-  /* edges, faint pass: alpha thins as the field zooms out, so clusters
-     read as nebulae at overview instead of saturating into flat discs */
+  /* edges, faint passes: alpha thins as the field zooms out, so clusters
+     read as nebulae at overview instead of saturating into flat discs.
+     Cross-document edges — the web that weaves the islands together —
+     run warmer and a touch brighter than the steel of intra edges. */
   ctx2d.lineWidth = 1;
-  ctx2d.strokeStyle = TOK['--edge'];
-  ctx2d.globalAlpha = iso ? 0.16 : Math.max(0.18, Math.min(1, s * 2.6));
-  ctx2d.beginPath();
-  for (let t = 0; t < G.ts.length; t++) {
-    if (!pass(t) || (focusTris && focusTris.has(t))) continue;
-    const a = G.ts[t], b = G.to[t];
-    const x1 = sx(G.ex[a]), y1 = sy(G.ey[a]), x2 = sx(G.ex[b]), y2 = sy(G.ey[b]);
-    if ((x1 < -30 && x2 < -30) || (x1 > W + 30 && x2 > W + 30) || (y1 < -30 && y2 < -30) || (y1 > H + 30 && y2 > H + 30)) continue;
-    ctx2d.moveTo(x1, y1); ctx2d.lineTo(x2, y2);
+  for (const crossPass of [0, 1]) {
+    ctx2d.strokeStyle = crossPass ? 'rgba(224,164,92,.5)' : TOK['--edge'];
+    ctx2d.globalAlpha = iso ? (crossPass ? 0.22 : 0.16)
+                             : Math.max(crossPass ? 0.24 : 0.18, Math.min(1, s * 2.6));
+    ctx2d.beginPath();
+    for (let t = 0; t < G.ts.length; t++) {
+      if (crossT[t] !== crossPass) continue;
+      if (!pass(t) || (focusTris && focusTris.has(t))) continue;
+      const a = G.ts[t], b = G.to[t];
+      const x1 = sx(G.ex[a]), y1 = sy(G.ey[a]), x2 = sx(G.ex[b]), y2 = sy(G.ey[b]);
+      if ((x1 < -30 && x2 < -30) || (x1 > W + 30 && x2 > W + 30) || (y1 < -30 && y2 < -30) || (y1 > H + 30 && y2 > H + 30)) continue;
+      ctx2d.moveTo(x1, y1); ctx2d.lineTo(x2, y2);
+    }
+    ctx2d.stroke();
   }
-  ctx2d.stroke();
   ctx2d.globalAlpha = 1;
 
   /* edges, lit pass: focus set, hover neighbourhood, selected triple */
@@ -126,15 +187,27 @@ function draw() {
     ctx2d.beginPath(); ctx2d.moveTo(sx(G.ex[a]), sy(G.ey[a])); ctx2d.lineTo(sx(G.ex[b]), sy(G.ey[b])); ctx2d.stroke();
   }
 
-  /* nodes */
-  ctx2d.globalAlpha = iso ? 1 : Math.max(0.38, Math.min(1, s * 3.2));
+  /* nodes: a pre-rendered glow sprite under a small core. The core takes
+     its home document's colour; shared hub entities burn amber; radius
+     grows with the entity's fact count. */
+  ctx2d.globalAlpha = iso ? 1 : Math.max(0.5, Math.min(1, s * 3.2));
   for (let i = 0; i < G.ent.length; i++) {
     const x = sx(G.ex[i]), y = sy(G.ey[i]);
-    if (x < -12 || x > W + 12 || y < -12 || y > H + 12) continue;
+    if (x < -14 || x > W + 14 || y < -14 || y > H + 14) continue;
     let rp = Math.min(6, 1.15 + Math.sqrt(G.edeg[i]) * 0.5);
     if (s < 0.2) rp = Math.min(rp, 0.75 + Math.sqrt(G.edeg[i]) * 0.05);
-    let col = TOK['--node'];
-    if (iso && focusEnts && !focusEnts.has(i)) col = TOK['--node-dim'];
+    const dim = iso && focusEnts && !focusEnts.has(i);
+    /* at overview scale only hubs and heavy entities carry a glow —
+       15k tiny sprites would swamp the frame for no visible gain */
+    if (!dim && (s >= 0.2 || i === sel.ent || i === hover || G.endocs[i] >= HUB_MIN || G.edeg[i] >= 24)) {
+      const spr = i === sel.ent ? sprSel : i === hover ? sprHover
+                : G.endocs[i] >= HUB_MIN ? sprHub : sprGlow[G.edoc[i]];
+      const gs = Math.max(7, rp * 5.2);
+      ctx2d.drawImage(spr, x - gs / 2, y - gs / 2, gs, gs);
+    }
+    let col = G.docs[G.edoc[i]].col || TOK['--node'];
+    if (dim) col = TOK['--node-dim'];
+    else if (G.endocs[i] >= HUB_MIN) col = TOK['--amber'];
     if (i === sel.ent) col = TOK['--node-sel'];
     else if (i === hover) col = TOK['--amber-2'];
     ctx2d.fillStyle = col;
@@ -163,23 +236,32 @@ function draw() {
   } else if (s >= 0.34) {
     for (let i = 0; i < G.ent.length; i++) if (G.edeg[i] >= 60) tryLabel(i, G.ent[i]);
   }
-  /* document names over clusters when zoomed out, collision-thinned */
+  /* document names at cluster centroids when zoomed out: small caps,
+     letter-spaced, fading away as the reader zooms into the field */
   if (s < 0.34 && !iso) {
-    ctx2d.font = FONT; ctx2d.textAlign = 'center';
+    const fade = Math.max(0, Math.min(1, (0.34 - s) / 0.22));
+    ctx2d.font = "600 10.5px -apple-system,'Segoe UI',Helvetica,Arial,sans-serif";
+    try { ctx2d.letterSpacing = '1.6px'; } catch (e) { /* older canvas: no tracking */ }
+    ctx2d.textAlign = 'center';
+    ctx2d.globalAlpha = 0.88 * fade;
     const dplaced = [];
-    for (let d = 0; d < G.docs.length; d++) {
+    const order = G.docs.map((_, d) => d).sort((a, b) => G.docs[b].r - G.docs[a].r);
+    for (const d of order) {
       const doc = G.docs[d], x = sx(doc.x), y = sy(doc.y), rr = doc.r * s;
-      if (rr < 17 || x < 30 || x > W - 30 || y < 10 || y > H) continue;
-      const name = doc.c.length > 22 ? doc.c.slice(0, 21) + '…' : doc.c;
-      const w = ctx2d.measureText(name).width, ly = y - rr - 6;
+      if (rr < 24 || x < 30 || x > W - 30 || y < 10 || y > H) continue;
+      const raw = doc.c.toUpperCase();
+      const name = raw.length > 26 ? raw.slice(0, 25) + '…' : raw;
+      const w = ctx2d.measureText(name).width + 12;
       let clash = false;
-      for (const b of dplaced) if (x - w / 2 < b[0] + b[2] && x + w / 2 > b[0] && ly - 9 < b[1] + b[3] && ly + 3 > b[1]) { clash = true; break; }
+      for (const b of dplaced) if (x - w / 2 < b[0] + b[2] && x + w / 2 > b[0] && y - 10 < b[1] + b[3] && y + 5 > b[1]) { clash = true; break; }
       if (clash) continue;
-      dplaced.push([x - w / 2, ly - 9, w, 12]);
+      dplaced.push([x - w / 2, y - 10, w, 15]);
       ctx2d.fillStyle = TOK['--caption'];
-      ctx2d.fillText(name, x, ly);
+      ctx2d.fillText(name, x, y);
     }
+    ctx2d.globalAlpha = 1;
     ctx2d.textAlign = 'left';
+    try { ctx2d.letterSpacing = '0px'; } catch (e) { /* as above */ }
   }
   updateStatus();
 }
