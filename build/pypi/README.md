@@ -581,7 +581,7 @@ runs when an embedder is bound
 
 ## Status
 
-Release 0.2.0, published on PyPI. The pipeline,
+Release 0.2.1, published on PyPI. The pipeline,
 profiler, ontology builder, inspect viewer,
 verification cores, packs, and the serving surface
 (search command, sample API, and the MCP server)

@@ -7,15 +7,9 @@ and the project adheres to
 
 ## [Unreleased]
 
-### 0.2.1 — draft, not yet released
+## [0.2.1] - 2026-11-18
 
-I have implemented this release and it is green in
-my tree, but I have **not tagged or published it**:
-the tag waits on a final live verification gate I
-have not run yet. What follows is only what the
-release will contain.
-
-#### Added
+### Added
 
 - **Two-pass build** — I split the build's
   candidate path into two passes. The first pass
