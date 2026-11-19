@@ -264,6 +264,52 @@ def _per_doc_distribution(candidates: list[dict],
             "median": statistics.median(vals), "max": vals[-1]}
 
 
+def _apply_canonical_vocabularies(candidates: list[dict],
+                                    setup_cfg: dict | None) -> dict:
+    """Recording-time normalisation (0.2.1, freeze item 3).
+
+    For every candidate whose relation is a category with a
+    declared canonical vocabulary (setup_config
+    canonical_vocabularies), look the verbatim object up in
+    the vocabulary: a hit records the canonical key on the
+    candidate as ``canonical_object`` — the verbatim value
+    stays the judged object through GATES/ROUTE, and WRITE
+    stores the object under the canonical key with the
+    verbatim value kept as an alias and on the written
+    record. A miss is a named, counted build event (returned
+    here for canonicalization.json + the batch metrics) —
+    the candidate flows unchanged; nothing is silently
+    dropped or silently passed over.
+
+    Idempotent: a candidate already carrying canonical_object
+    is not re-derived (the adjudication stage pops the key
+    when a retype changes the object, and re-derives through
+    this same pass)."""
+    from .profile_config import (
+        canonical_key_for,
+        canonical_vocabularies,
+    )
+    vocabs = canonical_vocabularies(setup_cfg)
+    stats: dict = {"declared": bool(vocabs), "mapped": 0,
+                   "unmapped": {}}
+    if not vocabs:
+        return stats
+    for c in candidates:
+        category = c.get("relation")
+        if category not in vocabs or c.get("canonical_object"):
+            continue
+        key = canonical_key_for(setup_cfg, category,
+                                c.get("object") or "")
+        if key is not None:
+            c["canonical_object"] = key
+            stats["mapped"] += 1
+        else:
+            per = stats["unmapped"].setdefault(category, {})
+            value = c.get("object") or ""
+            per[value] = per.get(value, 0) + 1
+    return stats
+
+
 def stage_candidates(b: Batch, root: Path, stages: list[str]) -> None:
     """CANDIDATES: LLM proposer → candidates.
 
@@ -1450,6 +1496,21 @@ def stage_candidates(b: Batch, root: Path, stages: list[str]) -> None:
             _log(b.batch_id, f"CANDIDATES: {idx+1}/{len(doc_ids)} docs, "
                     f"{len(candidates)} candidates")
             _beat(b, root, "CANDIDATES", len(done_docs), len(doc_ids))
+    # Recording-time canonicalisation (0.2.1): declared
+    # vocabularies resolve verbatim slot values to canonical
+    # keys on the candidate record itself, before any
+    # downstream stage reads it — set derivation and serving
+    # matching downstream never fold at read time.
+    canon_stats = _apply_canonical_vocabularies(candidates, setup_cfg)
+    if canon_stats["declared"]:
+        with open(d / "canonicalization.json", "w") as f:
+            json.dump(canon_stats, f, indent=1)
+        _log(b.batch_id,
+             f"CANDIDATES canonicalisation: "
+             f"{canon_stats['mapped']} value(s) mapped to "
+             f"canonical keys, "
+             f"{sum(sum(v.values()) for v in canon_stats['unmapped'].values())} "
+             f"unmapped (named in canonicalization.json)")
     with open(d / "candidates.jsonl", "w") as f:
         for c in candidates:
             f.write(json.dumps(c) + "\n")
@@ -1505,6 +1566,10 @@ def stage_candidates(b: Batch, root: Path, stages: list[str]) -> None:
                      "model": b.config.llm_model}}
     if ckpt_reset is not None:
         b.metrics["candidates"]["checkpoint_reset"] = ckpt_reset
+    if canon_stats["declared"]:
+        b.metrics["candidates"]["canonicalization"] = {
+            "mapped": canon_stats["mapped"],
+            "unmapped": canon_stats["unmapped"]}
     if identity_seat_src is not None:
         b.metrics["candidates"]["identity_seat"] = {
             **identity_seat_src,
@@ -1727,6 +1792,38 @@ def stage_adjudicate(b: Batch, root: Path, stages: list[str],
             texts[r["doc_id"]] = r["text"]
     decision_rows, survivors, total_cost = adj.adjudicate_candidates(
         adjudicate_fn, candidates, texts, model=b.config.gate_model)
+    # Canonical keys (0.2.1, freeze item 3): a retype that
+    # changed the object popped the key recorded at
+    # CANDIDATES (it belonged to the old value); re-derive it
+    # against the declared vocabulary here, so a survivor
+    # never carries a key for a value it no longer states.
+    # An unmapped retyped value is a named, counted event in
+    # this stage's metrics, same rule as at CANDIDATES.
+    canon_rederived = 0
+    canon_unmapped: dict[str, int] = {}
+    setup_cfg = _load_setup_config(b, root)
+    from .profile_config import (
+        canonical_key_for,
+        canonical_vocabularies,
+    )
+    if canonical_vocabularies(setup_cfg):
+        dec_by_id = {row["candidate_id"]: row
+                     for row in decision_rows}
+        for s in survivors:
+            dec = dec_by_id.get(
+                (s.get("adjudication") or {}).get("candidate_id"))
+            if dec is None or dec["decision"] != "retype" \
+                    or dec["final_object"] == dec["original"]["object"]:
+                continue
+            key = canonical_key_for(setup_cfg, s.get("relation"),
+                                    s.get("object") or "")
+            if key is not None:
+                s["canonical_object"] = key
+                canon_rederived += 1
+            else:
+                value = s.get("object") or ""
+                canon_unmapped[value] = \
+                    canon_unmapped.get(value, 0) + 1
     with open(d / "adjudication.jsonl", "w") as f:
         for row in decision_rows:
             f.write(json.dumps(row) + "\n")
@@ -1751,6 +1848,11 @@ def stage_adjudicate(b: Batch, root: Path, stages: list[str],
         "remedies": remedies, "clauses": clauses,
         "enforcements": enforcements,
         "cost_usd": _round_cost(total_cost)}
+    if canon_rederived or canon_unmapped:
+        b.metrics["adjudication"]["canonical_rederived"] = \
+            canon_rederived
+        b.metrics["adjudication"]["canonical_unmapped"] = \
+            canon_unmapped
     _record_cost(b, "ADJUDICATE", _round_cost(total_cost))
     save_batch(b, root)
     advance(b, root, [*stages, "ADJUDICATE"],
@@ -2512,8 +2614,14 @@ def stage_write(b: Batch, root: Path, stages: list[str],
     ent_ids: dict[str, str] = {}
     er_merges = 0
     for j in tier1:
+        # Recording-time canonicalisation (0.2.1): a row
+        # carrying canonical_object stores its object entity
+        # under the canonical key; the verbatim value joins
+        # the entity's aliases below, so both forms stay
+        # addressable and derivations match on the key.
+        obj_name = j.get("canonical_object") or j["object"]
         for name, type_key in ((j["subject"], "subject_type"),
-                               (j["object"], "object_type")):
+                               (obj_name, "object_type")):
             key = name.lower()
             if key in ent_ids:
                 continue
@@ -2538,6 +2646,14 @@ def stage_write(b: Batch, root: Path, stages: list[str],
             attested = j.get(att_key) or ""
             extra_aliases = [attested] if attested \
                 and attested != name else []
+            if type_key == "object_type" \
+                    and j.get("canonical_object") \
+                    and j["object"] != name \
+                    and j["object"] not in extra_aliases:
+                # The verbatim value rides as an alias of the
+                # canonical-key entity (same retention rule as
+                # the attested surfaces above).
+                extra_aliases.append(j["object"])
             hit = er_match(name, "", j.get("context", "")[:500],
                            j["doc_id"], mention_type=label)
             if hit:
@@ -2669,10 +2785,14 @@ def stage_write(b: Batch, root: Path, stages: list[str],
         profile_map=profile_map,
         vocab=(setup_cfg or {}).get("label_categories") or [])
     triples = []
+    n_canonical = 0
     for j in tier1:
+        obj_surface = j.get("canonical_object") or j["object"]
+        if j.get("canonical_object"):
+            n_canonical += 1
         s_name, stored_rel, o_name, _layer = \
             normalizer.normalize_triple(
-                j["subject"], j["relation"], j["object"])
+                j["subject"], j["relation"], obj_surface)
         triples.append(Triple(
             subject_id=ent_ids[s_name.lower()],
             object_id=ent_ids[o_name.lower()],
@@ -2686,11 +2806,18 @@ def stage_write(b: Batch, root: Path, stages: list[str],
     # the WRITE-time ER mapping cannot be reconstructed afterwards
     # from surface names (resolution is order/decision-dependent).
     with open(d / "written_triples.jsonl", "w") as f:
-        for t, j in zip(triples, tier1):
-            f.write(json.dumps({
+        for t, j in zip(triples, tier1, strict=True):
+            rec = {
                 "subject_id": t.subject_id, "relation": t.relation,
                 "surface_relation": j["relation"],
-                "object_id": t.object_id, "doc_id": t.doc_id}) + "\n")
+                "object_id": t.object_id, "doc_id": t.doc_id}
+            if j.get("canonical_object"):
+                # The record carries the canonical key (the
+                # stored object_id) AND the verbatim value the
+                # text stated (0.2.1, freeze item 3).
+                rec["canonical_object"] = j["canonical_object"]
+                rec["verbatim_object"] = j["object"]
+            f.write(json.dumps(rec) + "\n")
     rel_report = normalizer.report()
     with open(d / "relation_map.json", "w") as f:
         json.dump(rel_report, f, indent=1)
@@ -2721,6 +2848,8 @@ def stage_write(b: Batch, root: Path, stages: list[str],
                                   .values())}
     if store_replaced is not None:
         b.metrics["write"]["store_replaced"] = store_replaced
+    if n_canonical:
+        b.metrics["write"]["canonicalized_objects"] = n_canonical
     _record_cost(b, "WRITE", _round_cost(er_cost))
     save_batch(b, root)
     advance(b, root, [*stages, "WRITE"], to=BatchStatus.WRITTEN)
