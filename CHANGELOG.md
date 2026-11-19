@@ -33,10 +33,16 @@ release will contain.
   and a veto must record the retype it tried and
   why that retype failed. A batch whose profile
   declares nothing runs the previous single-pass
-  path unchanged.
+  path unchanged. Every shipped pack declares the
+  layer from this release (Core 0.6.1, Legal
+  Contract 0.2.2, Open Domain 0.10.1, Bio Medical
+  0.3.1, FIBO Contracts 0.1.1), so a pack-resolved
+  build runs the adjudication pass by default.
 - **Full-population verification gate** — when a
-  configuration declares `full_verification_gate`,
-  a ship gate between ROUTE and WRITE re-audits
+  configuration declares `full_verification_gate`
+  — and every shipped pack declares it from this
+  release — a ship gate between ROUTE and WRITE
+  re-audits
   every triple bound for the store, independently,
   against the same quote-completeness standard. A
   failure gets one retype and a second audit; a

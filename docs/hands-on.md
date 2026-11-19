@@ -293,10 +293,16 @@ re-spending. Watch it with `ontosmith batch status
 demo-4docs`.
 
 Two further stages exist, and both run only when
-the batch's configuration declares them — no
-shipped pack declares either today, so the tracks
-in this guide never enter them. A profile or pack
-that declares `adjudication_layer` inserts an
+the batch's configuration declares them — and
+every shipped pack now declares both (Core 0.6.1,
+Legal Contract 0.2.2, Open Domain 0.10.1, Bio
+Medical 0.3.1, FIBO Contracts 0.1.1), so a build
+under a shipped pack enters them. The transcripts
+printed in this guide were recorded under the
+previous pack versions and show the base sequence;
+the stages themselves work as follows. A profile
+or pack that declares `adjudication_layer`
+inserts an
 adjudication stage between candidates and gates:
 a separate pass decides every candidate keep,
 retype, or veto under an eight-clause proposal
@@ -320,7 +326,7 @@ declared packs. A pack may declare
 `canonical_vocabularies` — a surface-to-key map
 for a slot category, recorded on the candidate
 beside the verbatim value. The Legal Contract
-pack (0.2.1) declares one for Governing Law, so
+pack (0.2.2) declares one for Governing Law, so
 "Commonwealth of Virginia" is stored under the
 `virginia` key with the verbatim form kept as an
 alias, and a value that maps to no key is a

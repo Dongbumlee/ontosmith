@@ -77,10 +77,11 @@ CC BY 4.0.*
 
 *The base stage contract and its tier branches, as coded
 in `pipeline/` — rendered by `harness/render_charts.py`.
-A profile may declare two further stages inside this
-sequence — an adjudication pass between candidates and
-gates, and a verification gate between route and write;
-neither runs unless declared.*
+Every shipped pack declares two further stages inside
+this sequence — an adjudication pass between candidates
+and gates, and a verification gate between route and
+write; a configuration that declares neither runs the
+base sequence alone.*
 
 ## Try it — step 1 needs no API key
 
@@ -231,7 +232,7 @@ over HTTP and needs the server, not the extra.)
 
 | Piece | What it is |
 |---|---|
-| Batch pipeline | The staged build: ingest → NER/roster → candidates → gates → route → write → index → verify, under a versioned pack, with a ledger that records what each run spent. Two further stages run when the profile declares them: an adjudication pass that decides every candidate keep / retype / veto (between candidates and gates), and a ship gate that re-audits every store-bound triple before it is written (between route and write) |
+| Batch pipeline | The staged build: ingest → NER/roster → candidates → gates → route → write → index → verify, under a versioned pack, with a ledger that records what each run spent. Two further stages run when the profile declares them — and every shipped pack declares both: an adjudication pass that decides every candidate keep / retype / veto (between candidates and gates), and a ship gate that re-audits every store-bound triple before it is written (between route and write) |
 | Corpus profiler | `ontosmith profile` — a deterministic census of your corpus and the decision points a human should settle first |
 | Ontology builder | `ontosmith ontology` — drafts a domain schema from a profile, or imports an external ontology under a recorded scoping; deterministic validation; emits a hash-pinned pack only after explicit human approval |
 | Four domain packs + Core baseline | Domain ontologies as data — schema, definitions, boundary examples, thresholds, measured conformance record (below) |
