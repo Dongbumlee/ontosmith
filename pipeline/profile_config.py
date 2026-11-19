@@ -287,6 +287,41 @@ CONSUMED_KEYS: dict[str, str] = {
                                    "(stage_candidates -> "
                                    "pair_proposer."
                                    "build_pair_prompt_judge)",
+    # ADJUDICATE (stage_adjudicate, 0.2.1 two-pass build):
+    # the Pass D adjudication layer between CANDIDATES and
+    # GATES — every candidate is decided keep / retype / veto
+    # under the eight proposal-discipline clauses with full-
+    # excerpt evidence, and every decision is recorded in the
+    # batch's adjudication.jsonl (pipeline/adjudication.py).
+    "adjudication_layer": "ADJUDICATE Pass D adjudication "
+                          "layer switch (stage_adjudicate -> "
+                          "pipeline.adjudication; absent = off, "
+                          "byte-identical single-pass path)",
+    # SHIP_GATE (stage_ship_gate, 0.2.1): the full-population
+    # verification gate between ROUTE and WRITE — every
+    # store-bound triple is independently audited against
+    # quote completeness; failures get one retype + re-audit,
+    # second failures are excluded, and the batch record
+    # carries the shipped / excluded / vetoed accounting.
+    "full_verification_gate": "SHIP_GATE full-population "
+                              "verification gate switch "
+                              "(stage_ship_gate -> "
+                              "pipeline.adjudication; absent "
+                              "= off, byte-identical path)",
+    # CANDIDATES canonical vocabularies (0.2.1 recording-time
+    # normalisation): per declared slot category, a
+    # surface -> canonical-key map. Candidates in a declared
+    # category carry the canonical key beside the verbatim
+    # value from CANDIDATES on; WRITE stores the value under
+    # the canonical key. Unmapped values are named, counted
+    # build events — never silently dropped.
+    "canonical_vocabularies": "CANDIDATES/WRITE recording-time "
+                              "canonical vocabularies: "
+                              "{category: {surface: canonical}} "
+                              "(stage_candidates / stage_write "
+                              "-> pipeline.profile_config."
+                              "canonical_key_for; absent = no "
+                              "canonicalisation)",
     # ROUTE (stage_route)
     "c1_whitelist": "ROUTE Arm C C1 demotions (_c1_whitelist)",
     # WRITE (stage_write)
@@ -392,6 +427,28 @@ def setup_config_errors(cfg: dict, *, merged: bool = False) -> list[str]:
     if isl is not None and not isinstance(isl, bool):
         errors.append("setup_config key 'identity_seat_live' must be "
                       "a boolean")
+    for _bool_key in ("adjudication_layer", "full_verification_gate"):
+        _bv = cfg.get(_bool_key)
+        if _bv is not None and not isinstance(_bv, bool):
+            errors.append(f"setup_config key {_bool_key!r} must be "
+                          "a boolean")
+    cv = cfg.get("canonical_vocabularies")
+    if cv is not None:
+        if not isinstance(cv, dict):
+            errors.append("setup_config key 'canonical_vocabularies' "
+                          "must be an object {category: "
+                          "{surface: canonical}}")
+        else:
+            for cat, mapping in cv.items():
+                if not isinstance(mapping, dict) or not mapping \
+                        or not all(
+                            isinstance(s, str) and s.strip()
+                            and isinstance(c, str) and c.strip()
+                            for s, c in mapping.items()):
+                    errors.append(
+                        f"canonical_vocabularies[{cat!r}] must be a "
+                        "non-empty object of non-empty string "
+                        "surface -> canonical entries")
     if not merged and isl is True \
             and cfg.get("identity_seat_decisions") is not None:
         # One payload, two seat forms is an authoring
@@ -1710,6 +1767,81 @@ def pair_probe_gate_enabled(cfg: dict | None) -> bool:
             f"pair_probe_gate must be a boolean, got {v!r} "
             f"(fail closed)")
     return v
+
+
+def adjudication_layer_enabled(cfg: dict | None) -> bool:
+    """The profile's Pass D adjudication declaration (0.2.1
+    two-pass build): between CANDIDATES and GATES, every
+    candidate is adjudicated keep / retype / veto under the
+    proposal-discipline clauses and every decision is
+    recorded (pipeline/adjudication.py).
+
+    Absent = off: CANDIDATES flows into GATES exactly as
+    before, byte-identical. A declared value must be a
+    boolean — anything else fails closed."""
+    v = (cfg or {}).get("adjudication_layer")
+    if v is None:
+        return False
+    if not isinstance(v, bool):
+        raise ValueError(
+            f"adjudication_layer must be a boolean, got {v!r} "
+            f"(fail closed)")
+    return v
+
+
+def full_verification_gate_enabled(cfg: dict | None) -> bool:
+    """The profile's full-population verification-gate
+    declaration (0.2.1): between ROUTE and WRITE, every
+    store-bound triple is independently audited against
+    quote completeness — one retype + re-audit on failure,
+    exclusion on second failure (stage_ship_gate).
+
+    Absent = off: ROUTE flows into WRITE exactly as before,
+    byte-identical. A declared value must be a boolean —
+    anything else fails closed."""
+    v = (cfg or {}).get("full_verification_gate")
+    if v is None:
+        return False
+    if not isinstance(v, bool):
+        raise ValueError(
+            f"full_verification_gate must be a boolean, got "
+            f"{v!r} (fail closed)")
+    return v
+
+
+def canonical_vocabularies(cfg: dict | None) -> dict:
+    """The profile's recording-time canonical vocabularies
+    (0.2.1): {category: {surface: canonical key}}. Absent =
+    {} (no canonicalisation anywhere). The shape is
+    validated by setup_config_errors at creation; a malformed
+    declaration reaching this accessor fails closed."""
+    v = (cfg or {}).get("canonical_vocabularies")
+    if v is None:
+        return {}
+    if not isinstance(v, dict) or not all(
+            isinstance(m, dict) for m in v.values()):
+        raise ValueError(
+            f"canonical_vocabularies must be an object of "
+            f"objects, got {v!r} (fail closed)")
+    return v
+
+
+def canonical_key_for(cfg: dict | None, category: str,
+                      value: str) -> str | None:
+    """The canonical key a declared vocabulary assigns to a
+    verbatim slot value, or None when the category declares
+    no vocabulary or the value is unmapped. Lookup is
+    whitespace/case-insensitive on the surface, matching how
+    the values arrive from the text; the canonical key is
+    returned exactly as declared."""
+    mapping = canonical_vocabularies(cfg).get(category)
+    if not mapping:
+        return None
+    want = " ".join(str(value).split()).strip().lower()
+    for surface, canonical in mapping.items():
+        if " ".join(str(surface).split()).strip().lower() == want:
+            return canonical
+    return None
 
 
 def slot_framing(cfg: dict | None) -> str | None:
