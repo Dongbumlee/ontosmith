@@ -292,6 +292,46 @@ and the run resumes from its ledger instead of
 re-spending. Watch it with `ontosmith batch status
 demo-4docs`.
 
+Two further stages exist, and both run only when
+the batch's configuration declares them — no
+shipped pack declares either today, so the tracks
+in this guide never enter them. A profile or pack
+that declares `adjudication_layer` inserts an
+adjudication stage between candidates and gates:
+a separate pass decides every candidate keep,
+retype, or veto under an eight-clause proposal
+discipline, judging each claim against its full
+excerpt and recording every decision — rejections
+included — in the batch's `adjudication.jsonl`.
+A configuration that declares
+`full_verification_gate` inserts a ship gate
+between route and write: every triple bound for
+the store is independently re-audited for quote
+completeness, a failure gets one retype and a
+second audit, and a second failure excludes it.
+The batch record accounts for every candidate —
+vetoed, held for review, dropped, shipped,
+excluded — and that accounting, not a sample, is
+the shipping criterion; the sampled audit VERIFY
+runs keeps a calibration role only.
+
+Two recording behaviours ride along with the
+declared packs. A pack may declare
+`canonical_vocabularies` — a surface-to-key map
+for a slot category, recorded on the candidate
+beside the verbatim value. The Legal Contract
+pack (0.2.1) declares one for Governing Law, so
+"Commonwealth of Virginia" is stored under the
+`virginia` key with the verbatim form kept as an
+alias, and a value that maps to no key is a
+named, counted build event, never a silent drop.
+And when a pack's clause sweep runs, the
+categories it finds ABSENT in a document are
+written to the batch's `negative_findings.jsonl`
+as citable absence records — a "no such clause"
+answer can rest on a record, not on a missing
+row.
+
 A corpus this size — four documents —
 prices in cents of model spend;
 `ontosmith verify project` counts and prices a larger
