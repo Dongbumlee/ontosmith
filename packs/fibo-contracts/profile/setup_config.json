@@ -430,5 +430,7 @@
    "Contract",
    "ContractProvision"
   ]
- ]
+ ],
+ "adjudication_layer": true,
+ "full_verification_gate": true
 }

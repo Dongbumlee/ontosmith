@@ -264,6 +264,60 @@ def _per_doc_distribution(candidates: list[dict],
             "median": statistics.median(vals), "max": vals[-1]}
 
 
+def _id_slug(s: str) -> str:
+    """Slug for record ids (finding ids): alphanumerics and
+    dashes, everything else folded to a dash."""
+    return "".join(
+        ch if ch.isalnum() or ch == "-" else "-"
+        for ch in s.lower()).strip("-")
+
+
+def _apply_canonical_vocabularies(candidates: list[dict],
+                                    setup_cfg: dict | None) -> dict:
+    """Recording-time normalisation (0.2.1, freeze item 3).
+
+    For every candidate whose relation is a category with a
+    declared canonical vocabulary (setup_config
+    canonical_vocabularies), look the verbatim object up in
+    the vocabulary: a hit records the canonical key on the
+    candidate as ``canonical_object`` — the verbatim value
+    stays the judged object through GATES/ROUTE, and WRITE
+    stores the object under the canonical key with the
+    verbatim value kept as an alias and on the written
+    record. A miss is a named, counted build event (returned
+    here for canonicalization.json + the batch metrics) —
+    the candidate flows unchanged; nothing is silently
+    dropped or silently passed over.
+
+    Idempotent: a candidate already carrying canonical_object
+    is not re-derived (the adjudication stage pops the key
+    when a retype changes the object, and re-derives through
+    this same pass)."""
+    from .profile_config import (
+        canonical_key_for,
+        canonical_vocabularies,
+    )
+    vocabs = canonical_vocabularies(setup_cfg)
+    stats: dict = {"declared": bool(vocabs), "mapped": 0,
+                   "unmapped": {}}
+    if not vocabs:
+        return stats
+    for c in candidates:
+        category = c.get("relation")
+        if category not in vocabs or c.get("canonical_object"):
+            continue
+        key = canonical_key_for(setup_cfg, category,
+                                c.get("object") or "")
+        if key is not None:
+            c["canonical_object"] = key
+            stats["mapped"] += 1
+        else:
+            per = stats["unmapped"].setdefault(category, {})
+            value = c.get("object") or ""
+            per[value] = per.get(value, 0) + 1
+    return stats
+
+
 def stage_candidates(b: Batch, root: Path, stages: list[str]) -> None:
     """CANDIDATES: LLM proposer → candidates.
 
@@ -680,6 +734,11 @@ def stage_candidates(b: Batch, root: Path, stages: list[str]) -> None:
     # contract artifact since the pipeline source retired).
     candidates = []
     blocked_all = []  # Arm-B C3-blocked records (killed-set audit sidecar)
+    # Negative findings (0.2.1, freeze item 4): slot categories
+    # the sweep found ABSENT in a document, materialised as
+    # citable records (negative_findings.jsonl) rather than
+    # left as the absence of a candidate.
+    negative_all: list[dict] = []
     # Verdict sidecar:
     # every pair verdict the pair stage produces, persisted
     # pre-guard so the verdict -> blocked -> deduped -> kept
@@ -832,6 +891,11 @@ def stage_candidates(b: Batch, root: Path, stages: list[str]) -> None:
                 with open(d / "candidates_blocked.jsonl") as f:
                     for line in f:
                         blocked_all.append(json.loads(line))
+            if (d / "negative_findings.jsonl").exists():
+                with open(d / "negative_findings.jsonl") as f:
+                    for line in f:
+                        if line.strip():
+                            negative_all.append(json.loads(line))
             if pair_enum and (d / "pair_verdicts.jsonl").exists():
                 with open(d / "pair_verdicts.jsonl") as f:
                     for line in f:
@@ -1419,6 +1483,34 @@ def stage_candidates(b: Batch, root: Path, stages: list[str]) -> None:
                         "context": _prop.quote_window(text, bl["quote"]),
                         "method": "clause-llm", "quote": bl["quote"],
                         "reason": bl["reason"]})
+                # Absence materialisation (0.2.1, freeze item
+                # 4): a declared category the sweep neither
+                # filled nor had guard-blocked was found ABSENT
+                # in this document. That absence is itself a
+                # finding — downstream consumers (the conflict
+                # and absence reads) cannot use an absence that
+                # exists only as a missing candidate, so it is
+                # materialised as a flagged negative-finding
+                # record: a distinct record kind, citable by
+                # finding_id, never a positive triple.
+                # "Document Name" is exempt: it is the subject
+                # carrier, and its absence is resolved by the
+                # file-name fallback above — recording it as
+                # absent would state a falsehood.
+                attested_cats = {f["category"] for f in fills} | \
+                    {bl["category"] for bl in sblocked}
+                for cat in slot_categories:
+                    if cat == "Document Name" \
+                            or cat in attested_cats:
+                        continue
+                    negative_all.append({
+                        "kind": "negative_finding",
+                        "finding_id": f"nf-{_id_slug(doc_id)}-"
+                                      f"{_id_slug(cat)}",
+                        "batch_id": b.batch_id, "run_id": b.run_id,
+                        "doc_id": doc_id, "subject": doc_name,
+                        "category": cat, "status": "absent",
+                        "method": "clause-llm"})
         candidates.extend(doc_llm)
         blocked_all.extend(doc_blocked)
         # Checkpoint: save progress after each doc
@@ -1431,6 +1523,10 @@ def stage_candidates(b: Batch, root: Path, stages: list[str]) -> None:
                 with open(d / "candidates_blocked.jsonl", "w") as f:
                     for bl in blocked_all:
                         f.write(json.dumps(bl) + "\n")
+            if negative_all:
+                with open(d / "negative_findings.jsonl", "w") as f:
+                    for nf in negative_all:
+                        f.write(json.dumps(nf) + "\n")
             if pair_verdicts:
                 with open(d / "pair_verdicts.jsonl", "w") as f:
                     for v in pair_verdicts:
@@ -1450,6 +1546,21 @@ def stage_candidates(b: Batch, root: Path, stages: list[str]) -> None:
             _log(b.batch_id, f"CANDIDATES: {idx+1}/{len(doc_ids)} docs, "
                     f"{len(candidates)} candidates")
             _beat(b, root, "CANDIDATES", len(done_docs), len(doc_ids))
+    # Recording-time canonicalisation (0.2.1): declared
+    # vocabularies resolve verbatim slot values to canonical
+    # keys on the candidate record itself, before any
+    # downstream stage reads it — set derivation and serving
+    # matching downstream never fold at read time.
+    canon_stats = _apply_canonical_vocabularies(candidates, setup_cfg)
+    if canon_stats["declared"]:
+        with open(d / "canonicalization.json", "w") as f:
+            json.dump(canon_stats, f, indent=1)
+        _log(b.batch_id,
+             f"CANDIDATES canonicalisation: "
+             f"{canon_stats['mapped']} value(s) mapped to "
+             f"canonical keys, "
+             f"{sum(sum(v.values()) for v in canon_stats['unmapped'].values())} "
+             f"unmapped (named in canonicalization.json)")
     with open(d / "candidates.jsonl", "w") as f:
         for c in candidates:
             f.write(json.dumps(c) + "\n")
@@ -1457,6 +1568,14 @@ def stage_candidates(b: Batch, root: Path, stages: list[str]) -> None:
         with open(d / "candidates_blocked.jsonl", "w") as f:
             for bl in blocked_all:
                 f.write(json.dumps(bl) + "\n")
+    if negative_all:
+        with open(d / "negative_findings.jsonl", "w") as f:
+            for nf in negative_all:
+                f.write(json.dumps(nf) + "\n")
+        _log(b.batch_id,
+             f"CANDIDATES negative findings: "
+             f"{len(negative_all)} absent slot categories "
+             f"materialised (negative_findings.jsonl)")
     if pair_verdicts:
         with open(d / "pair_verdicts.jsonl", "w") as f:
             for v in pair_verdicts:
@@ -1505,6 +1624,13 @@ def stage_candidates(b: Batch, root: Path, stages: list[str]) -> None:
                      "model": b.config.llm_model}}
     if ckpt_reset is not None:
         b.metrics["candidates"]["checkpoint_reset"] = ckpt_reset
+    if canon_stats["declared"]:
+        b.metrics["candidates"]["canonicalization"] = {
+            "mapped": canon_stats["mapped"],
+            "unmapped": canon_stats["unmapped"]}
+    if slot_categories:
+        b.metrics["candidates"]["negative_findings"] = \
+            len(negative_all)
     if identity_seat_src is not None:
         b.metrics["candidates"]["identity_seat"] = {
             **identity_seat_src,
@@ -1687,6 +1813,117 @@ def _fold_costs(costs: list):
     return total
 
 
+def _declared_adjudication(b: Batch, root: Path) -> bool:
+    """Whether the batch's profile declares the Pass D
+    adjudication layer (0.2.1 two-pass build). The declaration
+    is read from the same resolved setup_config every stage
+    consumes; a batch with no profile declares nothing. A
+    malformed declaration raises here (fail closed), exactly
+    as it would at the stages that consume the config."""
+    cfg = _load_setup_config(b, root)
+    if not cfg:
+        return False
+    from .profile_config import adjudication_layer_enabled
+    return adjudication_layer_enabled(cfg)
+
+
+def stage_adjudicate(b: Batch, root: Path, stages: list[str],
+                     adjudicate_fn) -> None:
+    """ADJUDICATE: Pass D (0.2.1 two-pass build).
+
+    Every candidate from CANDIDATES is adjudicated keep /
+    retype / veto under the proposal-discipline clauses
+    (pipeline/adjudication.py): decision order keep -> retype
+    -> veto, the full excerpt as truth boundary, quote
+    completeness (R5) as a shipping condition, mandatory
+    retype logging on vetoes (R4). Every decision — vetoes
+    included — is persisted to adjudication.jsonl (the batch
+    artefact the accounting reads); survivors, with their
+    final fields applied, go to candidates_adjudicated.jsonl,
+    which GATES consumes in place of candidates.jsonl.
+    candidates.jsonl itself is never mutated: Pass C's record
+    stays exactly as proposed."""
+    from . import adjudication as adj
+    d = batch_dir(root, b.batch_id)
+    candidates = [json.loads(l) for l in open(d / "candidates.jsonl")]
+    texts = {}
+    with open(d / "texts.jsonl") as f:
+        for line in f:
+            r = json.loads(line)
+            texts[r["doc_id"]] = r["text"]
+    decision_rows, survivors, total_cost = adj.adjudicate_candidates(
+        adjudicate_fn, candidates, texts, model=b.config.gate_model)
+    # Canonical keys (0.2.1, freeze item 3): a retype that
+    # changed the object popped the key recorded at
+    # CANDIDATES (it belonged to the old value); re-derive it
+    # against the declared vocabulary here, so a survivor
+    # never carries a key for a value it no longer states.
+    # An unmapped retyped value is a named, counted event in
+    # this stage's metrics, same rule as at CANDIDATES.
+    canon_rederived = 0
+    canon_unmapped: dict[str, int] = {}
+    setup_cfg = _load_setup_config(b, root)
+    from .profile_config import (
+        canonical_key_for,
+        canonical_vocabularies,
+    )
+    if canonical_vocabularies(setup_cfg):
+        dec_by_id = {row["candidate_id"]: row
+                     for row in decision_rows}
+        for s in survivors:
+            dec = dec_by_id.get(
+                (s.get("adjudication") or {}).get("candidate_id"))
+            if dec is None or dec["decision"] != "retype" \
+                    or dec["final_object"] == dec["original"]["object"]:
+                continue
+            key = canonical_key_for(setup_cfg, s.get("relation"),
+                                    s.get("object") or "")
+            if key is not None:
+                s["canonical_object"] = key
+                canon_rederived += 1
+            else:
+                value = s.get("object") or ""
+                canon_unmapped[value] = \
+                    canon_unmapped.get(value, 0) + 1
+    with open(d / "adjudication.jsonl", "w") as f:
+        for row in decision_rows:
+            f.write(json.dumps(row) + "\n")
+    with open(d / "candidates_adjudicated.jsonl", "w") as f:
+        for row in survivors:
+            f.write(json.dumps(row) + "\n")
+    counts = {"keep": 0, "retype": 0, "veto": 0}
+    remedies: dict[str, int] = {}
+    clauses: dict[str, int] = {}
+    enforcements: dict[str, int] = {}
+    for row in decision_rows:
+        counts[row["decision"]] += 1
+        remedies[row["r5_remedy"]] = remedies.get(row["r5_remedy"], 0) + 1
+        if row.get("clause") is not None:
+            key = str(row["clause"])
+            clauses[key] = clauses.get(key, 0) + 1
+        if row.get("enforcement"):
+            enforcements[row["enforcement"]] = \
+                enforcements.get(row["enforcement"], 0) + 1
+    b.metrics["adjudication"] = {
+        "candidates": len(candidates), **counts,
+        "remedies": remedies, "clauses": clauses,
+        "enforcements": enforcements,
+        "cost_usd": _round_cost(total_cost)}
+    if canon_rederived or canon_unmapped:
+        b.metrics["adjudication"]["canonical_rederived"] = \
+            canon_rederived
+        b.metrics["adjudication"]["canonical_unmapped"] = \
+            canon_unmapped
+    _record_cost(b, "ADJUDICATE", _round_cost(total_cost))
+    save_batch(b, root)
+    advance(b, root, [*stages, "ADJUDICATE"],
+            to=BatchStatus.ADJUDICATED)
+    _log(b.batch_id, f"ADJUDICATE done: {len(candidates)} candidates "
+                     f"-> keep {counts['keep']}, retype "
+                     f"{counts['retype']}, veto {counts['veto']} "
+                     f"(see adjudication.jsonl)")
+
+
 def stage_gates(b: Batch, root: Path, stages: list[str],
                 decide_fn, resolution_decide_fn=None) -> None:
     """GATES: Jev noul per candidate (queue-based, resumable).
@@ -1712,7 +1949,13 @@ def stage_gates(b: Batch, root: Path, stages: list[str],
     """
     from .queue import WorkQueue
     d = batch_dir(root, b.batch_id)
-    candidates = [json.loads(l) for l in open(d / "candidates.jsonl")]
+    # Pass D (0.2.1): when the adjudication stage ran, GATES
+    # judges the adjudicated survivors — candidates.jsonl
+    # stays Pass C's untouched record.
+    cand_p = d / "candidates.jsonl"
+    if (d / "candidates_adjudicated.jsonl").exists():
+        cand_p = d / "candidates_adjudicated.jsonl"
+    candidates = [json.loads(l) for l in open(cand_p)]
     if resolution_decide_fn is None and any(
             _resolution_needs(c) for c in candidates):
         raise RuntimeError(
@@ -1929,7 +2172,7 @@ def stage_gates(b: Batch, root: Path, stages: list[str],
              f"GATES: mention resolutions judged — {res_counts}")
     _record_cost(b, "GATES", _round_cost(total_cost))
     save_batch(b, root)
-    advance(b, root, [*stages, "GATES"])
+    advance(b, root, [*stages, "GATES"], to=BatchStatus.GATED)
     _log(b.batch_id, f"GATES done: {len(judgments) - errs} ok, "
                      f"cost={'unmetered' if total_cost is None else 'metered'}, "
                      f"{errs} errors")
@@ -2085,6 +2328,118 @@ def stage_route(b: Batch, root: Path, stages: list[str]) -> None:
 ER_XDOC_MERGE_MIN = 0.85
 
 
+def _declared_ship_gate(b: Batch, root: Path) -> bool:
+    """Whether the batch's profile declares the
+    full-population verification gate (0.2.1). Same
+    resolved-config source and fail-closed posture as
+    _declared_adjudication."""
+    cfg = _load_setup_config(b, root)
+    if not cfg:
+        return False
+    from .profile_config import full_verification_gate_enabled
+    return full_verification_gate_enabled(cfg)
+
+
+def stage_ship_gate(b: Batch, root: Path, stages: list[str],
+                    audit_fn) -> None:
+    """SHIP_GATE: full-population verification at the write
+    boundary (0.2.1, freeze item 2).
+
+    Every Tier-1 row in routed.jsonl — the exact population
+    bound for the store — is independently audited against
+    quote completeness (R5) by pipeline/adjudication's audit
+    (a differently-worded prompt from Pass D's; no sample —
+    the whole population). A failure gets ONE retype (the
+    auditor's validated correction, else deterministic quote
+    extension) and ONE re-audit; a second failure excludes
+    the row. Survivors are written to ship_set.jsonl, which
+    WRITE consumes in place of routed.jsonl; routed.jsonl is
+    never mutated (VERIFY's tier-count check keeps reading
+    the route record). The full trail lands in
+    verification_gate.jsonl, and the batch record carries the
+    accounting identity
+
+        candidates = vetoed + review + dropped
+                     + shipped + excluded
+
+    asserted here — a drift between the artefacts and the
+    account fails the stage loudly rather than recording a
+    build whose population does not add up. The pre-existing
+    audit_sample_n keeps its calibration role in VERIFY's
+    sampling checks; it plays no part in this gate.
+    """
+    from . import adjudication as adj
+    d = batch_dir(root, b.batch_id)
+    routed = [json.loads(l) for l in open(d / "routed.jsonl")]
+    tier1 = [j for j in routed if j.get("tier") == 1]
+    texts = {}
+    with open(d / "texts.jsonl") as f:
+        for line in f:
+            r = json.loads(line)
+            texts[r["doc_id"]] = r["text"]
+    ship_rows = []
+    records = []
+    counts = {"shipped": 0, "shipped_retyped": 0, "excluded": 0}
+    excluded_classes: dict[str, int] = {}
+    total_cost: float | None = 0.0
+    for j in tier1:
+        outcome, shipped_row, record, cost = adj.audit_store_row(
+            audit_fn, j, texts.get(j["doc_id"]) or "",
+            model=b.config.gate_model)
+        total_cost = adj.add_cost(total_cost, cost)
+        counts[outcome] += 1
+        if shipped_row is not None:
+            ship_rows.append(shipped_row)
+        else:
+            cls = record.get("excluded_class") or "other"
+            excluded_classes[cls] = excluded_classes.get(cls, 0) + 1
+        records.append(record)
+    with open(d / "ship_set.jsonl", "w") as f:
+        for row in ship_rows:
+            f.write(json.dumps(row) + "\n")
+    with open(d / "verification_gate.jsonl", "w") as f:
+        for record in records:
+            f.write(json.dumps(record) + "\n")
+    shipped_total = counts["shipped"] + counts["shipped_retyped"]
+    b.metrics["ship_gate"] = {
+        "audited": len(tier1), "shipped": shipped_total,
+        "shipped_retyped": counts["shipped_retyped"],
+        "excluded": counts["excluded"],
+        "excluded_classes": excluded_classes,
+        "cost_usd": _round_cost(total_cost)}
+    # The batch accounting identity (freeze item 2): every
+    # candidate is accounted exactly once.
+    route_m = b.metrics.get("route") or {}
+    n_candidates = len([json.loads(l)
+                        for l in open(d / "candidates.jsonl")])
+    accounting = {
+        "candidates": n_candidates,
+        "vetoed": (b.metrics.get("adjudication") or {}).get("veto", 0),
+        "review": route_m.get("tier2", 0),
+        "dropped": route_m.get("dropped", 0),
+        "shipped": shipped_total,
+        "excluded": counts["excluded"],
+    }
+    accounted = (accounting["vetoed"] + accounting["review"]
+                 + accounting["dropped"] + accounting["shipped"]
+                 + accounting["excluded"])
+    if accounted != accounting["candidates"]:
+        raise RuntimeError(
+            f"SHIP_GATE accounting does not close: {accounting} "
+            f"accounts for {accounted} of "
+            f"{accounting['candidates']} candidates")
+    b.metrics["accounting"] = accounting
+    _record_cost(b, "SHIP_GATE", _round_cost(total_cost))
+    save_batch(b, root)
+    advance(b, root, [*stages, "SHIP_GATE"],
+            to=BatchStatus.SHIP_GATED)
+    _log(b.batch_id, f"SHIP_GATE done: {len(tier1)} audited -> "
+                     f"{shipped_total} shipped "
+                     f"({counts['shipped_retyped']} retyped), "
+                     f"{counts['excluded']} excluded "
+                     f"(see verification_gate.jsonl)")
+
+
 def stage_write(b: Batch, root: Path, stages: list[str],
                 registry, graph, er_decide_fn=None) -> None:
     """WRITE: registry-first, then graph. (Consistency §10.1)
@@ -2112,8 +2467,14 @@ def stage_write(b: Batch, root: Path, stages: list[str],
     """
     from .registry import Entity, Triple
     d = batch_dir(root, b.batch_id)
+    # Ship gate (0.2.1): when SHIP_GATE ran, WRITE consumes
+    # its ship set — the audited survivors of the routed
+    # Tier-1 population — instead of routed.jsonl itself.
     tier1 = []
-    with open(d / "routed.jsonl") as f:
+    tier1_p = d / "routed.jsonl"
+    if "SHIP_GATE" in stages and (d / "ship_set.jsonl").exists():
+        tier1_p = d / "ship_set.jsonl"
+    with open(tier1_p) as f:
         for line in f:
             j = json.loads(line)
             if j.get("tier") == 1:
@@ -2314,8 +2675,14 @@ def stage_write(b: Batch, root: Path, stages: list[str],
     ent_ids: dict[str, str] = {}
     er_merges = 0
     for j in tier1:
+        # Recording-time canonicalisation (0.2.1): a row
+        # carrying canonical_object stores its object entity
+        # under the canonical key; the verbatim value joins
+        # the entity's aliases below, so both forms stay
+        # addressable and derivations match on the key.
+        obj_name = j.get("canonical_object") or j["object"]
         for name, type_key in ((j["subject"], "subject_type"),
-                               (j["object"], "object_type")):
+                               (obj_name, "object_type")):
             key = name.lower()
             if key in ent_ids:
                 continue
@@ -2340,6 +2707,14 @@ def stage_write(b: Batch, root: Path, stages: list[str],
             attested = j.get(att_key) or ""
             extra_aliases = [attested] if attested \
                 and attested != name else []
+            if type_key == "object_type" \
+                    and j.get("canonical_object") \
+                    and j["object"] != name \
+                    and j["object"] not in extra_aliases:
+                # The verbatim value rides as an alias of the
+                # canonical-key entity (same retention rule as
+                # the attested surfaces above).
+                extra_aliases.append(j["object"])
             hit = er_match(name, "", j.get("context", "")[:500],
                            j["doc_id"], mention_type=label)
             if hit:
@@ -2471,10 +2846,14 @@ def stage_write(b: Batch, root: Path, stages: list[str],
         profile_map=profile_map,
         vocab=(setup_cfg or {}).get("label_categories") or [])
     triples = []
+    n_canonical = 0
     for j in tier1:
+        obj_surface = j.get("canonical_object") or j["object"]
+        if j.get("canonical_object"):
+            n_canonical += 1
         s_name, stored_rel, o_name, _layer = \
             normalizer.normalize_triple(
-                j["subject"], j["relation"], j["object"])
+                j["subject"], j["relation"], obj_surface)
         triples.append(Triple(
             subject_id=ent_ids[s_name.lower()],
             object_id=ent_ids[o_name.lower()],
@@ -2488,11 +2867,18 @@ def stage_write(b: Batch, root: Path, stages: list[str],
     # the WRITE-time ER mapping cannot be reconstructed afterwards
     # from surface names (resolution is order/decision-dependent).
     with open(d / "written_triples.jsonl", "w") as f:
-        for t, j in zip(triples, tier1):
-            f.write(json.dumps({
+        for t, j in zip(triples, tier1, strict=True):
+            rec = {
                 "subject_id": t.subject_id, "relation": t.relation,
                 "surface_relation": j["relation"],
-                "object_id": t.object_id, "doc_id": t.doc_id}) + "\n")
+                "object_id": t.object_id, "doc_id": t.doc_id}
+            if j.get("canonical_object"):
+                # The record carries the canonical key (the
+                # stored object_id) AND the verbatim value the
+                # text stated (0.2.1, freeze item 3).
+                rec["canonical_object"] = j["canonical_object"]
+                rec["verbatim_object"] = j["object"]
+            f.write(json.dumps(rec) + "\n")
     rel_report = normalizer.report()
     with open(d / "relation_map.json", "w") as f:
         json.dump(rel_report, f, indent=1)
@@ -2523,9 +2909,11 @@ def stage_write(b: Batch, root: Path, stages: list[str],
                                   .values())}
     if store_replaced is not None:
         b.metrics["write"]["store_replaced"] = store_replaced
+    if n_canonical:
+        b.metrics["write"]["canonicalized_objects"] = n_canonical
     _record_cost(b, "WRITE", _round_cost(er_cost))
     save_batch(b, root)
-    advance(b, root, [*stages, "WRITE"])
+    advance(b, root, [*stages, "WRITE"], to=BatchStatus.WRITTEN)
     _log(b.batch_id, f"WRITE done: {n} triples, {len(ent_ids)} entities, "
                      f"{er_merges} ER merges")
     if er_review:
@@ -3082,7 +3470,8 @@ def purge_batch_attempt(b: Batch, root: Path, graph) -> dict:
         elif hasattr(graph, "_delete_batch_rels"):
             graph._delete_batch_rels(b.batch_id)
             info["edges_deleted"] = -1  # count not reported by store
-    for name in ("written_triples.jsonl", "tier2_index.pkl"):
+    for name in ("written_triples.jsonl", "tier2_index.pkl",
+                 "ship_set.jsonl", "verification_gate.jsonl"):
         p = d / name
         if p.exists():
             p.unlink()
@@ -3091,7 +3480,8 @@ def purge_batch_attempt(b: Batch, root: Path, graph) -> dict:
 
 
 def _preflight_bindings(b: Batch, stages: list[str],
-                          live_decide: bool) -> None:
+                          live_decide: bool, root: Path | None = None,
+                          live_layers: bool = False) -> None:
     """Refuse before any stage runs when a pending stage needs a
     seat whose key variable is unset.
 
@@ -3117,10 +3507,24 @@ def _preflight_bindings(b: Batch, stages: list[str],
         _conn.seat("proposer").require_key()
     if live_decide and "GATES" not in stages:
         _conn.seat("judge").require_key()
+    # The declared 0.2.1 layers ride the judge seat's chat
+    # route (live_layers = the caller wired the live layer
+    # functions): a pending declared ADJUDICATE needs the
+    # judge key before CANDIDATES spends, not at its first
+    # call after it.
+    if live_layers and root is not None \
+            and "ADJUDICATE" not in stages \
+            and _declared_adjudication(b, root):
+        _conn.seat("judge").require_key()
+    if live_layers and root is not None \
+            and "SHIP_GATE" not in stages \
+            and _declared_ship_gate(b, root):
+        _conn.seat("judge").require_key()
 
 
 def _preflight_cost_cap(b: Batch, stages: list[str],
-                        live_decide: bool) -> None:
+                        live_decide: bool, root: Path | None = None,
+                        live_layers: bool = False) -> None:
     """Stop-line preflight: when a USD cap is set,
     every seat this run will use must be able to meter its
     spend — otherwise the cap could never trip and the run
@@ -3140,6 +3544,12 @@ def _preflight_cost_cap(b: Batch, stages: list[str],
         seats.append("proposer")
     if live_decide and ("GATES" not in stages
                         or "WRITE" not in stages):
+        seats.append("judge")
+    if live_layers and root is not None and "judge" not in seats \
+            and (("ADJUDICATE" not in stages
+                  and _declared_adjudication(b, root))
+                 or ("SHIP_GATE" not in stages
+                     and _declared_ship_gate(b, root))):
         seats.append("judge")
     if "INDEX" not in stages:
         seats.append("embedder")
@@ -3386,6 +3796,7 @@ def _finish_summary(b: Batch, root: Path, registry) -> None:
 def run_batch(b: Batch, root: Path, doc_texts: dict[str, str] | None,
               decide_fn=None, er_decide_fn=None,
               resolution_decide_fn=None,
+              adjudicate_fn=None, audit_fn=None,
               registry=None, graph=None,
               live_decide: bool = False,
               keep_run_id: bool = False) -> Batch:
@@ -3421,8 +3832,8 @@ def run_batch(b: Batch, root: Path, doc_texts: dict[str, str] | None,
         info = purge_batch_attempt(b, root, graph)
         info["purged_run_id"] = b.run_id
         stages = [s for s in stages
-                  if s in ("INGEST", "NER", "CANDIDATES", "GATES",
-                           "ROUTE")]
+                  if s in ("INGEST", "NER", "CANDIDATES",
+                           "ADJUDICATE", "GATES", "ROUTE")]
         b.metrics["retry_purge"] = info
         save_state(b, root, stages)
         _log(b.batch_id, f"retry purge: {info['edges_deleted']} "
@@ -3446,8 +3857,10 @@ def run_batch(b: Batch, root: Path, doc_texts: dict[str, str] | None,
             "INGEST": BatchStatus.INGESTED,
             "NER": BatchStatus.NER_DONE,
             "CANDIDATES": BatchStatus.CANDIDATES_DONE,
+            "ADJUDICATE": BatchStatus.ADJUDICATED,
             "GATES": BatchStatus.GATED,
             "ROUTE": BatchStatus.ROUTED,
+            "SHIP_GATE": BatchStatus.SHIP_GATED,
             "WRITE": BatchStatus.WRITTEN,
             "INDEX": BatchStatus.INDEXED,
             "VERIFY": BatchStatus.VERIFIED,
@@ -3482,12 +3895,20 @@ def run_batch(b: Batch, root: Path, doc_texts: dict[str, str] | None,
     # Preflight (before the try, so a refusal leaves the batch
     # un-failed and un-started): pending stages' seats must have
     # their keys, or the run refuses with BindingKeyError here.
-    _preflight_bindings(b, stages, live_decide and decide_fn is not None)
+    _preflight_bindings(b, stages, live_decide and decide_fn is not None,
+                        root,
+                        live_layers=live_decide
+                        and (adjudicate_fn is not None
+                             or audit_fn is not None))
     # Stop-line preflight, same placement and for
     # the same reason: a USD cap over cost-less seats refuses
     # by name before any stage starts.
     _preflight_cost_cap(b, stages,
-                        live_decide and decide_fn is not None)
+                        live_decide and decide_fn is not None,
+                        root,
+                        live_layers=live_decide
+                        and (adjudicate_fn is not None
+                             or audit_fn is not None))
     # Store preflight, same placement: a build needs
     # Neo4j serving before the first stage runs.
     _preflight_store(b, stages, graph)
@@ -3509,7 +3930,22 @@ def run_batch(b: Batch, root: Path, doc_texts: dict[str, str] | None,
             _beat(b, root, "CANDIDATES")
             stage_candidates(b, root, stages)
             stages.append("CANDIDATES")
-        if b.status == BatchStatus.CANDIDATES_DONE:
+        if b.status == BatchStatus.CANDIDATES_DONE \
+                and "ADJUDICATE" not in stages \
+                and _declared_adjudication(b, root):
+            if adjudicate_fn is None:
+                raise RuntimeError(
+                    "ADJUDICATE: the profile declares the "
+                    "adjudication layer (adjudication_layer) but "
+                    "no adjudication function was wired — "
+                    "refusing to gate unadjudicated candidates "
+                    "(fail closed)")
+            _check_cost_cap(b)
+            _beat(b, root, "ADJUDICATE")
+            stage_adjudicate(b, root, stages, adjudicate_fn)
+            stages.append("ADJUDICATE")
+        if b.status in (BatchStatus.CANDIDATES_DONE,
+                        BatchStatus.ADJUDICATED):
             assert decide_fn is not None, "decide_fn required for GATES"
             _check_cost_cap(b)
             _beat(b, root, "GATES")
@@ -3521,7 +3957,21 @@ def run_batch(b: Batch, root: Path, doc_texts: dict[str, str] | None,
             _beat(b, root, "ROUTE")
             stage_route(b, root, stages)
             stages.append("ROUTE")
-        if b.status == BatchStatus.ROUTED:
+        if b.status == BatchStatus.ROUTED \
+                and "SHIP_GATE" not in stages \
+                and _declared_ship_gate(b, root):
+            if audit_fn is None:
+                raise RuntimeError(
+                    "SHIP_GATE: the profile declares the "
+                    "full-population verification gate "
+                    "(full_verification_gate) but no audit "
+                    "function was wired — refusing to write "
+                    "unaudited triples (fail closed)")
+            _check_cost_cap(b)
+            _beat(b, root, "SHIP_GATE")
+            stage_ship_gate(b, root, stages, audit_fn)
+            stages.append("SHIP_GATE")
+        if b.status in (BatchStatus.ROUTED, BatchStatus.SHIP_GATED):
             assert registry is not None and graph is not None
             _check_cost_cap(b)
             _beat(b, root, "WRITE")

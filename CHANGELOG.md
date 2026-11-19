@@ -7,6 +7,73 @@ and the project adheres to
 
 ## [Unreleased]
 
+### 0.2.1 — draft, not yet released
+
+I have implemented this release and it is green in
+my tree, but I have **not tagged or published it**:
+the tag waits on a final live verification gate I
+have not run yet. What follows is only what the
+release will contain.
+
+#### Added
+
+- **Two-pass build** — I split the build's
+  candidate path into two passes. The first pass
+  enumerates candidates as before; a new
+  adjudication stage (declared with
+  `adjudication_layer`, between CANDIDATES and
+  GATES) then decides every candidate keep /
+  retype / veto under an eight-clause proposal
+  discipline, judging each claim against its full
+  excerpt and enforcing quote completeness
+  deterministically — a claim ships only when its
+  evidence quote, read alone, states the whole
+  claim. Every decision, rejections included, is
+  recorded in the batch's `adjudication.jsonl`,
+  and a veto must record the retype it tried and
+  why that retype failed. A batch whose profile
+  declares nothing runs the previous single-pass
+  path unchanged. Every shipped pack declares the
+  layer from this release (Core 0.6.1, Legal
+  Contract 0.2.2, Open Domain 0.10.1, Bio Medical
+  0.3.1, FIBO Contracts 0.1.1), so a pack-resolved
+  build runs the adjudication pass by default.
+- **Full-population verification gate** — when a
+  configuration declares `full_verification_gate`
+  — and every shipped pack declares it from this
+  release — a ship gate between ROUTE and WRITE
+  re-audits
+  every triple bound for the store, independently,
+  against the same quote-completeness standard. A
+  failure gets one retype and a second audit; a
+  second failure excludes it. The batch record
+  carries the full accounting — candidates =
+  vetoed + review + dropped + shipped + excluded —
+  and that accounting is the shipping criterion.
+  The sampled audit keeps a calibration role only;
+  it no longer decides what ships.
+- **Recording-time normalisation** — a pack may
+  declare `canonical_vocabularies`: a
+  surface-to-key map for a slot category, recorded
+  on the candidate beside the verbatim value, so
+  derivation and serving match on canonical keys
+  instead of folding free text after the fact. A
+  value that maps to no key is a named, counted
+  build event, never a silent drop. The Legal
+  Contract pack moves to 0.2.1 to declare the
+  first vocabulary, for Governing Law: "State of
+  New York" and "Commonwealth of Virginia" are
+  stored under the `new_york` and `virginia` keys,
+  with the verbatim form kept as an alias.
+- **Absence materialisation** — when a pack's
+  clause sweep finds a declared category ABSENT in
+  a document, the build now writes that absence as
+  a citable record (`negative_findings.jsonl`,
+  readable through the store layer beside the
+  positive triples), so "no such clause" can be
+  answered from a record instead of from a missing
+  row.
+
 ## [0.2.0] - 2026-11-13
 
 ### Changed

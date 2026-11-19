@@ -49,7 +49,7 @@ from .batch import (
 )
 from .batch_run import _er_terminal_account, run_batch
 from .neo4j_store import Neo4jEntityRegistry, Neo4jGraphStore
-from .reference_profile import JUDGE_MODEL
+from .reference_profile import JUDGE_MODEL, PROVIDER_SORT
 from .reference_profile import SYSTEMONE_URL as SYSTEMONE_URL
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -520,6 +520,41 @@ def _resolution_decide_fn(context: str, mention: str, antecedent: str,
         result.get("usage"), binding)
 
 
+def _judge_chat(prompt: str, model: str = JUDGE_MODEL):
+    """Chat transport on the judge seat for the 0.2.1 layers
+    (Pass D adjudication and the ship-gate audit —
+    pipeline/adjudication.py builds the prompts; this is only
+    the wire). Returns (response_text, cost_usd | None) in the
+    decide-function shape the stages record. A missing key
+    refuses with BindingKeyError naming seat + variable."""
+    import requests
+    binding = connections.seat("judge")
+    key = binding.require_key()
+    payload = {
+        "model": model,
+        "messages": [{"role": "user", "content": prompt}],
+        "max_tokens": 8000,
+    }
+    if binding.is_openrouter_dialect:
+        payload["provider"] = {"sort": PROVIDER_SORT}
+    if not binding.has_capability(
+            connections.CAP_NO_TEMPERATURE, model):
+        payload["temperature"] = 0.0
+    r = requests.post(
+        binding.chat_url,
+        headers={"Authorization": f"Bearer {key}"},
+        json=payload, timeout=300)
+    r.raise_for_status()
+    data = r.json()
+    text = data["choices"][0]["message"]["content"].strip()
+    if text.startswith("```"):
+        lines = text.split("\n")
+        text = "\n".join(lines[1:-1] if lines[-1].strip() == "```"
+                         else lines[1:])
+    return text, connections.normalize_usage(
+        data.get("usage"), binding).get("cost")
+
+
 def _load_batch_or_exit(root: Path, batch_id: str) -> Batch:
     """Load a batch or exit with a named error: a
     typo'd id is a user error, not a traceback."""
@@ -578,6 +613,7 @@ def cmd_run(args) -> None:
     run_batch(b, sroot, doc_texts, decide_fn=_decide_fn,
               er_decide_fn=_er_decide_fn,
               resolution_decide_fn=_resolution_decide_fn,
+              adjudicate_fn=_judge_chat, audit_fn=_judge_chat,
               registry=registry, graph=graph, live_decide=True,
               keep_run_id=args.reuse_run)
 

@@ -100,13 +100,13 @@
   "display_name": "Bio Medical",
   "pack_format": 1,
   "pack_id": "bio-medical",
-  "pack_version": "0.3.0",
+  "pack_version": "0.3.1",
   "payload": {
     "kind": "setup_config",
-    "note": "The loader file (profile/setup_config.json, beside this manifest) is byte-identical to this pinned file (asserted by the pack test and by the pack freeze). The pack binds the payload by pin; it never forks its content. Pack 0.2.0 (2026-10-19): the payload gained one declared key, pair_judge_generic_relation, carrying the generic-member name the pair judge's evidence template previously held as a core-code literal; no definition, switch, or prohibition changed and every rendered prompt is byte-identical (the domain-boundary test). Pin re-taken and pack_version bumped per docs/PACK_DESIGN.md SS1.2; the 0.1.0 payload bytes remain in git history.",
-    "path": "packs/bio-medical/profile/setup_config_v4.json",
-    "profile_version": 4,
-    "sha256": "80bd6f8b9a108cd4b36007347df602b2cb728299a726b6a201b2876882120711"
+    "note": "The loader file (profile/setup_config.json, beside this manifest) is byte-identical to this pinned file (asserted by the pack test and by the pack freeze). The pack binds the payload by pin; it never forks its content. Pack 0.2.0 (2026-10-19): the payload gained one declared key, pair_judge_generic_relation, carrying the generic-member name the pair judge's evidence template previously held as a core-code literal; no definition, switch, or prohibition changed and every rendered prompt is byte-identical (the domain-boundary test). Pin re-taken and pack_version bumped per docs/PACK_DESIGN.md SS1.2; the 0.1.0 payload bytes remain in git history. Pack 0.3.1 (2026-11-18): profile v5 adds two declarations — adjudication_layer and full_verification_gate, the 0.2.1 two-pass layers — and changes no definition, switch, or prohibition; the v4 payload stays in the tree beside it, and the loader file carries the v5 bytes.",
+    "path": "packs/bio-medical/profile/setup_config_v5.json",
+    "profile_version": 5,
+    "sha256": "3ac67875315b10925ebed505466bab6863b70439eb6f41c8c07fd71acc06cc87"
   },
   "profile_family": "biored",
   "status": "in_force",

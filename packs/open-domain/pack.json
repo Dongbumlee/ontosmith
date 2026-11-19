@@ -29,7 +29,7 @@
    "note": "Authored-definitions payload. Not adopted: the stage-4 pilot that priced it ran under configurations the fitting line later corrected, and its counted ceilings sit below the v1 payload's measured rates. Adoption only via a registered gate in a future pack version; the bytes stay in the repo. Its direction declarations ARE in force as emission data via direction_declarations.json (this manifest's artefacts list).",
    "path": "packs/open-domain/profile/setup_config_v2.json",
    "profile_version": 2,
-   "sha256": "95a8e923a4b017ae0457836c08b4f9fdf36dffe1b538f1f73d17bec476115580",
+   "sha256": "8ddf507b9ccbb5071a4abf501a11b37abdcb45bac9a4181ae726395431e14737",
    "status": "candidate_not_in_force"
   }
  ],
@@ -74,13 +74,13 @@
  "display_name": "Open Domain",
  "pack_format": 1,
  "pack_id": "open-domain",
- "pack_version": "0.10.0",
+ "pack_version": "0.10.1",
  "payload": {
   "kind": "setup_config",
-  "note": "In force. The fitted production configuration (stages 4c-12) runs on the v1 payload: the full v1 guidance is the extraction surface the fitting line adopted (J5s0/J3F/J3F2 all rejected; the v2 payload's cost ceilings sit below v1's, so v2 was never priced in the corrected configuration). Promotion binds the v1 bytes by this pin, per the main-run design (section 6). Pack 0.6.0 adds one key to the v1 bytes: relation_declarations_source, naming the pack's relation-declarations artefact (DC-7); no other payload content changes. Pack 0.9.0 raises proposer_max_per_chunk 25 -> 40 in both payloads: the 2026-11-02 cap measurement on general text (biography / novel / contract, three repeats at 25) found the CUAD-inherited 25 binding hard outside the contract genre (biography records +64% at 40), while 40 kept the non-duplicate gate-block share inside the baseline band on every genre and 60 breached it. Pack 0.10.0 declares proposer_complement_draw in both payloads: the 2026-11-02/03 draw measurement on general text (biography / novel / contract) found a residual pass — a second proposer pass shown the first pass's extractions, asked only for facts not yet covered — raises written records substantially at roughly double the proposer cost (biography 103 -> 234, novel 42 -> 75, contract 192 -> 369), recovering 31 of 73 never-proposed gold facts on the biography slice and covering 127 of 158 hand-extracted gold facts (single draw: 92). The fiction slice's ungrounded-block share rose (6.3% -> 16.7%) and stayed inside the guards; no genre regressed.",
+  "note": "In force. The fitted production configuration (stages 4c-12) runs on the v1 payload: the full v1 guidance is the extraction surface the fitting line adopted (J5s0/J3F/J3F2 all rejected; the v2 payload's cost ceilings sit below v1's, so v2 was never priced in the corrected configuration). Promotion binds the v1 bytes by this pin, per the main-run design (section 6). Pack 0.6.0 adds one key to the v1 bytes: relation_declarations_source, naming the pack's relation-declarations artefact (DC-7); no other payload content changes. Pack 0.9.0 raises proposer_max_per_chunk 25 -> 40 in both payloads: the 2026-11-02 cap measurement on general text (biography / novel / contract, three repeats at 25) found the CUAD-inherited 25 binding hard outside the contract genre (biography records +64% at 40), while 40 kept the non-duplicate gate-block share inside the baseline band on every genre and 60 breached it. Pack 0.10.0 declares proposer_complement_draw in both payloads: the 2026-11-02/03 draw measurement on general text (biography / novel / contract) found a residual pass — a second proposer pass shown the first pass's extractions, asked only for facts not yet covered — raises written records substantially at roughly double the proposer cost (biography 103 -> 234, novel 42 -> 75, contract 192 -> 369), recovering 31 of 73 never-proposed gold facts on the biography slice and covering 127 of 158 hand-extracted gold facts (single draw: 92). The fiction slice's ungrounded-block share rose (6.3% -> 16.7%) and stayed inside the guards; no genre regressed. Pack 0.10.1 declares adjudication_layer and full_verification_gate in both payloads: the 0.2.1 two-pass layers — the Pass D adjudication pass between candidates and gates, and the full-population ship gate between route and write — run for this family's builds from this version.",
   "path": "packs/open-domain/profile/setup_config.json",
   "profile_version": 1,
-  "sha256": "d3015687392af075cf1ba0bf8627b573d9ef919aad1f714369afc7fcf3619192"
+  "sha256": "36a331e4c8bbeda575b6115f394ab4c0c44e405ece8ef9afc4749e5c3352a839"
  },
  "profile_family": "redocred",
  "status": "in_force",

@@ -117,6 +117,30 @@ class _StubHandler(BaseHTTPRequestHandler):
                 prompt = payload["messages"][0]["content"]
             except Exception:
                 pass
+            if prompt.startswith("You are Pass D."):
+                # The adjudication stage (declared by the
+                # core pack from 0.6.1): the stub judge keeps
+                # every candidate, decided by id.
+                content = json.dumps([
+                    {"candidate_id": cid, "decision": "keep"}
+                    for cid in re.findall(
+                        r"Candidate (cand-\d+):", prompt)])
+                self._json(200, {
+                    "choices": [{"message": {"content": content}}],
+                    "usage": {"prompt_tokens": 12,
+                              "completion_tokens": 4}})
+                return
+            if prompt.startswith(
+                    "You are an independent verifier."):
+                # The ship gate's audit (declared by the
+                # core pack from 0.6.1): the stub's triples
+                # are quote-complete, so the audit passes.
+                content = json.dumps({"verdict": "pass"})
+                self._json(200, {
+                    "choices": [{"message": {"content": content}}],
+                    "usage": {"prompt_tokens": 12,
+                              "completion_tokens": 4}})
+                return
             triples = []
             if "Mara Voss" in prompt:
                 triples.append({
@@ -349,6 +373,8 @@ class TestTryItBEndToEnd(unittest.TestCase):
                     b, self.state, doc_texts,
                     decide_fn=batch_cli._decide_fn,
                     er_decide_fn=batch_cli._er_decide_fn,
+                    adjudicate_fn=batch_cli._judge_chat,
+                    audit_fn=batch_cli._judge_chat,
                     registry=registry, graph=_FakeGraph(),
                     live_decide=True, keep_run_id=reuse)
         return out.getvalue()
@@ -419,7 +445,12 @@ class TestTryItBEndToEnd(unittest.TestCase):
                      if path.endswith("/systemone")}
         embeddings = {p.get("model") for path, p in wire
                       if path.endswith("/embeddings")}
-        self.assertEqual(chat, {STUB_MODELS["proposer"]})
+        # Chat carries the proposer and — since the
+        # core pack declared the 0.2.1 layers — the
+        # judge seat too (adjudication + ship-gate
+        # audit speak the judge's chat route).
+        self.assertEqual(chat, {STUB_MODELS["proposer"],
+                                STUB_MODELS["judge"]})
         self.assertEqual(decisions, {STUB_MODELS["judge"]})
         self.assertEqual(embeddings, {STUB_MODELS["embedder"]})
 
@@ -427,7 +458,8 @@ class TestTryItBEndToEnd(unittest.TestCase):
         #    stage unmetered, the total null — and the
         #    status JSON prints it that way.
         ledger = b.metrics["cost_ledger"]
-        for stage in ("CANDIDATES", "GATES", "INDEX"):
+        for stage in ("CANDIDATES", "ADJUDICATE", "GATES",
+                      "SHIP_GATE", "INDEX"):
             self.assertIsNone(ledger[stage], stage)
         self.assertIsNone(ledger["total_usd"])
         self.assertEqual(ledger["metered_usd"], 0.0)

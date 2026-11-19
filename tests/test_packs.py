@@ -64,7 +64,7 @@ class TestLoaderEquivalence(unittest.TestCase):
     def test_provenance_binds_under_public_slug(self):
         for slug, (codename, family, _ds) in PACKS.items():
             payload = (ROOT / "packs" / slug / "profile"
-                       / ("setup_config_v4.json"
+                       / ("setup_config_v5.json"
                           if slug == "bio-medical"
                           else "setup_config.json")).read_bytes()
             prov = pack_for_setup_config(ROOT, family, payload)

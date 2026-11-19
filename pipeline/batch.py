@@ -26,8 +26,15 @@ class BatchStatus(str, Enum):
     INGESTED = "INGESTED"
     NER_DONE = "NER_DONE"
     CANDIDATES_DONE = "CANDIDATES_DONE"
+    # Optional declared stages (0.2.1 two-pass build): ADJUDICATED
+    # sits between CANDIDATES_DONE and GATED, SHIP_GATED between
+    # ROUTED and WRITTEN. A batch whose profile declares neither
+    # layer never enters these statuses — the stages that border
+    # them advance to their historical targets explicitly.
+    ADJUDICATED = "ADJUDICATED"
     GATED = "GATED"
     ROUTED = "ROUTED"
+    SHIP_GATED = "SHIP_GATED"
     WRITTEN = "WRITTEN"
     INDEXED = "INDEXED"
     VERIFIED = "VERIFIED"
@@ -40,8 +47,10 @@ STAGE_ORDER = [
     BatchStatus.INGESTED,
     BatchStatus.NER_DONE,
     BatchStatus.CANDIDATES_DONE,
+    BatchStatus.ADJUDICATED,
     BatchStatus.GATED,
     BatchStatus.ROUTED,
+    BatchStatus.SHIP_GATED,
     BatchStatus.WRITTEN,
     BatchStatus.INDEXED,
     BatchStatus.VERIFIED,
@@ -258,11 +267,20 @@ def save_state(b: Batch, root: Path, stages_completed: list[str],
     (d / "state.json").write_text(json.dumps(state, indent=1))
 
 
-def advance(b: Batch, root: Path, stages_completed: list[str]) -> None:
-    """Move to the next stage in STAGE_ORDER and checkpoint."""
-    idx = STAGE_ORDER.index(b.status)
-    if idx + 1 < len(STAGE_ORDER):
-        b.status = STAGE_ORDER[idx + 1]
+def advance(b: Batch, root: Path, stages_completed: list[str],
+            to: BatchStatus | None = None) -> None:
+    """Move to the next stage in STAGE_ORDER and checkpoint.
+
+    ``to`` names the target explicitly: the stages bordering the
+    optional declared stages (ADJUDICATED / SHIP_GATED) advance
+    to their historical targets so a batch that skips the
+    optional stage never lands in its status by adjacency."""
+    if to is not None:
+        b.status = to
+    else:
+        idx = STAGE_ORDER.index(b.status)
+        if idx + 1 < len(STAGE_ORDER):
+            b.status = STAGE_ORDER[idx + 1]
     save_batch(b, root)
     save_state(b, root, stages_completed)
 

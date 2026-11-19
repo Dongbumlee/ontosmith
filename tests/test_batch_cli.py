@@ -36,7 +36,7 @@ class TestCmdCreateProfileWiring(unittest.TestCase):
             shutil.copy(STAGING / "packs" / "bio-medical" / name,
                         self.tmp / "packs" / "bio-medical" / name)
         for name in ("profile.json", "setup_config.json",
-                     "setup_config_v4.json"):
+                     "setup_config_v5.json"):
             shutil.copy(STAGING / "packs" / "bio-medical" / "profile"
                         / name, pack_profile / name)
         # the resolver's baseline pack must exist in the
