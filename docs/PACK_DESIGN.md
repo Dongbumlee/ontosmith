@@ -344,6 +344,24 @@ Every element of a build belongs to exactly one class:
 | **PACK** | Domain content; rides as data in the payload, never as a code branch | Type inventories with definitions and boundary examples; merge prohibitions; clause label categories; surface→canonical relation maps; the domain's measured judge-variant selection |
 | **RUN** | A per-run parameter — the operator's choice for one run, not the domain's and not the core's | Thresholds and the review band; the enumeration window; the spend stop-line; model bindings (capability-tier assignments made in the connection layer) |
 
+The 0.2.1 declarations sit on this boundary the
+same way. The adjudication layer and the
+full-population verification gate are CORE
+mechanisms — stage machinery and policy, identical
+for every domain — that a payload switches on with
+the `adjudication_layer` and
+`full_verification_gate` declarations; the switch
+is data, the mechanism is not. A
+`canonical_vocabularies` declaration is PACK
+content proper: the domain's own surface→canonical
+map for a slot category, recorded on the candidate
+at build time (the Legal Contract pack's Governing
+Law vocabulary is the first case). Absence records
+are RUN output: the batch's
+`negative_findings.jsonl`, written when a pack's
+clause sweep finds a declared category ABSENT in a
+document.
+
 Two standing consequences:
 
 - **Model names are never pack content.** A payload may
