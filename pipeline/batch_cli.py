@@ -3,11 +3,17 @@
 The batch path is the product's build engine. Every run moves
 through the stage contract
 
-    INGEST -> NER -> CANDIDATES -> GATES -> ROUTE -> WRITE
-           -> INDEX -> VERIFY
+    INGEST -> NER -> CANDIDATES -> ADJUDICATE -> GATES -> ROUTE
+           -> SHIP_GATE -> WRITE -> INDEX -> VERIFY
 
 with per-stage state persisted under the batch directory, so a
 run can resume after failure without redoing completed stages.
+ADJUDICATE (the second pass over the candidates) and SHIP_GATE
+(the full-population verification gate) run when the profile
+declares their layers (``adjudication_layer`` /
+``full_verification_gate``); the core baseline and every
+shipped pack declare both, and a declared layer with no wired
+function refuses the run rather than skipping silently.
 
 Batch state (the batches/ tree, the registry) lives under
 state_root() — see its docstring. Packs resolve through

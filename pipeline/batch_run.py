@@ -2895,6 +2895,24 @@ def stage_write(b: Batch, root: Path, stages: list[str],
             "entities": _inv["entities"],
             "chunks": _inv["chunks"],
             "stamped_at": datetime.now(UTC).isoformat()})
+    # Absence projection (0.2.2): the batch's materialised
+    # negative findings (negative_findings.jsonl, written at
+    # CANDIDATES) join the graph as (:NegativeFinding) nodes,
+    # through the §4 GraphStore over the same client — the
+    # _index_serving pattern: a run with no production store
+    # (stub graph objects) projects nothing, and the records
+    # stay readable through the store layer alone.
+    if store_client is not None:
+        from .graph_store import GraphStore
+        from .registry_store import RegistryStore
+        _n_findings = GraphStore(
+            client=store_client,
+            registry_store=RegistryStore(root),
+        ).project_negative_findings(b.batch_id)
+        if _n_findings:
+            _log(b.batch_id,
+                 f"WRITE: {_n_findings} negative findings "
+                 f"projected into the graph")
     b.metrics["write"] = {"triples": n, "entities": len(ent_ids),
                           "er_merges": er_merges,
                           "er_form_variant_merges": er_merges,

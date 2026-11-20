@@ -5,6 +5,20 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>OntoSmith, ontology-based GraphRAG, judged triple by triple</title>
 <meta name="description" content="OntoSmith builds knowledge graphs under an ontology a human approves. Models propose, the Jev decision model judges, Neo4j stores. Every written fact keeps its evidence.">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="OntoSmith">
+<meta property="og:title" content="OntoSmith, ontology-based GraphRAG, judged triple by triple">
+<meta property="og:description" content="OntoSmith builds knowledge graphs under an ontology a human approves. Models propose, the Jev decision model judges, Neo4j stores. Every written fact keeps its evidence.">
+<meta property="og:url" content="https://dongbumlee.github.io/ontosmith/">
+<meta property="og:image" content="https://dongbumlee.github.io/ontosmith/assets/graph-explorer.png">
+<meta property="og:image:width" content="572">
+<meta property="og:image:height" content="685">
+<meta property="og:image:alt" content="The OntoSmith Graph Explorer: a complete build drawn as one dense graph, clustered by document">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="OntoSmith, ontology-based GraphRAG, judged triple by triple">
+<meta name="twitter:description" content="OntoSmith builds knowledge graphs under an ontology a human approves. Models propose, the Jev decision model judges, Neo4j stores. Every written fact keeps its evidence.">
+<meta name="twitter:image" content="https://dongbumlee.github.io/ontosmith/assets/graph-explorer.png">
+<meta name="twitter:image:alt" content="The OntoSmith Graph Explorer: a complete build drawn as one dense graph, clustered by document">
 <link rel="icon" type="image/svg+xml" href="assets/logo-mark.svg">
 <script>document.documentElement.classList.add('js');</script>
 <style>
@@ -229,11 +243,13 @@ footer a{color:var(--cream)}
       <div class="stage"><div class="n">01</div><div class="t">Ingest</div></div><div class="arrow">→</div>
       <div class="stage"><div class="n">02</div><div class="t">NER</div></div><div class="arrow">→</div>
       <div class="stage"><div class="n">03</div><div class="t">Candidates</div></div><div class="arrow">→</div>
-      <div class="stage"><div class="n">04</div><div class="t">Gates</div></div><div class="arrow">→</div>
-      <div class="stage"><div class="n">05</div><div class="t">Route</div></div><div class="arrow">→</div>
-      <div class="stage"><div class="n">06</div><div class="t">Write</div></div><div class="arrow">→</div>
-      <div class="stage"><div class="n">07</div><div class="t">Index</div></div><div class="arrow">→</div>
-      <div class="stage"><div class="n">08</div><div class="t">Verify</div></div>
+      <div class="stage"><div class="n">04</div><div class="t">Adjudicate</div></div><div class="arrow">→</div>
+      <div class="stage"><div class="n">05</div><div class="t">Gates</div></div><div class="arrow">→</div>
+      <div class="stage"><div class="n">06</div><div class="t">Route</div></div><div class="arrow">→</div>
+      <div class="stage"><div class="n">07</div><div class="t">Ship gate</div></div><div class="arrow">→</div>
+      <div class="stage"><div class="n">08</div><div class="t">Write</div></div><div class="arrow">→</div>
+      <div class="stage"><div class="n">09</div><div class="t">Index</div></div><div class="arrow">→</div>
+      <div class="stage"><div class="n">10</div><div class="t">Verify</div></div>
     </div>
   </div>
 </div>
@@ -329,7 +345,7 @@ footer a{color:var(--cream)}
     </figure>
     <div class="darkstats">
       <div class="stat"><div class="v serif">4</div><div class="k">ontology domain packs: legal, bio-medical, open-domain, and an imported FIBO contracts pack, on one shared core</div></div>
-      <div class="stat"><div class="v serif">8</div><div class="k">pipeline stages, ingest to verify</div></div>
+      <div class="stat"><div class="v serif">10</div><div class="k">pipeline stages, ingest to verify</div></div>
       <div class="stat"><div class="v serif">3</div><div class="k">serving channels in the default search: direct sentence index, graph pool, beam traversal</div></div>
     </div>
   </div>

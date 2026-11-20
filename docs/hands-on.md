@@ -146,7 +146,7 @@ $ ontosmith batch create --source examples/corpus --collection demo \
     --profile profiles/demo/profile.json
 profile: demo sha256:28ede2ab1b3e4fd2
 binding: reference
-setup_config: resolved (core baseline + profile 'demo', 32 keys) -> setup_config.resolved.json
+setup_config: resolved (core baseline + profile 'demo', 36 keys) -> setup_config.resolved.json
 proposer_framing: Extract factual relations from the excerpt below.
 created batch demo-4docs with 4 docs
 run: python -m pipeline batch run demo-4docs
@@ -479,7 +479,7 @@ $ ontosmith batch create --source demo --collection redocred-dev-subset \
 profile: redocred sha256:aceac6fb15f59e38
 pack: open-domain 0.10.0 (payload sha256:d3015687392af075cf…)
 binding: reference
-setup_config: resolved (core baseline + open-domain, 38 keys) -> setup_config.resolved.json
+setup_config: resolved (core baseline + open-domain, 42 keys) -> setup_config.resolved.json
 proposer_framing: Extract factual relations from this document excerpt.
 created batch redocred-dev-subset-40docs with 40 docs
 ```
@@ -665,7 +665,7 @@ $ ontosmith batch create --source examples/corpus --collection demo-own \
 profile: demo sha256:28ede2ab1b3e4fd2
 pack: demo-ceramics 0.1.0 (payload sha256:0e521c59d46b0db6…)
 binding: reference
-setup_config: resolved (core baseline + demo-ceramics, 26 keys) -> setup_config.resolved.json
+setup_config: resolved (core baseline + demo-ceramics, 30 keys) -> setup_config.resolved.json
 proposer_framing: Extract factual relations from the excerpt below.
 created batch demo-own-4docs with 4 docs
 ```
@@ -986,7 +986,7 @@ $ ontosmith batch create --source cuad-subset-100 \
 profile: fibo-cuad sha256:b54c32666bb16ea7
 pack: fibo-contracts 0.1.0 (payload sha256:0d77115fb79acf07…)
 binding: reference
-setup_config: resolved (core baseline + fibo-contracts, 27 keys) -> setup_config.resolved.json
+setup_config: resolved (core baseline + fibo-contracts, 31 keys) -> setup_config.resolved.json
 proposer_framing: Extract factual relations from the excerpt below.
 created batch fibo-cuad-100-100docs with 100 docs
 ```

@@ -28,6 +28,10 @@ surface a stranger can run. This module is that surface:
   the store's own; attestation records still read from the
   registry artifacts — the registry is the source of truth
   (§4), exactly as the lab's ``GraphData`` loaded them.
+  Absence records (negative findings) are the exception:
+  they read from the graph's projected (:NegativeFinding)
+  nodes, so an absence answer always describes the store's
+  current graph.
   The store holds one graph: the serving store
   resolves it from the WRITE stamp, never from a
   user-supplied scope.
@@ -164,6 +168,14 @@ class _ArtifactRecords:
         self._registry = registry
         self._entities: dict[str, dict] = {}
         self._triples: list[dict] = []
+        # The build's materialised absence records, in the
+        # records' own shape. A subclass whose load already
+        # read them (a batch directory's negative_findings
+        # .jsonl, or the graph's (:NegativeFinding) nodes)
+        # sets the attribute before this constructor runs;
+        # it is preserved, never reset.
+        if not hasattr(self, "_negative_findings"):
+            self._negative_findings: list[dict] = []
         for rec in records:
             row = _normalize_triple(rec, batch_id=batch_id)
             if row is None:
@@ -245,6 +257,17 @@ class _ArtifactRecords:
     def triples(self) -> list[dict]:
         """The attestation records, normalized (copies)."""
         return [dict(t) for t in self._triples]
+
+    def negative_findings(self) -> list[dict]:
+        """The build's materialised absence records
+        (copies): one per (document, declared slot
+        category) the clause sweep found ABSENT, each
+        flagged kind="negative_finding" / status="absent"
+        and citable by finding_id. This is how serving
+        answers "no such clause" — from a record, never
+        from a missing triple. Empty when the build
+        recorded none."""
+        return [dict(f) for f in self._negative_findings]
 
     def triple_records(self) -> list[dict]:
         """Records in the spelling the R9 viewer
@@ -390,6 +413,8 @@ class FileServingStore(_ArtifactRecords):
             self._corpus = rs.corpus(self._batch_id)
         except (OSError, ValueError, KeyError):
             self._corpus = ""
+        self._negative_findings = rs.negative_findings(
+            self._batch_id)
         texts_p = d / "texts.jsonl"
         if texts_p.is_file():
             for line in texts_p.read_text().splitlines():
@@ -703,7 +728,12 @@ class Neo4jServingStore(_ArtifactRecords):
     parity is by construction); attestation records and
     entity resolution read from the registry artifacts —
     the registry is the source of truth (§4), the same
-    split the lab's GraphData used. A store that cannot
+    split the lab's GraphData used. Absence records are
+    the one read that comes from the graph itself
+    (0.2.2): the (:NegativeFinding) nodes WRITE projected,
+    so "no such clause" is answered by the store's current
+    graph, not by an artifact of a build it may have
+    replaced. A store that cannot
     be reached refuses by name (StoreError) — it never
     silently falls back to the file store.
 
@@ -735,6 +765,15 @@ class Neo4jServingStore(_ArtifactRecords):
         if isinstance(getattr(self.gs, "c", None), Neo4jClient):
             records = self._resolve_store_graph(root)
             self._heal_serving(root)
+            # Absence reads come from the graph itself
+            # (0.2.2): the stamped batch's projected
+            # (:NegativeFinding) nodes, not the artifacts —
+            # the graph is what serving answers from.
+            if hasattr(self.gs, "negative_findings"):
+                self._negative_findings = self._guard(
+                    "read the graph's negative findings",
+                    lambda: self.gs.negative_findings(
+                        self._batch_id))
         elif self.source is not None and self.source.is_dir():
             self._batch_id = self.source.name
             found = _records_from_dir(self.source)
@@ -745,6 +784,11 @@ class Neo4jServingStore(_ArtifactRecords):
                 self._corpus = rs.corpus(self._batch_id)
             except (OSError, ValueError, KeyError):
                 self._corpus = ""
+            try:
+                self._negative_findings = rs.negative_findings(
+                    self._batch_id)
+            except (OSError, ValueError, KeyError):
+                self._negative_findings = []
         super().__init__(records, corpus=self._corpus,
                          batch_id=self._batch_id,
                          registry=_load_registry(root))
