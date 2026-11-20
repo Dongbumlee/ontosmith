@@ -7,6 +7,46 @@ and the project adheres to
 
 ## [Unreleased]
 
+## [0.2.2] - 2026-11-20
+
+### Added
+
+- **Absence, served** — the build's negative findings
+  (declared slots the clause sweep recorded ABSENT)
+  are projected into the Neo4j graph next to the
+  triples and readable from both serving stores. The
+  MCP `search` tool returns matching findings as
+  flagged `negative_finding` items — status `absent`,
+  citable by `finding_id` — after the ranked results,
+  so an agent asking whether a clause exists can
+  receive a recorded "no" instead of an empty result
+  it cannot interpret. Absence items are additional:
+  they never consume the result budget or displace a
+  claim, and the tool surface is unchanged.
+
+### Fixed
+
+- **Serving binds to the batch's own tree** — serving
+  a batch directory from outside the state root
+  resolved registry-backed reads (the corpus, the
+  tier-2 index, negative findings) against the state
+  root: silently empty, or a different batch with the
+  same id. A batch directory's own tree is now
+  authoritative for that batch, in both serving
+  stores and every source form.
+
+### Changed
+
+- Documentation and site match the shipped ten-stage
+  pipeline: the hands-on guide's resolved-key counts
+  recomputed by running the shipped resolver; the
+  site stage strip and the pipeline figure
+  regenerated with the adjudication stage and the
+  ship gate; the whitepaper's stage list and Figure 1
+  caption updated to match; Open Graph and Twitter
+  metadata, with the Graph Explorer capture as the
+  share image, added to the site and demo pages.
+
 ## [0.2.1] - 2026-11-18
 
 ### Added
