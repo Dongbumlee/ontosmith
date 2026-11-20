@@ -11,6 +11,12 @@ and exposes the method set:
   project_from_registry(batch_id)  rebuild a batch's REL projection
                                    from its WRITE manifest (§4, E3)
   verify_counts(batch_id)          artifact recount vs live graph
+  project_negative_findings(batch_id)
+                                   project the batch's materialised
+                                   absence records (negative_findings
+                                   .jsonl) as (:NegativeFinding) nodes
+  negative_findings(batch_id)      read the graph's absence records
+                                   back, in the records' own shape
 
 plus the §6 (E5) serving-index projection:
 
@@ -27,7 +33,8 @@ plus the §6 (E5) serving-index projection:
                                    with no manual step
 
 Schema (idempotent, ensure_schema): unique constraints on
-Entity.entity_id / Chunk.chunk_id / Document.doc_id; a vector index
+Entity.entity_id / Chunk.chunk_id / Document.doc_id /
+NegativeFinding.finding_id; a vector index
 on Chunk.embedding (text-embedding-3-large, 3072d, cosine); Lucene
 full-text indexes on Chunk.text and Entity.name.
 
@@ -103,6 +110,9 @@ def schema_statements(analyzer: str | None = None) -> list[str]:
         "FOR (s:Sentence) REQUIRE s.sentence_id IS UNIQUE",
         "CREATE CONSTRAINT doc_id_unique IF NOT EXISTS "
         "FOR (d:Document) REQUIRE d.doc_id IS UNIQUE",
+        "CREATE CONSTRAINT negative_finding_id_unique "
+        "IF NOT EXISTS FOR (f:NegativeFinding) "
+        "REQUIRE f.finding_id IS UNIQUE",
         f"CREATE VECTOR INDEX {VECTOR_INDEX} IF NOT EXISTS "
         "FOR (c:Chunk) ON (c.embedding) OPTIONS {indexConfig: "
         f"{{`vector.dimensions`: {EMBED_DIMS}, "
@@ -174,7 +184,9 @@ class GraphStore:
                                      "entity_id_unique",
                                      "chunk_id_unique",
                                      "sentence_id_unique",
-                                     "doc_id_unique"]}}])[0]
+                                     "doc_id_unique",
+                                     "negative_finding_id_unique"]
+                                    }}])[0]
         return [{"name": r["row"][0], "type": r["row"][1],
                  "state": r["row"][2], "labels": r["row"][3],
                  "properties": r["row"][4]} for r in rows]
@@ -805,6 +817,7 @@ class GraphStore:
                 "p_true": p, "tier": 1, "tag": "VERIFIED",
                 "model": model, "gate": "triple"})
         n_edges = self.upsert_edges(triples)
+        n_findings = self.project_negative_findings(batch_id)
         # The projection is complete: (re)stamp the store
         # with this graph's identity, exactly as a
         # build's WRITE does.
@@ -826,6 +839,7 @@ class GraphStore:
                "entity_names_from_graph": len(known) - from_registry,
                "entity_names_from_id_slug": missing_names,
                "rels_deleted": int(deleted or 0), "edges": n_edges,
+               "negative_findings": n_findings,
                "p_true_carried": carried, "p_true_unset": unset}
         if replaced is not None:
             out["replaced"] = replaced
@@ -839,6 +853,83 @@ class GraphStore:
                 "FOREACH (x IN rs | DELETE x) RETURN n",
             "parameters": {"b": batch_id}}])[0]
         return int(rows[0]["row"][0]) if rows else 0
+
+    # ------------------------------------------------------------------
+    # negative findings: the absence projection (0.2.2)
+    # ------------------------------------------------------------------
+    def project_negative_findings(self, batch_id: str) -> int:
+        """Project the batch's materialised absence records
+        (RegistryStore.negative_findings — negative_findings
+        .jsonl) into the graph as (:NegativeFinding) nodes:
+        first-class records of the projection, flagged
+        kind="negative_finding" / status="absent", keyed by
+        their citable finding_id and carrying the record's
+        own fields (batch, run, document, subject surface,
+        declared category, method). They are NOT triples: no
+        REL edge is created, so no traversal or triple count
+        can mistake an absence for an attested fact — serving
+        reads them through negative_findings() below and
+        answers "no such clause" from the graph itself.
+
+        Rebuild semantics mirror project_from_registry's:
+        the batch's previously projected findings are
+        deleted first, then the current records are MERGEd,
+        so a re-projection lands exactly the artifact's set.
+        A replaced graph's findings are cleared with the
+        rest of its content (clear_store_graph). Returns
+        the number of findings projected."""
+        records = self.rs.negative_findings(batch_id)
+        self.c.run([{
+            "statement":
+                "MATCH (f:NegativeFinding {batch_id: $b}) "
+                "DELETE f",
+            "parameters": {"b": batch_id}}])
+        rows = [{
+            "finding_id": r["finding_id"],
+            "kind": r.get("kind") or "negative_finding",
+            "batch_id": r.get("batch_id") or batch_id,
+            "run_id": r.get("run_id") or "",
+            "doc_id": r.get("doc_id") or "",
+            "subject": r.get("subject") or "",
+            "category": r.get("category") or "",
+            "status": r.get("status") or "absent",
+            "method": r.get("method") or "",
+        } for r in records]
+        n = 0
+        for i in range(0, len(rows), 500):
+            n += self.c.one(
+                "UNWIND $rows AS row "
+                "MERGE (f:NegativeFinding "
+                "{finding_id: row.finding_id}) "
+                "SET f.kind = row.kind, "
+                "f.batch_id = row.batch_id, "
+                "f.run_id = row.run_id, f.doc_id = row.doc_id, "
+                "f.subject = row.subject, "
+                "f.category = row.category, "
+                "f.status = row.status, f.method = row.method "
+                "RETURN count(f)",
+                {"rows": rows[i:i + 500]}) or 0
+        return int(n)
+
+    def negative_findings(self, batch_id: str) -> list[dict]:
+        """The graph's absence records for one batch, read
+        back in the materialised records' own shape (the
+        negative_findings.jsonl fields), ordered by
+        finding_id so the read is deterministic. Empty when
+        the batch projected none (no slot sweep, or a build
+        predating the projection)."""
+        rows = self.c.run([{
+            "statement":
+                "MATCH (f:NegativeFinding {batch_id: $b}) "
+                "RETURN f.finding_id, f.kind, f.batch_id, "
+                "f.run_id, f.doc_id, f.subject, f.category, "
+                "f.status, f.method ORDER BY f.finding_id",
+            "parameters": {"b": batch_id}}])[0]
+        keys = ("finding_id", "kind", "batch_id", "run_id",
+                "doc_id", "subject", "category", "status",
+                "method")
+        return [dict(zip(keys, r["row"], strict=True))
+                for r in rows]
 
     def verify_counts(self, batch_id: str) -> dict:
         """Recount the batch from its artifacts (RegistryStore) and

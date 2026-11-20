@@ -28,6 +28,10 @@ surface a stranger can run. This module is that surface:
   the store's own; attestation records still read from the
   registry artifacts — the registry is the source of truth
   (§4), exactly as the lab's ``GraphData`` loaded them.
+  Absence records (negative findings) are the exception:
+  they read from the graph's projected (:NegativeFinding)
+  nodes, so an absence answer always describes the store's
+  current graph.
   The store holds one graph: the serving store
   resolves it from the WRITE stamp, never from a
   user-supplied scope.
@@ -164,6 +168,14 @@ class _ArtifactRecords:
         self._registry = registry
         self._entities: dict[str, dict] = {}
         self._triples: list[dict] = []
+        # The build's materialised absence records, in the
+        # records' own shape. A subclass whose load already
+        # read them (a batch directory's negative_findings
+        # .jsonl, or the graph's (:NegativeFinding) nodes)
+        # sets the attribute before this constructor runs;
+        # it is preserved, never reset.
+        if not hasattr(self, "_negative_findings"):
+            self._negative_findings: list[dict] = []
         for rec in records:
             row = _normalize_triple(rec, batch_id=batch_id)
             if row is None:
@@ -246,6 +258,17 @@ class _ArtifactRecords:
         """The attestation records, normalized (copies)."""
         return [dict(t) for t in self._triples]
 
+    def negative_findings(self) -> list[dict]:
+        """The build's materialised absence records
+        (copies): one per (document, declared slot
+        category) the clause sweep found ABSENT, each
+        flagged kind="negative_finding" / status="absent"
+        and citable by finding_id. This is how serving
+        answers "no such clause" — from a record, never
+        from a missing triple. Empty when the build
+        recorded none."""
+        return [dict(f) for f in self._negative_findings]
+
     def triple_records(self) -> list[dict]:
         """Records in the spelling the R9 viewer
         (``pipeline.inspect.build_report``) normalizes:
@@ -278,6 +301,36 @@ def _load_registry(root: Path | None):
         return None
     from .file_registry import SqliteEntityRegistry
     return SqliteEntityRegistry(db)
+
+
+def _batch_tree_root(d: Path) -> Path | None:
+    """The root of the artifact tree a batch directory
+    belongs to, when it sits in the canonical layout
+    (``<root>/batches/<batch_id>``); None for a standalone
+    directory, which belongs to no tree."""
+    return d.parent.parent if d.parent.name == "batches" \
+        else None
+
+
+def _batch_registry(d: Path):
+    """The registry binding for batch directory ``d``:
+    (RegistryStore, registry root). The directory's OWN
+    tree is authoritative for its batch — a directory in
+    the canonical layout binds the root it sits under,
+    never a root the caller passed, so a batch served
+    from another workspace's tree cannot resolve its
+    registry reads (corpus, negative findings, the tier-2
+    index) against the process state root's same-id batch
+    instead: silently empty, or silently a different
+    batch. A standalone directory binds the reader to the
+    directory itself — every per-batch artifact lives
+    inside it — and binds no SQLite registry root: no
+    tree beside it holds its registry, and a foreign
+    registry is never bound silently."""
+    own = _batch_tree_root(d)
+    if own is not None:
+        return RegistryStore(own), own
+    return RegistryStore(d.parent, batches_dir=d.parent), None
 
 
 def _records_from_dir(d: Path) -> tuple[list[dict], Path] | None:
@@ -332,7 +385,10 @@ class FileServingStore(_ArtifactRecords):
     - a **batch directory** (carries ``batch.json``):
       routed attestations + document texts + the tier-2
       serving index (chunk texts + embeddings) when the
-      batch's INDEX stage wrote one;
+      batch's INDEX stage wrote one; the batch's registry
+      reads bind to the directory's own tree
+      (:func:`_batch_registry`), never to a root the
+      caller passed;
     - a **records directory or file** (the shipped
       example's form): a triple-records JSONL plus a
       corpus of ``.txt`` documents (a ``corpus/`` sibling
@@ -359,12 +415,15 @@ class FileServingStore(_ArtifactRecords):
         self._documents: dict[str, str] = {}
         self._batch_id = ""
         self._corpus = ""
-        registry = _load_registry(root)
         if source.is_dir() and (source / "batch.json").is_file():
-            records = self._load_batch(source, root)
+            rs, registry_root = _batch_registry(source)
+            registry = _load_registry(registry_root)
+            records = self._load_batch(source, rs)
         elif source.is_dir():
+            registry = _load_registry(root)
             records = self._load_records_dir(source)
         elif source.is_file():
+            registry = _load_registry(root)
             records = self._load_records_file(source)
         else:
             raise StoreError(
@@ -378,18 +437,19 @@ class FileServingStore(_ArtifactRecords):
 
     # -- source forms -------------------------------------------
     def _load_batch(self, d: Path,
-                    root: Path | None) -> list[dict]:
-        rs_root = root
-        if rs_root is None:
-            # <root>/batches/<batch_id> — the store root is
-            # two levels up from the batch directory.
-            rs_root = d.parent.parent
-        rs = RegistryStore(rs_root)
+                    rs: RegistryStore) -> list[dict]:
+        # ``rs`` arrives bound to the batch directory's
+        # own tree (_batch_registry): the corpus, the
+        # negative findings, and the tier-2 index all
+        # resolve against the tree that actually holds
+        # the served directory.
         self._batch_id = d.name
         try:
             self._corpus = rs.corpus(self._batch_id)
         except (OSError, ValueError, KeyError):
             self._corpus = ""
+        self._negative_findings = rs.negative_findings(
+            self._batch_id)
         texts_p = d / "texts.jsonl"
         if texts_p.is_file():
             for line in texts_p.read_text().splitlines():
@@ -703,7 +763,17 @@ class Neo4jServingStore(_ArtifactRecords):
     parity is by construction); attestation records and
     entity resolution read from the registry artifacts —
     the registry is the source of truth (§4), the same
-    split the lab's GraphData used. A store that cannot
+    split the lab's GraphData used. Artifact reads for a
+    batch bind to that batch directory's own tree
+    (:func:`_batch_registry`) — the file store's rule —
+    so a build named from another workspace resolves its
+    records there, not under this process's state root.
+    Absence records are
+    the one read that comes from the graph itself
+    (0.2.2): the (:NegativeFinding) nodes WRITE projected,
+    so "no such clause" is answered by the store's current
+    graph, not by an artifact of a build it may have
+    replaced. A store that cannot
     be reached refuses by name (StoreError) — it never
     silently falls back to the file store.
 
@@ -729,25 +799,62 @@ class Neo4jServingStore(_ArtifactRecords):
         self._corpus = ""
         self._stamp: dict | None = None
         self._serving: dict | None = None
+        # The artifact binding the load below resolves:
+        # the RegistryStore reader bound to the tree the
+        # served batch's artifacts actually live in, and
+        # that tree's root for the SQLite registry (None
+        # for a standalone batch directory — no tree
+        # beside it holds its registry).
+        self._artifact_rs: RegistryStore | None = None
+        self._registry_root: Path | None = root
         self._sent_rows: list[dict] | None = None
         self._sent_emb: np.ndarray | None = None
         from .neo4j_store import Neo4jClient
         if isinstance(getattr(self.gs, "c", None), Neo4jClient):
             records = self._resolve_store_graph(root)
             self._heal_serving(root)
+            # Absence reads come from the graph itself
+            # (0.2.2): the stamped batch's projected
+            # (:NegativeFinding) nodes, not the artifacts —
+            # the graph is what serving answers from.
+            if hasattr(self.gs, "negative_findings"):
+                self._negative_findings = self._guard(
+                    "read the graph's negative findings",
+                    lambda: self.gs.negative_findings(
+                        self._batch_id))
         elif self.source is not None and self.source.is_dir():
             self._batch_id = self.source.name
             found = _records_from_dir(self.source)
             if found:
                 records = found[0]
-            rs = RegistryStore(root or self.source.parent.parent)
+            if (self.source / "batch.json").is_file():
+                rs, self._registry_root = _batch_registry(
+                    self.source)
+            else:
+                # The records form has no batch tree of
+                # its own: the reader binds to the
+                # directory itself, so its corpus/findings
+                # reads resolve inside it (honestly empty
+                # when it carries neither) — never in a
+                # same-named batch under some root. The
+                # SQLite registry keeps the records form's
+                # rule (the caller's root).
+                rs = RegistryStore(self.source.parent,
+                                   batches_dir=self.source.parent)
+            self._artifact_rs = rs
             try:
                 self._corpus = rs.corpus(self._batch_id)
             except (OSError, ValueError, KeyError):
                 self._corpus = ""
+            try:
+                self._negative_findings = rs.negative_findings(
+                    self._batch_id)
+            except (OSError, ValueError, KeyError):
+                self._negative_findings = []
         super().__init__(records, corpus=self._corpus,
                          batch_id=self._batch_id,
-                         registry=_load_registry(root))
+                         registry=_load_registry(
+                             self._registry_root))
         self._documents_count = len(
             {t["doc_id"] for t in self._triples if t["doc_id"]})
 
@@ -797,19 +904,30 @@ class Neo4jServingStore(_ArtifactRecords):
                 f"'{self.source.name}' to make its graph the "
                 f"store's, or drop --batch/--source to serve "
                 f"the store's current graph.")
-        sroot = root or _state_root()
-        bdir = sroot / "batches" / want
-        if not bdir.is_dir():
-            raise StoreError(
-                f"the Neo4j store's current graph was built "
-                f"by batch '{want}', whose artifacts are not "
-                f"under this state root ({sroot}) — the "
-                f"attestation records live with the registry "
-                f"that built the graph; run from that "
-                f"workspace, or rebuild here.")
+        if self.source is not None and self.source.is_dir():
+            # The named build's own tree is authoritative
+            # for its artifacts, wherever it lives: the
+            # registry reads bind to that tree
+            # (_batch_registry), not to this process's
+            # state root.
+            bdir = self.source
+            rs, reg_root = _batch_registry(bdir)
+        else:
+            sroot = root or _state_root()
+            bdir = sroot / "batches" / want
+            if not bdir.is_dir():
+                raise StoreError(
+                    f"the Neo4j store's current graph was built "
+                    f"by batch '{want}', whose artifacts are not "
+                    f"under this state root ({sroot}) — the "
+                    f"attestation records live with the registry "
+                    f"that built the graph; run from that "
+                    f"workspace, or rebuild here.")
+            rs, reg_root = RegistryStore(sroot), sroot
         self._batch_id = want
         self.source = bdir
-        rs = RegistryStore(sroot)
+        self._artifact_rs = rs
+        self._registry_root = reg_root
         try:
             self._corpus = rs.corpus(want)
         except (OSError, ValueError, KeyError):
@@ -824,15 +942,22 @@ class Neo4jServingStore(_ArtifactRecords):
         batch's chunks when the store holds none for it
         (GraphStore.ensure_serving — idempotent, and no
         provider spend: the projection replays the batch's
-        recorded embeddings). The projection reads this
-        workspace's artifacts, so it runs through a store
-        bound to the same state root the stamp resolution
+        recorded embeddings). The projection reads the
+        stamped batch's artifacts, so it runs through a
+        store bound to the same tree the stamp resolution
         just used. A store that cannot be healed refuses
         by name here (StoreError), not at first search."""
         from .graph_store import GraphStore
+        # The projection replays the stamped batch's
+        # recorded artifacts, so it reads through the
+        # same binding the stamp resolution just used —
+        # the batch's own tree, not a fresh state-root
+        # guess.
+        rs = self._artifact_rs
+        if rs is None:
+            rs = RegistryStore(root or _state_root())
         gs = GraphStore(client=self.gs.c,
-                        registry_store=RegistryStore(
-                            root or _state_root()))
+                        registry_store=rs)
         self._serving = self._guard(
             "ensure the serving schema and chunk projection",
             lambda: gs.ensure_serving(self._batch_id))

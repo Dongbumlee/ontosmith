@@ -211,15 +211,39 @@ def clear_store_chunks(client, keep_batch_id: str | None = None) -> dict:
     return {"chunks": int(n_chunks), "documents": int(n_docs)}
 
 
+def clear_store_negative_findings(
+        client, keep_batch_id: str | None = None) -> int:
+    """Delete projected negative findings that are not the
+    kept batch's. Negative findings are the graph's absence
+    records (0.2.2): a replaced graph's absences must not
+    outlive it, or serving would answer "no such clause"
+    from a build that is no longer the store's graph.
+    Returns the number removed."""
+    keep = keep_batch_id or ""
+    n = client.one(
+        "MATCH (f:NegativeFinding) "
+        "WHERE coalesce(f.batch_id, '') <> $keep "
+        "RETURN count(f)", {"keep": keep}) or 0
+    if n:
+        client.run([{
+            "statement": "MATCH (f:NegativeFinding) "
+                         "WHERE coalesce(f.batch_id, '') <> $keep "
+                         "DELETE f",
+            "parameters": {"keep": keep}}])
+    return int(n)
+
+
 def clear_store_graph(client, keep_batch_id: str | None = None) -> dict:
     """Remove the store's projected graph except the kept
     batch's own content: other batches' REL edges and
     chunks, then Document nodes left chunk-less and Entity
     nodes left with no REL edge and no chunk mention (they
     existed only for the removed graph — the registry,
-    which owns entity identity, is untouched). Returns the
-    counts removed: {rel_edges, chunks, documents,
-    entities}."""
+    which owns entity identity, is untouched). The removed
+    graph's negative findings go too (their absences
+    describe a graph the store no longer holds). Returns
+    the counts removed: {rel_edges, chunks, documents,
+    entities, negative_findings}."""
     keep = keep_batch_id or ""
     n_rels = client.one(
         "MATCH ()-[r:REL]->() "
@@ -232,6 +256,8 @@ def clear_store_graph(client, keep_batch_id: str | None = None) -> dict:
                          "DELETE r",
             "parameters": {"keep": keep}}])
     removed = clear_store_chunks(client, keep_batch_id)
+    n_findings = clear_store_negative_findings(
+        client, keep_batch_id)
     n_ents = client.one(
         "MATCH (e:Entity) WHERE NOT (e)-[:REL]-() "
         "AND NOT ()-[:MENTIONS]->(e) RETURN count(e)") or 0
@@ -243,7 +269,8 @@ def clear_store_graph(client, keep_batch_id: str | None = None) -> dict:
                          "DETACH DELETE e",
             "parameters": {}}])
     return {"rel_edges": int(n_rels), **removed,
-            "entities": int(n_ents)}
+            "entities": int(n_ents),
+            "negative_findings": int(n_findings)}
 
 
 def batch_graph_identity(batch) -> dict:

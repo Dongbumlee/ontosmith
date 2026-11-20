@@ -255,6 +255,12 @@ class _FakeNeo4jClient:
                 n = len(self.edges) - len(kept)
                 self.edges = kept
                 out.append([{"row": [n]}])
+            elif "NegativeFinding" in stmt:
+                # The projection's absence pass (0.2.2):
+                # this fake's batches record no findings,
+                # so the batch-scoped delete is a no-op
+                # and no MERGE follows it.
+                out.append([])
             else:
                 raise AssertionError(f"unexpected statement: {stmt}")
         return out

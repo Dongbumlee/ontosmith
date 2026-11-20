@@ -379,12 +379,16 @@ def _arrow(ax, x0, y0, x1, y1, color=MUTE, style="-|>", rad=0.0, lw=1.2):
 
 
 def render_pipeline_flow(out: Path) -> Path:
-    """The 8-stage batch contract + the ROUTE tier branches.
+    """The 10-stage batch contract + the ROUTE tier branches.
 
     Stage names/order are the shipped stage contract
     (pipeline/batch_cli.py docstring); the branches are the
     ROUTE logic of pipeline/batch_run.py with the shipped
     calibration (threshold 0.25, review band 0.25–0.50).
+    ADJUDICATE (the second pass over the candidates) and
+    SHIP GATE (the full-population verification gate) are
+    the declared-layer stages every shipped pack and the
+    core baseline declare on.
     """
     plt = _mpl()[0]
     fig, ax = plt.subplots(figsize=(10.5, 5.6))
@@ -396,18 +400,21 @@ def render_pipeline_flow(out: Path) -> Path:
 
     stages = [
         ("INGEST", "documents +\nprofile frozen"),
-        ("NER", "contract rows only\n(local NER retired)"),
+        ("NER", "contract rows only\nlocal NER retired"),
         ("CANDIDATES", "LLM proposer\n(the only source)"),
+        ("ADJUDICATE", "second pass\nkeep·retype·veto"),
         ("GATES", "Jev gates + judge\np_true score"),
         ("ROUTE", "tier by p_true\n(branches below)"),
+        ("SHIP GATE", "every row audited\nverified rows only"),
         ("WRITE", "Tier-1 → registry\nsource of truth"),
         ("INDEX", "Neo4j projection\n+ search indexes"),
         ("VERIFY", "scores + failure\nanatomy report"),
     ]
-    w, h, gap, y = 11.2, 10, 1.55, 44
+    w, h, gap, y = 9.4, 10, 1.05, 44
     xs = [1 + i * (w + gap) for i in range(len(stages))]
     for x, (title, sub) in zip(xs, stages, strict=True):
-        face = NAVY if title in ("GATES", "ROUTE") else DOT
+        face = NAVY if title in ("ADJUDICATE", "GATES", "ROUTE",
+                                 "SHIP GATE") else DOT
         if title == "ROUTE":
             face = CLAY
         _box(ax, x, y, w, h, title, sub, face)
@@ -417,7 +424,7 @@ def render_pipeline_flow(out: Path) -> Path:
     # ROUTE branches (batch_run.py): p >= band_hi -> Tier 1;
     # threshold <= p < band_hi -> Tier 2 review queue;
     # p < threshold -> Tier 0 dropped queue (recorded).
-    route_cx = xs[4] + w / 2
+    route_cx = xs[5] + w / 2
     lanes = [
         (6, "p ≥ 0.50", "Tier 1 · VERIFIED", "written at WRITE", NAVY),
         (38, "0.25 ≤ p < 0.50", "Tier 2 · review band", "review queue — human decides", CLAY_DEEP),

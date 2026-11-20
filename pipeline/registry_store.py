@@ -21,7 +21,8 @@ from pathlib import Path
 class RegistryStore:
     """File-backed registry reads (file-backed form of the RegistryStore)."""
 
-    def __init__(self, root: Path | None = None):
+    def __init__(self, root: Path | None = None,
+                 batches_dir: Path | None = None):
         # Default root: the batch state root (batch_cli.state_root
         # — $ONTOSMITH_ROOT, else the source tree, else the working
         # directory), imported lazily. The state root is a
@@ -31,7 +32,16 @@ class RegistryStore:
             from .batch_cli import state_root
             root = state_root()
         self.root = Path(root)
-        self.batches = self.root / "batches"
+        # batches_dir binds the batch tree directly, for a
+        # batch directory that lives outside any root's
+        # batches/ tree (a standalone copied-out build):
+        # every per-batch read funnels through batch_dir(),
+        # so binding the tree binds them all — the reads
+        # resolve inside the served directory itself, never
+        # in a same-id batch under another root.
+        self.batches = Path(batches_dir) \
+            if batches_dir is not None \
+            else self.root / "batches"
 
     def batch_dir(self, batch_id: str) -> Path:
         return self.batches / batch_id

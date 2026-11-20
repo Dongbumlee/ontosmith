@@ -70,6 +70,7 @@ class _InMemoryNeo4jClient(Neo4jClient):
         self.sentences: dict[str, dict] = {}
         self.has_sentence: set[tuple[str, str]] = set()
         self.mentions: set[tuple[str, str]] = set()
+        self.findings: dict[str, dict] = {}
         self.stamp: dict | None = None
 
     # -- transport -------------------------------------------------
@@ -176,7 +177,30 @@ class _InMemoryNeo4jClient(Neo4jClient):
                     self.mentions.add((row["chunk_id"], row["eid"]))
                     n += 1
             return [{"row": [n]}]
+        if "MERGE (f:NegativeFinding" in s:
+            for row in p["rows"]:
+                self.findings[row["finding_id"]] = {
+                    "kind": row["kind"],
+                    "batch_id": row["batch_id"],
+                    "run_id": row["run_id"],
+                    "doc_id": row["doc_id"],
+                    "subject": row["subject"],
+                    "category": row["category"],
+                    "status": row["status"],
+                    "method": row["method"]}
+            return [{"row": [len(p["rows"])]}]
         # --- scoped clears ------------------------------------
+        if "DELETE f" in s and "{batch_id: $b}" in s:
+            self.findings = {fid: f for fid, f in
+                             self.findings.items()
+                             if f["batch_id"] != p["b"]}
+            return []
+        if "DELETE f" in s and "coalesce(f.batch_id" in s:
+            keep = p["keep"]
+            self.findings = {fid: f for fid, f in
+                             self.findings.items()
+                             if (f["batch_id"] or "") == keep}
+            return []
         if "DELETE r" in s and "coalesce(r.batch_id" in s:
             keep = p["keep"]
             self.rels = [r for r in self.rels
@@ -249,6 +273,14 @@ class _InMemoryNeo4jClient(Neo4jClient):
                         and eid not in mentioned)
             else:
                 n = len(self.entities)
+            return [{"row": [n]}]
+        if "RETURN count(f)" in s:
+            if "coalesce(f.batch_id" in s:
+                n = sum(1 for f in self.findings.values()
+                        if (f["batch_id"] or "") != p["keep"])
+            else:
+                n = sum(1 for f in self.findings.values()
+                        if f["batch_id"] == p["b"])
             return [{"row": [n]}]
         if "RETURN count(c)" in s or "RETURN count(*)" in s:
             if "Chunk" in s and "{batch_id: $b}" in s:
@@ -346,6 +378,15 @@ class _InMemoryNeo4jClient(Neo4jClient):
             return [{"row": [cid, c["doc_id"], c["idx"],
                              c["text"]]}
                     for cid, c in items]
+        if "RETURN f.finding_id" in s:
+            rows = sorted(
+                (fid, f) for fid, f in self.findings.items()
+                if f["batch_id"] == p["b"])
+            return [{"row": [fid, f["kind"], f["batch_id"],
+                             f["run_id"], f["doc_id"],
+                             f["subject"], f["category"],
+                             f["status"], f["method"]]}
+                    for fid, f in rows]
         raise AssertionError(f"unhandled Cypher in fake: {s[:120]}")
 
     @staticmethod
