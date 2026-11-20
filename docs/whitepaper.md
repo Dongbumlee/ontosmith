@@ -144,13 +144,13 @@ method as much as the product's.
 A build is a batch: an immutable manifest at ingest (the
 bill of materials — source list, document count, a
 tamper-evident hash over the sorted document ids, and pins
-for the profile and pack the build runs under), then eight
+for the profile and pack the build runs under), then ten
 stages:
 
-**INGEST → NER/roster → CANDIDATES → GATES → ROUTE →
-WRITE → INDEX → VERIFY.**
+**INGEST → NER/roster → CANDIDATES → ADJUDICATE → GATES →
+ROUTE → SHIP GATE → WRITE → INDEX → VERIFY.**
 
-These eight stages are the build step of the product's
+These ten stages are the build step of the product's
 user-facing loop (profile → design → build → inspect →
 verify → serve); the design step is the profiler plus
 the ontology builder (§3.3–§3.4), and VERIFY runs the
@@ -167,6 +167,12 @@ same verification cores the loop's verify step exposes.
 - **CANDIDATES** enumerates entity pairs inside the
   configured window and the proposer proposes triples for
   them, each with an evidence span.
+- **ADJUDICATE** is the second pass over the candidate
+  set: every proposed triple is re-judged against its own
+  evidence span under the proposal discipline, and leaves
+  the pass as a keep, a retype to the claim the evidence
+  supports, or a veto. Every veto is recorded with its
+  reason — no candidate is dropped silently.
 - **GATES** applies the deterministic gates and the Jev
   decision model: a pinned, versioned judgment component
   (`typesafe/jev-1.13`) scoring candidate triples against
@@ -178,6 +184,13 @@ same verification cores the loop's verify step exposes.
   Entity resolution runs under its own threshold, with a
   cross-document merge floor (p_same ≥ 0.85) guarding
   against name-only merges.
+- **SHIP GATE** is the full-population verification gate
+  at the boundary to WRITE: every row bound for the store
+  is independently re-audited against its evidence span.
+  A failure earns one retype and re-audit; a second
+  failure excludes the row. The batch record carries the
+  accounting — the shipped set is exactly the set that
+  passed.
 - **WRITE** persists triples with evidence spans and full
   provenance (document, pair, verdicts, binding, schema
   version) into the registry.
@@ -188,11 +201,11 @@ same verification cores the loop's verify step exposes.
   with.
 
 > **Figure 1 — The batch pipeline.**
-> Eight stages with the ROUTE tier branches, as coded in
+> Ten stages with the ROUTE tier branches, as coded in
 > the product's `pipeline/` — rendered from the shipped
 > stage contract by `harness/render_charts.py`.
 >
-> ![Figure 1 — the batch pipeline: eight stages with the ROUTE tier branches](assets/pipeline-flow.png)
+> ![Figure 1 — the batch pipeline: ten stages with the ROUTE tier branches](assets/pipeline-flow.png)
 
 > **Figure 2 — The method.**
 > Proposer/judge separation across the build loop: the
