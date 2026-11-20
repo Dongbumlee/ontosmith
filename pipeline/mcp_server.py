@@ -15,7 +15,10 @@ with citation keys, a hard token budget with signalled
 truncation, and honest totals. Evidence is not optional:
 a triple and its evidence sentences travel in one
 object, conflicts are flagged rather than resolved,
-and derived facts are marked as derived. There is no
+and derived facts are marked as derived. Recorded
+absences — declared slots a build-time sweep found
+absent — travel as flagged negative-finding items,
+never as missing triples. There is no
 ``ask`` tool — the caller's model composes answers from
 returned evidence — and no query language crosses the
 boundary; parameters are structured only.
@@ -77,6 +80,7 @@ class McpService:
         self._records: list[dict] | None = None
         self._by_key: dict[tuple, list[dict]] | None = None
         self._objects_by_sr: dict[tuple, set] | None = None
+        self._findings: list[dict] | None = None
 
     # -- record indexes (built once, lazily) -----------
 
@@ -152,6 +156,89 @@ class McpService:
             item["conflicts_with"] = conflicts
         return item
 
+    # -- absence records --------------------------------
+
+    def _absence_records(self) -> list[dict]:
+        """The store's materialised absence records, via
+        the store contract (``negative_findings()``):
+        one per (document, declared slot category) the
+        build's sweep found ABSENT, each citable by
+        finding_id. A store predating the contract reads
+        as none — the same capability check the serving
+        layer itself makes."""
+        if self._findings is None:
+            fn = getattr(self.store, "negative_findings",
+                         None)
+            self._findings = fn() if callable(fn) else []
+        return self._findings
+
+    def _absence_items(self, query: str,
+                       linked_entities: list,
+                       builder: env.EnvelopeBuilder
+                       ) -> list[dict]:
+        """The absence items a query earns, as flagged
+        ``negative_finding`` objects — the claim side's
+        mirror: where a triple attests a slot is filled,
+        a finding records that the sweep found it absent.
+
+        Matching decomposes the query overlap exactly as
+        the serving layer decomposes a triple's (the
+        name/term split behind the ``name_only`` tag): the
+        finding's subject surface carries the name part,
+        its declared category the term part. A finding
+        matches on the term part — at least one content
+        token shared with the category — because the slot
+        is what an absence is *about*; subject overlap
+        alone is a mention, not an answer, and never
+        matches. When the query links entities, a second
+        gate applies: the finding's subject must share a
+        token with a linked entity's name, so one
+        document's absence is not served as another's
+        answer (a document-scoped finding with no subject
+        surface passes). Order is deterministic: category
+        overlap, then subject overlap, then finding_id."""
+        records = self._absence_records()
+        if not records:
+            return []
+        qtoks = _search._content_tokens(query)
+        if not qtoks:
+            return []
+        linked_toks: set = set()
+        for ent in linked_entities:
+            linked_toks |= _search._content_tokens(
+                ent["name"])
+        scored = []
+        for rec in records:
+            cat_ov = len(qtoks & _search._content_tokens(
+                rec.get("category", "")))
+            if not cat_ov:
+                continue
+            subj_toks = _search._content_tokens(
+                rec.get("subject", ""))
+            if linked_toks and subj_toks and not (
+                    subj_toks & linked_toks):
+                continue
+            name_ov = len(qtoks & subj_toks)
+            scored.append((-cat_ov, -name_ov,
+                           rec["finding_id"], rec))
+        scored.sort(key=lambda s: s[:3])
+        items = []
+        for _, _, _, rec in scored:
+            ref = builder.doc_ref(rec["doc_id"])
+            item: dict = {
+                "kind": "negative_finding",
+                "finding_id": rec["finding_id"],
+                "status": rec.get("status") or "absent",
+                "subject": rec.get("subject", ""),
+                "category": rec.get("category", ""),
+                "doc": ref,
+                "cite": builder.cite_key(ref),
+            }
+            if rec.get("method"):
+                item["method"] = rec["method"]
+            items.append(item)
+        return items
+
     # -- tools ------------------------------------------
 
     #: sentence_search unit ``via`` → the design's
@@ -223,7 +310,11 @@ class McpService:
         alongside; otherwise the hybrid document form.
         The result's ``arms`` and ``notes`` always say
         which form answered — a fallback is reported,
-        never silent."""
+        never silent. Recorded absences whose declared
+        slot category matches the query trail the ranked
+        results as flagged ``negative_finding`` items —
+        additional to the ``k``-bounded arms, never
+        displacing a claim."""
         if not (query or "").strip():
             raise McpToolError(
                 "parameter query must be a non-empty "
@@ -300,6 +391,18 @@ class McpService:
             if i < len(kept_text):
                 merged.append(kept_text[i])
         merged += mentions
+        # Absence items (0.2.2): additional, never
+        # displacing. They do not consume ``k`` — that
+        # budget bounds the retrieval arms, which have
+        # already run — and they trail the ranked claims
+        # and the name-only mentions as their own flagged
+        # section, inside the same envelope accounting
+        # (total, budget, cursor): under a tight token
+        # budget they are cut first, so an absence never
+        # crowds out a claim.
+        absence_items = self._absence_items(
+            query, res["entities"], builder)
+        merged += absence_items
         total = len(merged)
         out = builder.build(
             merged[offset:], total=total, offset=offset,
@@ -310,8 +413,17 @@ class McpService:
                 {"entity_id": e["entity_id"],
                  "name": e["name"]}
                 for e in res["entities"]]
-        if res["notes"]:
-            out["notes"] = res["notes"]
+        notes = list(res["notes"])
+        if absence_items:
+            notes.append(
+                f"absence records: {len(absence_items)} "
+                "negative finding(s) matched the query's "
+                "slot terms and are listed after the "
+                "ranked results — each is a recorded "
+                "sweep result (status: absent), not an "
+                "attested fact")
+        if notes:
+            out["notes"] = notes
         return out
 
     def entity(self, name: str) -> dict:
@@ -552,7 +664,10 @@ _SEARCH_DESC = (
     "about a topic, fact, or relation. Returns ranked "
     "evidence: graph triples (each a claim bound to "
     "its evidence sentences) interleaved with matching "
-    "document passages. Use this first for fact "
+    "document passages. When a declared slot the query "
+    "names was recorded absent by the build's sweep, a "
+    "flagged negative_finding item says so after the "
+    "ranked results. Use this first for fact "
     "questions. Do NOT use it to enumerate everything "
     "about one known entity — resolve the name with "
     "`entity`, then call `neighborhood`. Example: "
