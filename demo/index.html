@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>OntoSmith graph explorer</title>
+<meta name="description" content="A complete OntoSmith build, open for inspection: 64 sample contracts from the CUAD corpus as one navigable graph of 11,127 facts, every fact carrying its evidence.">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="OntoSmith">
+<meta property="og:title" content="OntoSmith graph explorer">
+<meta property="og:description" content="A complete OntoSmith build, open for inspection: 64 sample contracts from the CUAD corpus as one navigable graph of 11,127 facts, every fact carrying its evidence.">
+<meta property="og:url" content="https://dongbumlee.github.io/ontosmith/demo/">
+<meta property="og:image" content="https://dongbumlee.github.io/ontosmith/assets/graph-explorer.png">
+<meta property="og:image:width" content="572">
+<meta property="og:image:height" content="685">
+<meta property="og:image:alt" content="The OntoSmith Graph Explorer: a complete build drawn as one dense graph, clustered by document">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="OntoSmith graph explorer">
+<meta name="twitter:description" content="A complete OntoSmith build, open for inspection: 64 sample contracts from the CUAD corpus as one navigable graph of 11,127 facts, every fact carrying its evidence.">
+<meta name="twitter:image" content="https://dongbumlee.github.io/ontosmith/assets/graph-explorer.png">
+<meta name="twitter:image:alt" content="The OntoSmith Graph Explorer: a complete build drawn as one dense graph, clustered by document">
+<link rel="icon" type="image/svg+xml" href="../assets/logo-mark.svg">
+<style>
+/* Hallmark · shape: app screen, graph workbench · genre: modern-minimal · theme: custom (the project's own brand system, preserved) · job: try · idea: "the corpus at full density is the argument" · vibe: "dense, exact, instrument-quiet"
+ * paper: #fbf8f1 · navy: #0f1e2b · accent: #d99a4e · display: Georgia · body: system sans · layout: intro over a three-rail workbench on a dark field · signature: the full 11,127-fact graph drawn as one dense field, clustered by document, thinned only by the reader's own filters
+ * axes: paper/display/accent · posture: declared · contrast: pass · fold: pass · v2.0.0 */
+/* Hallmark · pre-emit critique: P4 H4 E4 S3 R4 V4 · weakest: S, an instrument screen trades spectacle for density; the dense field itself has to carry the first screen, so the intro stays short and the bench starts immediately */
+/* Hallmark · dismissed 58 · the screen is a working instrument: its words are interface labels, corpus facts and the graph's own evidence text, not prose sections */
+:root{
+  --navy:#0f1e2b; --navy-2:#16303f; --navy-3:#1e4258; --navy-veil:rgba(15,30,43,.94);
+  --deep:#0a1620; --field:#0d1b28; --field-hi:#132c42; --field-deep:#08131d; --dot:#33505f;
+  --cream:#f6f0e4; --paper:#fbf8f1; --card:#ffffff;
+  --clay:#b45f43; --clay-2:#cf7355; --amber:#d99a4e; --amber-2:#eeb96f;
+  --amber-55:rgba(238,185,111,.55); --amber-25:rgba(238,185,111,.25);
+  --ink:#22303c; --mute:#68757f; --line:#e7ddc9;
+  --nav-link:#cfd8dc; --hero-ink:#b9c8d0; --caption:#7e97a5; --panel-ink:#cfe3ee;
+  --edge:rgba(141,175,196,.34); --edge-faint:rgba(141,175,196,.05); --edge-lit:#eeb96f;
+  --node:#9fc0d4; --node-dim:rgba(159,192,212,.13); --node-sel:#cf7355; --ring:rgba(238,185,111,.16);
+  --font-body:-apple-system,'Segoe UI',Helvetica,Arial,sans-serif;
+  --font-display:Georgia,'Times New Roman',serif;
+  --font-mono:ui-monospace,Menlo,Consolas,monospace;
+}
+*{box-sizing:border-box; margin:0; padding:0}
+html{overflow-x:clip}
+body{font-family:var(--font-body); background:var(--paper); color:var(--ink); line-height:1.6; overflow-x:clip}
+.serif{font-family:var(--font-display)}
+a{color:var(--clay); text-decoration:none}
+a:hover{text-decoration:underline}
+a:active{opacity:.72}
+a:focus-visible, button:focus-visible, input:focus-visible, [tabindex]:focus-visible{outline:2px solid var(--amber); outline-offset:2px}
+.wrap{max-width:1340px; margin:0 auto; padding-left:28px; padding-right:28px}
+
+header{position:sticky; top:0; z-index:20; background:var(--navy-veil); backdrop-filter:blur(8px); color:var(--cream)}
+header .wrap{display:flex; justify-content:space-between; align-items:center; padding-top:12px; padding-bottom:12px}
+.wordmark{font-size:20px; display:flex; align-items:center; gap:8px; color:var(--cream)}
+.wordmark:hover{text-decoration:none}
+.wordmark img{height:28px; width:28px; display:block}
+.wordmark b{color:var(--amber); font-weight:600}
+header nav{display:flex; align-items:center}
+header nav a{color:var(--nav-link); margin-left:24px; font-size:15px}
+header nav a.cta{background:var(--amber); color:var(--navy); padding:8px 16px; border-radius:999px; font-weight:600}
+header nav a.cta:hover{background:var(--amber-2); text-decoration:none}
+
+.intro{padding:44px 0 32px}
+.intro h1{font-size:36px; line-height:1.18; font-weight:400; color:var(--navy); overflow-wrap:break-word; min-width:0; text-wrap:balance}
+.intro .lede{margin-top:12px; font-size:17px; color:var(--ink); max-width:760px}
+.intro .lede a{color:var(--clay)}
+.stats{display:flex; gap:44px; flex-wrap:wrap; margin-top:28px}
+.stat .v{font-family:var(--font-display); font-size:30px; color:var(--navy); line-height:1.1; font-variant-numeric:tabular-nums}
+.stat .k{font-size:13px; color:var(--mute); margin-top:2px}
+.steps{display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:20px; margin-top:32px}
+.step{border:1px solid var(--line); border-top:4px solid var(--navy-2); border-radius:12px; padding:16px 20px; background:var(--card)}
+.step.judge{border-top-color:var(--clay)}
+.step.verify{border-top-color:var(--amber)}
+.step h2{font-size:17px; font-weight:600; color:var(--navy)}
+.step p{font-size:14px; color:var(--mute); margin-top:4px}
+.intro .note{margin-top:16px; font-size:14px; color:var(--mute)}
+
+.bench{background:var(--navy); border-radius:16px; padding:16px; margin-bottom:56px}
+.bench-grid{display:grid; grid-template-columns:292px minmax(0,1fr) 356px; gap:16px; height:min(80vh,880px); min-height:560px}
+.rail{background:var(--navy-2); border:1px solid var(--navy-3); border-radius:12px; padding:16px; color:var(--panel-ink); display:flex; flex-direction:column; min-height:0}
+.rail h2{font-size:14px; font-weight:600; color:var(--cream); margin-bottom:4px}
+.railsub{font-size:12px; color:var(--caption); margin-bottom:8px}
+.rail .scroll{overflow-y:auto; min-height:0; padding-right:4px}
+.rail + .rail{margin-top:0}
+.leftcol{display:flex; flex-direction:column; gap:16px; min-height:0}
+.leftcol .rail{flex:1 1 0}
+
+.searchbox{position:relative; margin-bottom:16px}
+.searchbox label{display:block; font-size:12.5px; color:var(--caption); margin-bottom:4px}
+.searchbox input{width:100%; background:var(--field); border:1px solid var(--navy-3); border-radius:8px; color:var(--cream); font:inherit; font-size:14px; padding:8px 12px}
+.searchbox input::placeholder{color:var(--caption)}
+.results{position:absolute; left:0; right:0; top:calc(100% + 6px); background:var(--field); border:1px solid var(--navy-3); border-radius:8px; z-index:30; overflow:hidden; display:none}
+.results.open{display:block}
+.results button{display:flex; justify-content:space-between; gap:12px; width:100%; text-align:left; background:none; border:0; border-bottom:1px solid var(--navy-2); color:var(--panel-ink); font:inherit; font-size:13px; padding:8px 12px; cursor:pointer}
+.results button:last-child{border-bottom:0}
+.results button:hover, .results button.hot{background:var(--navy-3)}
+.results .deg{color:var(--caption); font-size:12px; white-space:nowrap}
+
+.docitem{display:block; width:100%; text-align:left; background:none; border:0; border-bottom:1px solid var(--navy-3); padding:8px; cursor:pointer; font:inherit}
+.docitem:last-child{border-bottom:0}
+.docitem:hover{background:var(--navy-3)}
+.docitem.on{background:var(--navy-3); box-shadow:inset 3px 0 0 var(--amber)}
+.docitem .t{display:block; font-size:13.5px; color:var(--cream); line-height:1.35}
+.docitem .m{display:block; font-size:12px; color:var(--caption); margin-top:2px}
+
+.reltools{display:flex; gap:8px; margin-bottom:8px}
+.reltools input{flex:1; min-width:0; background:var(--field); border:1px solid var(--navy-3); border-radius:8px; color:var(--cream); font:inherit; font-size:13px; padding:8px}
+.reltools input::placeholder{color:var(--caption)}
+.btn{background:var(--navy-3); color:var(--cream); border:1px solid var(--amber-25); border-radius:8px; font:inherit; font-size:13px; padding:8px 12px; cursor:pointer; white-space:nowrap}
+.btn:hover{border-color:var(--amber-55)}
+.btn:active{opacity:.75}
+.btn.primary{background:var(--amber); color:var(--navy); border-color:var(--amber); font-weight:600}
+.btn.primary:hover{background:var(--amber-2)}
+.btn:disabled{background:var(--navy-2); color:var(--caption); border-color:var(--navy-3); cursor:not-allowed}
+.relitem{display:flex; align-items:baseline; gap:8px; padding:4px 8px; font-size:13px; cursor:pointer; border-radius:6px}
+.relitem:hover{background:var(--navy-3)}
+.relitem input{accent-color:var(--amber)}
+.relitem .rn{flex:1; min-width:0; overflow-wrap:break-word}
+.relitem .rc{color:var(--caption); font-size:12px}
+
+.stage{position:relative; background:radial-gradient(120% 95% at 50% 42%, var(--field-hi) 0%, var(--field) 56%, var(--field-deep) 100%); border:1px solid var(--navy-3); border-radius:12px; overflow:hidden; min-height:520px}
+.stage canvas{position:absolute; inset:0; width:100%; height:100%; display:block; cursor:grab}
+.stage canvas.drag{cursor:grabbing}
+.stage .tools{position:absolute; top:12px; right:12px; display:flex; gap:8px; z-index:5}
+.stage .status{position:absolute; left:16px; bottom:12px; z-index:5; color:var(--caption); font-size:12.5px; display:flex; gap:16px; pointer-events:none}
+.stage .status b{color:var(--panel-ink); font-weight:600}
+.stage .loading{position:absolute; inset:0; display:flex; align-items:center; justify-content:center; color:var(--panel-ink); font-size:15px; z-index:6; background:var(--field)}
+.stage .hint{position:absolute; right:14px; bottom:12px; z-index:5; color:var(--caption); font-size:12.5px; pointer-events:none}
+
+.rail.insp{overflow-y:auto}
+.insp .empty{color:var(--caption); font-size:14px}
+.insp h3{font-size:18px; color:var(--cream); font-weight:600; line-height:1.3; overflow-wrap:break-word}
+.insp .meta{font-size:12.5px; color:var(--caption); margin-top:4px}
+.insp .meta div{margin-top:2px}
+.insp .row{display:flex; gap:8px; margin:16px 0; flex-wrap:wrap}
+.factlist{margin-top:4px}
+.fact{display:block; width:100%; text-align:left; background:none; border:0; border-bottom:1px solid var(--navy-3); padding:8px; cursor:pointer; font:inherit}
+.fact:hover{background:var(--navy-3)}
+.fact.on{background:var(--navy-3); box-shadow:inset 3px 0 0 var(--amber)}
+.fact .r{color:var(--amber-2); font-size:12.5px}
+.fact .o{display:block; color:var(--cream); font-size:13.5px; line-height:1.35; margin-top:1px}
+.fact .d{display:block; color:var(--caption); font-size:12px; margin-top:1px}
+.fact .dir{color:var(--caption); font-size:12px}
+.evfact{font-size:15px; color:var(--cream); line-height:1.45}
+.evfact .r{color:var(--amber-2)}
+blockquote.ev{margin-top:16px; background:var(--field); border:1px solid var(--navy-3); border-radius:8px; padding:16px; font-size:14.5px; line-height:1.65; color:var(--panel-ink)}
+blockquote.ev .ctx{color:var(--caption)}
+blockquote.ev mark{background:var(--amber-25); color:var(--cream); padding:0 2px; border-radius:2px}
+.src{margin-top:12px; font-size:12.5px; color:var(--caption)}
+.src .fn{font-family:var(--font-mono); font-size:11.5px; overflow-wrap:break-word; margin-top:4px}
+.backlink{background:none; border:0; color:var(--amber-2); font:inherit; font-size:13px; cursor:pointer; padding:0; margin-bottom:12px}
+.backlink:hover{text-decoration:underline}
+
+footer{border-top:1px solid var(--line); padding:24px 0 32px; color:var(--mute); font-size:13.5px}
+footer .wrap{display:flex; justify-content:space-between; gap:20px; flex-wrap:wrap}
+footer a{color:var(--clay)}
+
+@media (max-width:1080px){
+  .bench-grid{grid-template-columns:1fr; height:auto; min-height:0}
+  .stage{min-height:56vh}
+  .leftcol{flex-direction:row}
+  .leftcol .rail{max-height:300px}
+  .rail.insp{max-height:72vh}
+}
+@media (max-width:680px){
+  .leftcol{flex-direction:column}
+  .steps{grid-template-columns:1fr}
+  .stats{gap:24px}
+  .intro h1{font-size:29px}
+}
+@media (prefers-reduced-motion: reduce){
+  html{scroll-behavior:auto}
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap">
+    <a class="wordmark serif" href="../"><img src="../assets/logo-mark.svg" alt="" width="28" height="28"><span>Onto<b>Smith</b></span></a>
+    <nav>
+      <a href="../#how">How it works</a>
+      <a href="../#edges">Edges</a>
+      <a href="https://pypi.org/project/ontosmith/">PyPI</a>
+      <a class="cta" href="https://github.com/Dongbumlee/ontosmith">GitHub</a>
+    </nav>
+  </div>
+</header>
+
+<main class="wrap">
+  <div class="intro">
+    <h1 class="serif">The contract graph, at full size</h1>
+    <p class="lede">I ran OntoSmith over 64 sample contracts from the
+       <a href="https://github.com/TheAtticusProject/cuad">CUAD corpus</a> and published the whole
+       build here: every entity, every fact, and the evidence each fact stands on. What you are
+       looking at is the build itself, not a diagram of it.</p>
+    <div class="stats" id="stats">
+      <div class="stat"><div class="v" data-stat="documents">64</div><div class="k">documents</div></div>
+      <div class="stat"><div class="v" data-stat="entities">15,413</div><div class="k">entities</div></div>
+      <div class="stat"><div class="v" data-stat="facts">11,127</div><div class="k">facts</div></div>
+      <div class="stat"><div class="v" data-stat="relations">6,877</div><div class="k">relation forms</div></div>
+    </div>
+    <div class="steps">
+      <div class="step">
+        <h2>Propose</h2>
+        <p>A model reads each document and proposes candidate facts, each with the sentence it came from.</p>
+      </div>
+      <div class="step judge">
+        <h2>Adjudicate</h2>
+        <p>Every candidate is judged on its own: kept, retyped to what its evidence actually says, or vetoed.</p>
+      </div>
+      <div class="step verify">
+        <h2>Verify</h2>
+        <p>Before anything ships, each surviving fact is re-checked against its quote, one by one. The graph below holds only what passed.</p>
+      </div>
+    </div>
+    <p class="note">Nothing in the explorer is pre-cut. Search, the document index and the relation
+       filters all run over the full build, and the evidence panel quotes the source contract
+       around each fact.</p>
+  </div>
+
+  <div class="bench">
+    <div class="bench-grid">
+      <div class="leftcol">
+        <div class="rail">
+          <div class="searchbox">
+            <label for="q">Search entities</label>
+            <input id="q" type="search" autocomplete="off" placeholder="Try &quot;Licensor&quot; or a company name">
+            <div class="results" id="results" role="listbox"></div>
+          </div>
+          <h2>Documents</h2>
+          <p class="railsub">Select one to isolate its cluster</p>
+          <div class="scroll" id="doclist"></div>
+        </div>
+        <div class="rail">
+          <h2>Relations</h2>
+          <p class="railsub">Tick forms to thin the field to them</p>
+          <div class="reltools">
+            <input id="relq" type="search" autocomplete="off" placeholder="Filter this list">
+            <button class="btn" id="relclear" type="button">Clear</button>
+          </div>
+          <div class="scroll" id="rellist"></div>
+        </div>
+      </div>
+
+      <div class="stage" id="stage">
+        <canvas id="cv" tabindex="0" role="img" aria-label="Canvas drawing of the full graph: 64 document clusters holding 15,413 entities joined by 11,127 facts. Use the search box, the document index or the relation filters to explore it."></canvas>
+        <div class="tools">
+          <button class="btn" id="fit" type="button">Reset view</button>
+        </div>
+        <div class="status"><span id="st-facts"></span><span id="st-zoom"></span></div>
+        <div class="hint">Drag to pan, scroll to zoom, click a node</div>
+        <div class="loading" id="loading">Loading the full graph…</div>
+      </div>
+
+      <div class="rail insp" id="insp" aria-live="polite"></div>
+    </div>
+  </div>
+  <noscript>
+    <p style="margin-bottom:40px;color:var(--mute)">The explorer itself needs JavaScript: it draws
+       11,127 facts across 15,413 entities from 64 CUAD sample contracts on a canvas. The build it
+       shows was produced by the propose, adjudicate and verify stages described above, and every
+       fact in it carries the sentence it was read from.</p>
+  </noscript>
+</main>
+
+<footer>
+  <div class="wrap">
+    <span>Graph data: CUAD sample contracts, a public dataset of contracts from SEC filings.</span>
+    <span><a href="https://github.com/Dongbumlee/ontosmith">github.com/Dongbumlee/ontosmith</a></span>
+  </div>
+</footer>
+
+<script src="demo.js"></script>
+</body>
+</html>
