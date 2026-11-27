@@ -2,7 +2,7 @@
 
 A running batch periodically rewrites ``heartbeat.json`` in its batch
 directory: {batch_id, run_id, stage, progress, total, ts}. An external
-watchdog (the pattern proven 2026-10-14) polls the file's mtime and
+watchdog (a proven pattern) polls the file's mtime and
 contents to tell "still working" from "died mid-stage" — process
 death leaves batch.json/state.json untouched, so the heartbeat is
 the only artifact that goes stale exactly when the runner dies.

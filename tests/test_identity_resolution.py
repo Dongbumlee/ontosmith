@@ -1,7 +1,7 @@
 """Identity resolution — fragment endpoints are mention
 forms, not entities.
 
-The measured anatomy (issue #58, sweep pilot cuts 1-2):
+The measured anatomy (the entity sweep's pilot):
 the proposer types endpoints in the surface the local
 text uses — a first name alone (Wilfried), a nickname
 (Willi), a surname alone (Alger), a name missing its

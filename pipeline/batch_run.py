@@ -205,13 +205,13 @@ def stage_ingest(b: Batch, root: Path, doc_texts: dict[str, str],
 
 
 def stage_ner(b: Batch, root: Path, stages: list[str]) -> None:
-    """NER stage — contract writer only since 2026-10-29.
+    """NER stage — contract writer only.
 
-    The GLiNER NER stage fed the retired pipeline candidate
-    source. The LLM proposer's guards attest by deterministic
-    text containment and never consult NER mentions, and the
-    document list comes from texts.jsonl — so the stage now
-    emits one empty-entity row per document, keeping the
+    The stage emits one empty-entity row per document:
+    the LLM proposer's guards attest by deterministic
+    text containment and never consult NER mentions, and
+    the document list comes from texts.jsonl — so the
+    stage keeps the
     ner.jsonl contract (registry/graph consumers read it
     tolerantly) and resume semantics unchanged, and never
     loads a local model. The stage name stays NER because
@@ -241,8 +241,8 @@ def stage_ner(b: Batch, root: Path, stages: list[str]) -> None:
     _record_cost(b, "NER", 0.0)
     save_batch(b, root)
     advance(b, root, [*stages, "NER"])
-    _log(b.batch_id, "NER: contract rows written (GLiNER retired "
-                     "2026-10-29; the LLM proposer is the only "
+    _log(b.batch_id, "NER: contract rows written (the LLM "
+                     "proposer is the only "
                      "candidate source)")
 
 
@@ -251,7 +251,7 @@ def _per_doc_distribution(candidates: list[dict],
     """Candidate counts per document, over EVERY built
     document (a document with no candidates counts 0).
     Reported by CANDIDATES so extraction sparsity is a
-    printed fact, not a hidden one (issue #52)."""
+    printed fact, not a hidden one."""
     import statistics
     counts = {doc_id: 0 for doc_id in doc_ids}
     for c in candidates:
@@ -329,11 +329,8 @@ def stage_candidates(b: Batch, root: Path, stages: list[str]) -> None:
     (deterministic span/attestation/identity guards at
     proposal time), Jev gates judging downstream as usual.
 
-    The GLiNER+spaCy pipeline source was retired
-    2026-10-29 (unmeasured, English-bound, separate
-    identity discipline) and the candidate_source
-    setting was removed with it — there is one source,
-    so there is nothing to select.
+    There is one candidate source, so there is
+    nothing to select.
     """
     setup_cfg = _load_setup_config(b, root)
     slot_categories = list((setup_cfg or {}).get(
@@ -371,20 +368,20 @@ def stage_candidates(b: Batch, root: Path, stages: list[str]) -> None:
     # The free proposer's per-chunk proposal ceiling: the
     # profile may declare its own (proposer_max_per_chunk);
     # absent a declaration the core default applies and the
-    # prompt is byte-identical to the pre-#52 recipe.
+    # prompt is byte-identical to the core recipe.
     proposer_cap = proposer_max_per_chunk(setup_cfg)
-    # The mention layer (issue #54): the profile's
+    # The mention layer: the profile's
     # declaration switches the free proposer to the mention
     # prompt variant and the guards to span verification;
     # absent = off and this stage is byte-identical to the
-    # pre-layer behavior.
+    # layer-off behavior.
     mention_on = mention_layer_enabled(setup_cfg)
     if mention_on:
         _log(b.batch_id,
              "CANDIDATES: mention layer ON (mention spans + "
              "antecedent resolutions proposed, spans verified "
              "by the guards, resolutions judged at GATES)")
-    # The entity sweep (issue #58): the profile's
+    # The entity sweep: the profile's
     # declaration adds an entity-centered second proposal
     # pass inside the free-proposer branch below — the
     # chunk pass runs first, untouched; the sweep only
@@ -437,7 +434,7 @@ def stage_candidates(b: Batch, root: Path, stages: list[str]) -> None:
     # framing plus one pass per declared draw framing
     # (profile_config.proposer_draw_framings). Guidance, the
     # per-chunk cap and the model are shared; only the
-    # reading angle differs — the 2026-11-02 measurement
+    # reading angle differs — measurement
     # showed extra passes recover misses, but identical
     # repeats cannot reach the systematic blind spots.
     draw_framings = [triple_framing,
@@ -506,8 +503,7 @@ def stage_candidates(b: Batch, root: Path, stages: list[str]) -> None:
     # profile/pack-selected, absent = the quote-only test.
     theme_attest_chunk = bool((setup_cfg or {}).get(
         "theme_attest_chunk"))
-    # Identity seat (identity-surgery program,
-    # 2026-10-30): the profile may name a frozen
+    # Identity seat: the profile may name a frozen
     # decisions file carrying an offline judge's
     # verdicts for rule 4 of identity resolution.
     # Declared -> loaded once here and consulted per
@@ -806,7 +802,7 @@ def stage_candidates(b: Batch, root: Path, stages: list[str]) -> None:
             _seat_cost_folded[0] = live_seat.stats["cost_usd"]
     pair_stats = {"enumerated": 0, "answered": 0, "calls": 0,
                   "outcomes": {}, "alias_emitted": 0}
-    # Entity-sweep accounting (issue #58), checkpointed
+    # Entity-sweep accounting, checkpointed
     # with the proposer stats so a resumed run keeps the
     # true totals. All counters stay 0 — and no metrics
     # block is emitted — when the profile does not declare
@@ -910,7 +906,7 @@ def stage_candidates(b: Batch, root: Path, stages: list[str]) -> None:
         except Exception as e:
             # A checkpoint that cannot be read resets the stage's
             # resume state (done-docs, proposer/pair stats, loaded
-            # candidates). That reset used to be silent:
+            # candidates). The reset is not silent:
             # log it and stamp it into the metrics.
             ckpt_reset = {"error": f"{type(e).__name__}: {e}"}
             _log(b.batch_id,
@@ -1110,7 +1106,7 @@ def stage_candidates(b: Batch, root: Path, stages: list[str]) -> None:
                     if it.get(tk):
                         rec[tk] = it[tk]
                 # Verified mention records ride along the
-                # same way (issue #54): GATES judges any
+                # same way: GATES judges any
                 # resolution they carry before the fact.
                 if it.get("mentions"):
                     rec["mentions"] = it["mentions"]
@@ -1119,8 +1115,8 @@ def stage_candidates(b: Batch, root: Path, stages: list[str]) -> None:
                            for m in it["mentions"].values()):
                         proposer_stats["mention_resolutions"] += 1
                 # Endpoints whose mention data was absent
-                # fell back to the legacy evidence path
-                # (issue #54, cut 2): the fallback rides the
+                # fell back to the legacy evidence path:
+                # the fallback rides the
                 # candidate record and is counted by
                 # endpoint, so the fallback rate is visible
                 # in the stage metrics and at the finish.
@@ -1147,7 +1143,7 @@ def stage_candidates(b: Batch, root: Path, stages: list[str]) -> None:
                     rec["mentions"] = bl["mentions"]
                 doc_blocked.append(rec)
             if sweep_on:
-                # Entity sweep (issue #58): an additive
+                # Entity sweep: an additive
                 # second pass over the chunk pass's output.
                 # The census is deterministic code; anchors
                 # are the census entities that appear as NO
@@ -1685,10 +1681,10 @@ def stage_candidates(b: Batch, root: Path, stages: list[str]) -> None:
             b.metrics["candidates"]["pair_enum"][
                 "symmetric_source"] = symmetric_src
     if sweep_on:
-        # The sweep's own accounting block (issue #58):
+        # The sweep's own accounting block:
         # what the pass was asked, what it proposed, and
         # where the proposals died — evidence voids at
-        # proposal time (cut 2), duplicates behind the
+        # proposal time, duplicates behind the
         # chunk channel, off-anchor drops, guard blocks by
         # reason. Its spend is folded into the proposer
         # ledger above; the block also carries it separately
@@ -1718,12 +1714,12 @@ def stage_candidates(b: Batch, root: Path, stages: list[str]) -> None:
     # the true total.
     _record_cost(b, "CANDIDATES",
                  _round_cost(_conn_add_cost(0.0, proposer_cost)))
-    # Extraction density, reported (issue #52): the
+    # Extraction density, reported: the
     # per-document distribution over every built document,
     # and — for the free proposer — how many chunks reached
-    # the per-chunk proposal ceiling. Before this, totals
-    # were all the stage printed: a cap-bound run and a
-    # naturally sparse run were indistinguishable.
+    # the per-chunk proposal ceiling. Totals alone would
+    # leave a cap-bound run and a naturally sparse run
+    # indistinguishable.
     per_doc = _per_doc_distribution(candidates, texts.keys())
     b.metrics["candidates"]["per_doc"] = per_doc
     save_batch(b, root)
@@ -1749,7 +1745,7 @@ def stage_candidates(b: Batch, root: Path, stages: list[str]) -> None:
     fb_total = (proposer_stats.get("mention_fallback_subject", 0)
                 + proposer_stats.get("mention_fallback_object", 0))
     if fb_total:
-        # Mention-layer fallbacks (issue #54, cut 2):
+        # Mention-layer fallbacks:
         # endpoints whose mention data was absent were
         # judged on the quote under the legacy evidence
         # path. Named on the run output like guard blocks:
@@ -1931,7 +1927,7 @@ def stage_gates(b: Batch, root: Path, stages: list[str],
     Candidates are enqueued as work items. Workers claim, judge, complete.
     A crash mid-stage loses nothing — unclaimed items stay queued.
 
-    Mention layer (issue #54): a candidate carrying
+    Mention layer: a candidate carrying
     antecedent resolutions has each resolution judged as
     its own Jev decision BEFORE the fact (the proposer
     proposes, Jev decides). The candidate's resolution
@@ -1949,9 +1945,9 @@ def stage_gates(b: Batch, root: Path, stages: list[str],
     """
     from .queue import WorkQueue
     d = batch_dir(root, b.batch_id)
-    # Pass D (0.2.1): when the adjudication stage ran, GATES
+    # When the adjudication stage ran, GATES
     # judges the adjudicated survivors — candidates.jsonl
-    # stays Pass C's untouched record.
+    # stays the un-adjudicated record.
     cand_p = d / "candidates.jsonl"
     if (d / "candidates_adjudicated.jsonl").exists():
         cand_p = d / "candidates_adjudicated.jsonl"
@@ -1960,7 +1956,7 @@ def stage_gates(b: Batch, root: Path, stages: list[str],
             _resolution_needs(c) for c in candidates):
         raise RuntimeError(
             "GATES: candidates carry mention resolutions "
-            "(issue #54) but no resolution judge was wired — "
+            "but no resolution judge was wired — "
             "refusing to judge facts on unjudged resolutions "
             "(fail closed)")
     # The $ projection is a planning heuristic, printed only
@@ -2208,14 +2204,13 @@ def _c1_whitelist(setup_cfg: dict | None) -> set | None:
 
 
 def stage_route(b: Batch, root: Path, stages: list[str]) -> None:
-    """ROUTE: tier decision + review queue, Arm C baseline (§5).
+    """ROUTE: tier decision + review queue, Arm C baseline.
 
-    Design (2026-10-11):
+    Design:
     - Dropped candidates are saved to dropped_queue.jsonl for audit.
     - Human can review false negatives. Nothing is truly lost.
 
-    Arm C demotions (the standalone Arm C route logic,
-    wired in): a would-be Tier 1 item carrying C7 fields is demoted
+    Arm C demotions (the standalone Arm C route logic): a would-be Tier 1 item carrying C7 fields is demoted
     to Tier 2 — never dropped — when
       C4  asserted is False (negated/modal extraction), or
       C1  its object binding is prep:<lemma> and the (verb, prep)
@@ -2223,17 +2218,17 @@ def stage_route(b: Batch, root: Path, stages: list[str]) -> None:
     Items without C7 fields (LLM-proposed candidates) carry no
     asserted/path, so neither rule fires on them — their guards ran
     at proposal time (pipeline/proposer.py). C2 theme-presence likewise
-    lives at extraction level (§5), not here.
+    lives at extraction level, not here.
 
-    Mention layer (issue #54): a judgment whose resolution
+    Mention layer: a judgment whose resolution
     landed in the review band (resolution_status "review")
     is capped at Tier 2 — the ambiguous resolution goes to
     the human review queue with resolution_review set,
     never a silent Tier-1 accept. Dropped rows gain a
     reason_class when the judgment carries mention-layer
     fields: the drop_reason itself ("resolution_rejected")
-    or "fact_rejected" — the two drop classes the pre-layer
-    accounting could not tell apart.
+    or "fact_rejected" — the two drop classes the
+    accounting must tell apart.
     """
     d = batch_dir(root, b.batch_id)
     judgments = [json.loads(l) for l in open(d / "judgments.jsonl")]
@@ -2303,7 +2298,7 @@ def stage_route(b: Batch, root: Path, stages: list[str]) -> None:
                     # row error, e.g. DLQ) is distinguishable from a
                     # judged negative everywhere downstream.
                     "error": j.get("error")}
-                # Mention-layer reason classes (issue #54):
+                # Mention-layer reason classes:
                 # a rejected resolution is not a rejected
                 # fact, and the drop record says which.
                 if j.get("drop_reason"):
@@ -2321,7 +2316,7 @@ def stage_route(b: Batch, root: Path, stages: list[str]) -> None:
     _log(b.batch_id, f"ROUTE done: {counts}, Arm C demotes: {demotes}")
 
 
-# Cross-document merge guard (option B, decided 2026-10-16): a
+# Cross-document merge guard (option B): a
 # cross-document form-variant pair may auto-merge only when the Jev
 # ER gate scores it at or above this p_same. Below it — or unscored —
 # the pair is recorded to the review band and never merged.
@@ -2442,10 +2437,10 @@ def stage_ship_gate(b: Batch, root: Path, stages: list[str],
 
 def stage_write(b: Batch, root: Path, stages: list[str],
                 registry, graph, er_decide_fn=None) -> None:
-    """WRITE: registry-first, then graph. (Consistency §10.1)
+    """WRITE: registry-first, then graph.
 
     Entity resolution (the form-variant guardrail + the
-    cross-document merge guard, option B — decided 2026-10-16):
+    cross-document merge guard, option B):
     form variants of the name
     itself merge deterministically WITHIN a document; a cross-
     document form-variant pair may merge only when the Jev ER gate
@@ -2506,9 +2501,8 @@ def stage_write(b: Batch, root: Path, stages: list[str],
         merge (no gate consulted) and the recorded Jev ER score for
         a cross-document merge the merge guard admitted.
 
-        ER guardrail (§5 — replaces the earlier mechanism whose
-        merges measured 0.283 precision) + the cross-document
-        merge guard (option B, decided 2026-10-16) + type
+        ER guardrail + the cross-document
+        merge guard (option B) + type
         prohibitions:
         0. Type-pair prohibition: when the mention carries a type,
            the candidate entity's stored type (its label) differs,
@@ -2952,7 +2946,7 @@ def _index_embedder(model_name: str):
     openai/text-embedding-3-large) resolve, through the
     embedder seat's binding. There is no local embedding
     path: the local model measured
-    against the large one lost (2026-10-12, measured:
+    against the large one lost (measured:
     single-hop recall@10 0.500 -> 0.617 vs MiniLM; see
     rag_eval.py), so a config naming anything else
     refuses here instead of silently embedding with a
@@ -3007,10 +3001,11 @@ def _chunk_documents(texts: dict[str, str],
     check share this one implementation so the stage and its
     invariant can never disagree about what coverage means.
 
-    History: before issue #50 the stage chunked only
-    documents holding a Tier-2-routed candidate, so a
-    Tier-1-heavy build's serving index silently covered a
-    subset of the corpus (multilingual pilot, 2026-10-27:
+    The stage chunks every document: chunking only
+    documents holding a Tier-2-routed candidate would
+    leave a Tier-1-heavy build's serving index silently
+    covering a
+    subset of the corpus (a multilingual pilot measured
     1 of 16 documents). Sorted iteration keeps the index a
     deterministic function of the inputs."""
     chunks, meta = [], []
@@ -3165,7 +3160,7 @@ def stage_verify(b: Batch, root: Path, stages: list[str],
        with a production store attached, the store's chunk
        documents for the batch must match as well. Partial
        coverage FAILS — a green VERIFY means the serving
-       index covers the whole build (issue #50).
+       index covers the whole build.
 
     Graph checks are scoped by batch_id, NOT run_id: edges legitimately
     carry the id of the run that minted them, so run-scoping made the
@@ -3298,9 +3293,10 @@ def stage_verify(b: Batch, root: Path, stages: list[str],
         # Guard: a property audit that joined
         # 0 attestations compared nothing — the check FAILS and
         # VERIFIED is blocked; it never degrades to a silent pass
-        # on key existence alone. (The pre-fix audit resolved the
-        # wrong registry + a corpus field save_state never wrote,
-        # joined 0 on a real batch, and still recorded VERIFIED.)
+        # on key existence alone. (Resolving the
+        # wrong registry, or joining on a corpus field
+        # save_state never wrote, joins 0 — and a 0-join
+        # audit must never record VERIFIED.)
         prop_joined = join.get("joined", 0)
         drift_entry = {
             "pass": bool(rep["drift_free"]) and prop_joined > 0,
@@ -3371,9 +3367,9 @@ def stage_verify(b: Batch, root: Path, stages: list[str],
     #    the index artifact is consistent with INDEX's own
     #    metrics; none of them compared the index against the
     #    corpus — which is how a build whose serving index
-    #    held 1 of 16 documents recorded VERIFIED (the
-    #    Tier-2-only chunking of issue #50, measured by the
-    #    multilingual pilot, 2026-10-27). Expected coverage
+    #    held 1 of 16 documents could record VERIFIED (the
+    #    Tier-2-only chunking a
+    #    multilingual pilot measured). Expected coverage
     #    is re-derived here from texts.jsonl with the shared
     #    chunking rule (_chunk_documents), never from the
     #    stage's metrics. When the graph is a production
@@ -3460,7 +3456,7 @@ def _batch_edge_count(graph, batch_id: str) -> int:
 
 
 def purge_batch_attempt(b: Batch, root: Path, graph) -> dict:
-    """Retry semantics (decided 2026-10-19): retrying a
+    """Retry semantics: retrying a
     batch that already ran WRITE first DELETES that batch's own
     prior-attempt outputs, then rewrites ("erase, then write again").
 
@@ -3518,8 +3514,7 @@ def _preflight_bindings(b: Batch, stages: list[str],
     and its own call site raises the same named error.
     """
     from . import connections as _conn
-    # The proposer is the only candidate source (the pipeline
-    # source was retired 2026-10-29), so a pending CANDIDATES
+    # The proposer is the only candidate source, so a pending CANDIDATES
     # always needs its key.
     if "CANDIDATES" not in stages:
         _conn.seat("proposer").require_key()
@@ -3631,8 +3626,8 @@ def _preflight_store(b: Batch, stages: list[str], graph) -> None:
 
 
 def _er_terminal_account(registry, batch_id: str) -> dict | None:
-    """ER decisions for one batch, counted by terminal state
-    (issue #51): merges recorded, pairs held for settlement,
+    """ER decisions for one batch, counted by terminal state:
+    merges recorded, pairs held for settlement,
     and of those held, how many a human has settled (merge /
     keep-separate) and how many are still unactioned.
 
@@ -3667,37 +3662,33 @@ def _er_terminal_account(registry, batch_id: str) -> dict | None:
 
 
 def _finish_summary(b: Batch, root: Path, registry) -> None:
-    """The batch finish line (issue #51): a completed build
+    """The batch finish line: a completed build
     accounts for its ER decisions by terminal state in its
     own report — the metrics block and the run log — and a
     build ending with unactioned settlement holds says so
-    loudly, naming the remedy.
+    loudly, naming the remedy. The finish is the summary a
+    reader signs off on, so everything a stage totals is
+    restated here: a build can finish VERIFIED with most
+    of its ER decisions held (a measured pilot build held
+    44 of 49) and the hold itself is the product's design
+    (a human decision, never an auto-merge) — the finish
+    must state it.
 
-    Before this, WRITE recorded er_review_pairs in its stage
-    metrics and named the remedy on its log line, but the
-    finish (the summary a reader signs off on) carried no ER
-    accounting at all: the multilingual pilot's build
-    finished VERIFIED with 44 of 49 ER decisions held and
-    nothing at the finish line said the graph shipped with
-    those pairs unmerged. The hold itself is the product's
-    measured design (a human decision, never an auto-merge);
-    what was missing is that the build must state it.
-
-    The same rule covers CANDIDATES guard blocks (issue
-    #54, post-verdict): the stage totals its blocks by
+    The same rule covers CANDIDATES guard blocks
+    (post-verdict): the stage totals its blocks by
     reason in its own metrics and names them on its log
-    line, but the finish — the record a reader signs off
-    on — restated none of it, so a guard cliff (the
+    line, and the finish restates them — without the
+    restatement a guard cliff (the
     mention layer's measured mention_missing cull: 69 of
-    257 proposals in the Phase 2 A/B) was indistinguishable
+    257 proposals in one A/B) is indistinguishable
     at the finish from an ordinary sparse run. When the
     stage blocked anything, the finish carries the
     by-reason counts in its metrics and names them on its
     log line.
 
-    And the same rule covers mention-layer fallbacks
-    (issue #54, cut 2): endpoints whose mention data was
-    absent were judged on the quote under the legacy
+    And the same rule covers mention-layer fallbacks:
+    endpoints whose mention data was
+    absent are judged on the quote under the legacy
     evidence path. The fallback rate is the layer's
     compliance signal — if it is not restated at the
     finish, a run whose proposer never answered the
@@ -3706,8 +3697,7 @@ def _finish_summary(b: Batch, root: Path, registry) -> None:
     by endpoint in its metrics and names them on its log
     line.
 
-    And the same rule covers the entity sweep (issue
-    #58): the pass's yield and attrition — anchors asked,
+    And the same rule covers the entity sweep: the pass's yield and attrition — anchors asked,
     proposals made, duplicates dropped behind the chunk
     channel, off-anchor drops, guard blocks by reason —
     and its shipped Tier-1 count, attributed from the

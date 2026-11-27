@@ -171,11 +171,13 @@ def check_docs(docs: list[str]) -> dict:
 def check_profile_hash(batch_id: str, profile_hash: str) -> dict:
     """Compare the supplied profile hash against the one the
     batch itself recorded (batch.json; the manifest pin as
-    fallback). The gate used to echo the
+    fallback). The supplied hash is compared, never merely
+    echoed: echoing the
     caller's --profile-hash into the promotion record's version
-    block without comparing it to anything, so a mistyped or
-    stale hash 'passed' by construction — the version identity
-    was asserted, never checked."""
+    block without comparing it to anything would let
+    a mistyped or
+    stale hash 'pass' by construction — the version identity
+    asserted, never checked."""
     d = ROOT / "batches" / batch_id
     recorded = None
     src = None

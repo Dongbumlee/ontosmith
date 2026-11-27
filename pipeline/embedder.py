@@ -4,7 +4,7 @@ The ER gate (Jev) is accurate, but candidates must reach it first.
 Substring matching misses abbreviations (LHO, HSCA). Embedding-based
 search with a large model finds them.
 
-Validated 2026-10-10 (a "just in case" check was right):
+Validated (a "just in case" check was right):
 - text-embedding-3-large: LHO→Oswald variants, HSCA→House Select Committee
 - all-MiniLM-L6-v2 (local): missed both
 
@@ -81,7 +81,7 @@ class SeatEmbedder(EntityEmbedder):
         # Batch in chunks of 100 (API limits). Each response is large
         # (100 x 3072 floats) and the egress proxy occasionally cuts a
         # chunked read mid-stream — http.client.IncompleteRead killed
-        # the flagship INDEX stage on 2026-10-13 — so retry each
+        # the flagship INDEX stage — so retry each
         # chunk request with backoff instead of failing the whole call.
         out = []
         for i in range(0, len(texts), 100):
@@ -117,7 +117,7 @@ class SeatEmbedder(EntityEmbedder):
             # Convert each sub-batch to float32 immediately: accumulating
             # raw Python float lists for a whole corpus (~50k chunks x
             # 3072 dims) balloons to several GB and gets the process
-            # OOM-killed mid-stage (flagship INDEX, 2026-10-13).
+            # OOM-killed mid-stage (a flagship INDEX stage).
             out.append(np.array([d["embedding"] for d in data],
                                 dtype=np.float32))
             if len(out) % 50 == 0:

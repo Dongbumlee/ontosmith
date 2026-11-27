@@ -80,8 +80,8 @@ class TestAttestationJoin(TmpRoot):
         return row
 
     def test_duplicate_judged_keys_keep_per_attestation_scores(self):
-        # The pre-fix dict kept only the LAST judged row per key
-        # (0.98) and applied it to every attestation of the key.
+        # The dict must not keep only the LAST judged row per key
+        # (0.98) and apply it to every attestation of the key.
         judged = [self._judged(0.99, method="clause-llm"),
                   self._judged(0.98, method="llm-full")]
         surface = [self._surface(0.42, 1, "e1"),
@@ -92,9 +92,9 @@ class TestAttestationJoin(TmpRoot):
         self.assertEqual(stats, {"unmatched": 0, "unscored": 0})
 
     def test_unmatched_is_counted_not_defaulted(self):
-        # No judged row for the key: the pre-fix code silently
-        # scored (0.3, 2). The row's own projected values are
-        # used and the miss is counted.
+        # No judged row for the key: the row's own projected
+        # values are used and the miss is counted — never a
+        # silent (0.3, 2) default.
         atts, _toks, stats = self._run(
             [], [self._surface(0.66, 1)])
         self.assertEqual(len(atts), 1)
@@ -170,7 +170,7 @@ class TestCandidatesCounters(TmpRoot):
         # parsed resets the stage's resume state — and the
         # reset must be logged and stamped into the metrics,
         # never silent. Driven on the LLM path (the only
-        # candidate source since 2026-10-29) with the
+        # candidate source) with the
         # proposer chat mocked to propose nothing.
         d = batch_dir(self.root, "cand-test")
         d.mkdir(parents=True)

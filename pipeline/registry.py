@@ -1,10 +1,10 @@
 """EntityRegistry and GraphStore interfaces.
 
-Design decision (2026-10-10):
+Design:
 - EntityRegistry = system of record (source of truth for entities)
 - GraphStore = derived view optimized for RAG traversals
-- Interfaces are separate NOW; physical separation LATER.
-- Today: Neo4j implements GraphStore. Registry starts simple.
+- Interfaces are separate; physical separation is a later step.
+- Neo4j implements GraphStore. Registry starts simple.
 
 Write ordering (registry-first):
 1. EntityRegistry: resolve + merge entities → on failure: nothing happened

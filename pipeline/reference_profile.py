@@ -65,7 +65,7 @@ JUDGE_MODEL = "typesafe/jev-1.13"
 #: before any release carried it). Under the unified
 #: claim the score distribution shifts down, so TAU_LO
 #: was re-anchored at the boundary the unified FIT
-#: scores support (0.10 -> 0.05; decision B, 2026-11-01):
+#: scores support (0.10 -> 0.05):
 #: TAU_HI stays at its fitted 0.79, which under the
 #: stricter claim is strictly more conservative than in
 #: the regime it was fitted in. On the unified EVAL

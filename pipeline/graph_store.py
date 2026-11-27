@@ -72,10 +72,10 @@ _ANALYZER_NAME = re.compile(r"^[A-Za-z0-9_.-]+$")
 
 
 def fulltext_analyzer() -> str | None:
-    """The fulltext analyzer chosen for this deployment
-    (issue #53, B3): ``$ONTOSMITH_FULLTEXT_ANALYZER`` when
-    set, else None (Neo4j's stock ``standard`` analyzer —
-    the pre-fix behavior, unchanged for existing installs).
+    """The fulltext analyzer chosen for this deployment:
+    ``$ONTOSMITH_FULLTEXT_ANALYZER`` when
+    set, else None (Neo4j's stock ``standard`` analyzer,
+    unchanged for existing installs).
     Set it to a Lucene analyzer the SERVER bundles (e.g.
     ``cjk`` for CJK bigram tokenization) when the corpus is
     non-Latin. Stock Neo4j does not bundle a Korean

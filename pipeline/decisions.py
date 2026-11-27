@@ -134,9 +134,9 @@ def llm_text_judge(
     if parse_failed:
         # Fallback: reasoning trace or plain text. This
         # recovery invents the label from the LAST yes/no
-        # token in the raw output — it used to be invisible, so a
-        # parse failure read exactly like a judged No. The usage
-        # dict now carries parse_failed=True; the fallback label
+        # token in the raw output — if it were invisible, a
+        # parse failure would read exactly like a judged No. The usage
+        # dict carries parse_failed=True; the fallback label
         # may only be consumed with the failure visible in the
         # caller's record (gate_cli stamps it), never silently.
         trace = choice["message"].get("reasoning") or ""

@@ -73,8 +73,8 @@ not guessed from name substrings at call sites.
 (``no-temperature``, ``reasoning-tokens``; an empty value
 declares none). Undeclared, the capabilities derive from
 the seat's model id by the connection layer's derivation
-rules — the same rules, stated once, that the call sites
-used to apply ad hoc.
+rules — the same rules the call sites
+apply, stated once.
 
 The drafting seat ships **unbound**: the preset
 declares its endpoint coordinates but no model — drafting
@@ -136,8 +136,8 @@ CAP_REASONING_TOKENS = "reasoning-tokens"
 CAPABILITIES = (CAP_NO_TEMPERATURE, CAP_REASONING_TOKENS)
 
 # Derivation rules for undeclared capabilities — the
-# connection layer's single statement of them (call sites
-# used to apply these substrings ad hoc). They derive a
+# connection layer's single statement of them — no call
+# site applies these substrings on its own. They derive a
 # binding's defaults from its model id only; an explicit
 # ONTOSMITH_<S>_CAPABILITIES declaration always wins.
 _NO_TEMPERATURE_SUBSTRINGS = ("claude-haiku-5",)

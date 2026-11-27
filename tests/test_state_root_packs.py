@@ -1,6 +1,6 @@
 """Pack resolution anchored at the state root.
 
-Regression for the cap-probe defect (2026-11-02): batch
+Regression for the cap-probe defect: batch
 creation resolved packs against the code tree, so a pack
 placed in the state root's ``packs/`` — the layout a user
 with ONTOSMITH_ROOT set naturally reaches for — was

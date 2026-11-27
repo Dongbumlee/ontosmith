@@ -232,7 +232,7 @@ CONSUMED_KEYS: dict[str, str] = {
                               "pair-enumeration branch does "
                               "not consume this switch)",
     "mention_layer": "CANDIDATES->GATES mention layer "
-                     "(issue #54): the free proposer emits "
+                     ": the free proposer emits "
                      "per-endpoint mention spans + types + "
                      "verbatim antecedent resolutions, the "
                      "guards verify both spans, and GATES "
@@ -240,7 +240,7 @@ CONSUMED_KEYS: dict[str, str] = {
                      "(stage_candidates / stage_gates -> "
                      "proposer.mention_layer_enabled; absent "
                      "= off, byte-identical legacy path)",
-    "entity_sweep": "CANDIDATES entity sweep (issue #58): "
+    "entity_sweep": "CANDIDATES entity sweep: "
                     "an additive, entity-centered second "
                     "proposal pass inside the free-proposer "
                     "branch — a deterministic code census "
@@ -637,8 +637,7 @@ def setup_config_errors(cfg: dict, *, merged: bool = False) -> list[str]:
 
 def attribute_declaration_defects(attributes) -> list[str]:
     """Shape defects of one entity entry's ``attributes``
-    declaration list (schema_front value attributes, design
-    note 2026-11-06). Returns human-readable defect strings
+    declaration list (schema_front value attributes). Returns human-readable defect strings
     (empty = valid); an absent list is valid — a type that
     declares no attributes behaves exactly as before. The
     vocabulary is closed: a snake_case name, a value_type in
@@ -1651,7 +1650,7 @@ def proposer_framing(cfg: dict | None) -> str | None:
 
 def proposer_max_per_chunk(cfg: dict | None) -> int | None:
     """The family's declared per-chunk proposal ceiling for
-    the free proposer (issue #52); None = the core default
+    the free proposer; None = the core default
     (proposer.MAX_PER_CHUNK, the CUAD standalone recipe's
     value). A declared value must be a positive integer —
     anything else fails closed, like the other recipe
@@ -1670,7 +1669,7 @@ def proposer_draw_framings(cfg: dict | None) -> list:
     """The family's declared ADDITIONAL free-proposer draws:
     one framing string per extra pass over every chunk,
     unioned with the base draw (proposer_framing) before the
-    guards. The 2026-11-02 draw measurement is the design's
+    guards. Draw measurement is the design's
     evidence: extra passes recover facts a single pass
     misses, but only a differently-framed pass reaches the
     systematic blind spots — so a draw IS a framing, not a
@@ -1714,11 +1713,11 @@ def proposer_complement_draw(cfg: dict | None) -> bool:
 
 
 def mention_layer_enabled(cfg: dict | None) -> bool:
-    """The family's mention-layer declaration (issue #54).
+    """The family's mention-layer declaration.
 
     Absent = off: the free proposer runs the legacy prompt
     and the CANDIDATES->GATES path is byte-identical to the
-    pre-layer behavior. A declared value must be a boolean —
+    layer-off behavior. A declared value must be a boolean —
     anything else fails closed, like the other recipe
     declarations."""
     v = (cfg or {}).get("mention_layer")
@@ -1732,10 +1731,10 @@ def mention_layer_enabled(cfg: dict | None) -> bool:
 
 
 def entity_sweep_enabled(cfg: dict | None) -> bool:
-    """The family's entity-sweep declaration (issue #58).
+    """The family's entity-sweep declaration.
 
     Absent = off: the free proposer runs only its chunk
-    pass and CANDIDATES is byte-identical to the pre-sweep
+    pass and CANDIDATES is byte-identical to the sweep-off
     behavior. A declared value must be a boolean — anything
     else fails closed, like the other recipe declarations."""
     v = (cfg or {}).get("entity_sweep")

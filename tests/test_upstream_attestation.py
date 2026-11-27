@@ -1,4 +1,4 @@
-"""Upstream attestation program (2026-10-29): document
+"""Upstream attestation: document
 registry, tiered attestation, theme grading, duplicate
 accounting, and the identity absorption fix.
 

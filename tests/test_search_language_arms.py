@@ -1,4 +1,4 @@
-"""Search language-arm tests (issue #53: B1–B3).
+"""Search language-arm tests (B1–B3).
 
 The pilot's code findings: the query tokenizer was
 ``[a-z0-9]+``, so a Korean-only query produced ZERO tokens
@@ -17,7 +17,7 @@ Pinned here:
 - B2: the graph overlap ranking ranks a Korean document
   for a Korean query, and hybrid_search over a Korean
   fixture store fires BOTH the lexical and graph arms.
-- B3: the analyzer knob — unset means the pre-fix schema
+- B3: the analyzer knob — unset means the stock schema
   statements byte-for-byte; set means both fulltext
   indexes carry it; a malformed name fails closed.
 """

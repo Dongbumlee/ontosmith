@@ -16,7 +16,7 @@ This module is the pure decision logic only: sampling, hit-rate
 arithmetic and the open/close decision. It makes no model calls —
 the caller supplies the probe verdicts. The constants are global
 policy constants (one probe size, one floor), not per-pack data:
-the phase-3 probe-gate measurement (2026-11-09) found the pair
+the probe-gate measurement found the pair
 (probe 40, floor >= 5%) reproducing the full-census decision
 across legal, fibo, bio-medical and open-domain corpora, while a
 10% floor produced false opens and a strict-greater reading of

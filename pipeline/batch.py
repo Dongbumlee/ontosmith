@@ -65,9 +65,9 @@ class BatchConfig:
     # force and freezes them here, so a batch's
     # config states the models that actually run — the
     # same models its manifest's binding provenance names.
-    # (ner_model named the local GLiNER model of the
-    # retired pipeline source; the field is inert since
-    # 2026-10-29 and kept so stored configs still load.)
+    # (ner_model named the local GLiNER model of a
+    # retired pipeline source; the field is inert
+    # and kept so stored configs still load.)
     ner_model: str = NER_MODEL
     gate_model: str = JUDGE_MODEL
     triple_threshold: float = 0.25
@@ -85,10 +85,9 @@ class BatchConfig:
     # refuses by name at create/run, because it could never
     # trip (connections.require_metered).
     max_cost_usd: float | None = 10.0
-    # GATES claim lease (decided 2026-10-16): seconds a claimed
+    # GATES claim lease: seconds a claimed
     # queue item stays claimed before a resumed run may reclaim it.
-    # Default 300 = the pre-decision hard-coded constant in
-    # pipeline/queue.py; now a policy value set per batch/run.
+    # Default 300, a policy value set per batch/run.
     # Heartbeat-based claims are deferred to the multi-instance
     # distribution step (SETUP.md distribution note).
     queue_lease_seconds: int = 300
@@ -96,8 +95,7 @@ class BatchConfig:
     code_version: str = ""
     # Proposer model for the candidate stage. (There is no
     # candidate-source setting: the LLM proposer is the
-    # only source — the GLiNER+spaCy pipeline source and
-    # its candidate_source field were removed 2026-10-29.)
+    # only source.)
     llm_model: str = PROPOSER_MODEL
 
     def to_dict(self) -> dict:
@@ -105,7 +103,7 @@ class BatchConfig:
 
     @classmethod
     def from_dict(cls, d: dict) -> BatchConfig:
-        # A stored config from the pipeline era may still
+        # A stored config may still
         # carry candidate_source: "llm" (or its absence)
         # loads silently; a retired value refuses by name
         # rather than silently running a different builder
@@ -113,8 +111,8 @@ class BatchConfig:
         legacy = d.get("candidate_source")
         if legacy is not None and str(legacy).lower() != "llm":
             raise ValueError(
-                f"candidate_source {legacy!r} was retired "
-                "2026-10-29: the LLM proposer is the only "
+                f"candidate_source {legacy!r} was retired: "
+                "the LLM proposer is the only "
                 "candidate source (the GLiNER+spaCy pipeline "
                 "source is removed)")
         return cls(**{k: v for k, v in d.items() if k in cls.__dataclass_fields__})

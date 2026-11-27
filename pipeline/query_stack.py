@@ -23,19 +23,19 @@ Components:
   retrievers         dense / hybrid (vector + Lucene, RRF) over
                      GraphStore.search_chunks; graph-current (the
                      cuad_eval token-overlap arm ported onto the
-                     store snapshot); graph-PPR (OSS borrow #2,
-                     HippoRAG 2: Personalized PageRank over the
+                     store snapshot); graph-PPR
+                     (HippoRAG 2: Personalized PageRank over the
                      entity graph, seeded by linker hits and
                      query-to-triple embedding matches, Tier 1
                      edges at full weight, Tier 2 at 0.5 — fixed
                      ex ante; chunks participate via MENTIONS)
-  Router             OSS borrow #4 (LightRAG dual-level): one cheap
+  Router             LightRAG dual-level: one cheap
                      Haiku call splits a question into entity
                      keywords + theme keywords + a route class;
                      every split is logged (auditable)
-  Answerer           OSS borrow #7 (named evidence-packing recipes
-                     per route class under a fixed token budget)
-                     + #13 (nano-graphrag fail_response discipline):
+  Answerer           named evidence-packing recipes
+                     per route class under a fixed token budget,
+                     plus nano-graphrag fail_response discipline:
                      answers carry (doc_id, span) citations that
                      resolve to source text; abstention is a
                      first-class output under an ex-ante evidence
@@ -95,16 +95,16 @@ STOP = set("what which contracts contract corpus agreement agreements is are doe
 
 
 def tokenize(t: str) -> list[str]:
-    """Word tokens for the retrieval arms. Script-aware
-    (issue #53): the pre-fix pattern ``[a-z0-9]+`` yielded
+    """Word tokens for the retrieval arms. Script-aware:
+    a Latin-only pattern like ``[a-z0-9]+`` yields
     ZERO tokens for a Korean-only query, so the lexical arm
-    never fired and the graph arm's overlap sets were empty
+    never fires and the graph arm's overlap sets are empty
     for non-Latin content. ``[^\\W_]`` is the Unicode word
     class minus underscore: on lowercased ASCII input it
-    produces exactly the old ``[a-z0-9]+`` stream (the
+    produces exactly the ``[a-z0-9]+`` stream (the
     cuad_eval mirror the flagship numbers rest on is
     unchanged — pinned by test), while Hangul / CJK / kana /
-    Cyrillic / accented-Latin runs now tokenize on
+    Cyrillic / accented-Latin runs tokenize on
     whitespace-and-punctuation boundaries like Latin text.
 
     Known limit, stated plainly: this is whitespace

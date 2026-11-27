@@ -1,6 +1,6 @@
 """RAG embedder A/B — same frozen QA, MiniLM baseline vs a larger embedder.
 
-Motivation (2026-10-12): rag_eval.py showed vector recall is the weak arm
+Motivation: rag_eval.py showed vector recall is the weak arm
 vs graph traversal, and its index (tier2_index.pkl) is all-MiniLM-L6-v2.
 Question: how much of the gap is the embedder, not the approach?
 
@@ -13,7 +13,7 @@ Design rules (do not weaken):
 
 Backends:
   --backend fastembed --model BAAI/bge-base-en-v1.5   (local, ~136 min
-      measured 2026-10-12 on this 2-core VM for the full corpus)
+      measured on this 2-core VM for the full corpus)
   --backend fastembed --model BAAI/bge-large-en-v1.5  (local, slower)
   --backend openrouter --model openai/text-embedding-3-large
       (~7.4M tokens for the corpus, ~$1; needs a ROTATED OPENROUTER_API_KEY)

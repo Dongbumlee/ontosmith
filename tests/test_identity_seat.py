@@ -1,5 +1,4 @@
-"""The identity seat seam (identity-surgery program,
-2026-10-30): guard_triples accepts an optional injected
+"""The identity seat seam: guard_triples accepts an optional injected
 judge for rule 4 of identity resolution. With no seat,
 behavior is the deterministic rule chain (the whole
 suite is the regression proof); with a seat, the seat's
@@ -86,8 +85,8 @@ GONDAR_ITEM = {
 
 class TestIdentitySeat(unittest.TestCase):
     def test_rules_refuse_what_the_seat_completes(self):
-        # The fresh-material class the surgery program
-        # measured (probe preservation 0/4 for the rule
+        # A fresh-material class (measured: probe
+        # preservation 0/4 for the rule
         # chain): a surname mention whose full name the
         # document gives in its definitional lead. The
         # veto refuses it for lack of rewrite evidence;

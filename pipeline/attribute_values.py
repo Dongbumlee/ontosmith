@@ -1,6 +1,5 @@
 """Value attribute candidates: the propose -> gate ->
-judge -> record path (value-attributes design note,
-2026-11-06).
+judge -> record path.
 
 The proposer reports a declared attribute's value as its own
 item ({"entity", "entity_type", "attribute", "value",

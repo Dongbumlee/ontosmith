@@ -30,9 +30,9 @@ class TestPipelineImports(unittest.TestCase):
 
 
 class TestNoSysPathPollution(unittest.TestCase):
-    """Regression: lab modules used to sys.path.insert their own
-    directory and import siblings by bare name, which polluted
-    the process path and split module identity (a top-level
+    """Regression: lab modules must not sys.path.insert their own
+    directory and import siblings by bare name, which pollutes
+    the process path and splits module identity (a top-level
     `analyze_hardened` distinct from pipeline.analyze_hardened).
     Package modules import relatively and register no bare
     sibling names."""

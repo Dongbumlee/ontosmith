@@ -1,4 +1,4 @@
-"""Value attributes (design note 2026-11-06): declaration,
+"""Value attributes (the value-attributes design): declaration,
 processing, storage and lineage.
 
 Covered: the declaration layer — a schema_front entity entry

@@ -4,7 +4,7 @@ The figures are rendered by parsing the shipped record —
 never by retyping numbers. These tests pin the parse
 against the frozen record values (a drift in either the
 record or the parser fails here), smoke-render every
-figure, and pin the placement decision (2026-10-22):
+figure, and pin the placement:
 the README carries process diagrams only; the quality
 chart is a whitepaper asset under benchmarks/assets/.
 """
@@ -22,8 +22,8 @@ RECORD = ROOT / "benchmarks" / "redocred.md"
 HAS_MATPLOTLIB = importlib.util.find_spec("matplotlib") is not None
 
 # Support rates are the record's current figures: the
-# ruled adjudication contract's rates (2026-10-22;
-# whitepaper §5.3). Counts are the frozen census fates.
+# ruled adjudication contract's rates
+# (whitepaper §5.3). Counts are the frozen census fates.
 FROZEN_FATES = {
     "matched": (1838, 0.884),
     "never_enumerated": (6340, 0.424),

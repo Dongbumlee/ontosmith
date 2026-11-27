@@ -4,9 +4,9 @@ The open-domain pack's profile declares relation_types, so
 without an explicit proposer_guidance the guidance channel
 falls back to rendering those vocabularies as a CLOSED
 inventory ("Extract ONLY these relations ...") — the defect
-that emptied the 2026-11-01 fiction pilot (proposer proposed
+that empties a fiction pilot (measured: the proposer proposed
 9 kinship-shaped facts where a guidance-free call proposed
-23). The pack now declares its guidance verbatim: canonical
+23). The pack declares its guidance verbatim: canonical
 names are preferred forms, and stated facts are never dropped
 for being unlisted.
 
@@ -65,7 +65,7 @@ class TestOpenDomainGuidance(unittest.TestCase):
 class TestResolvePackArtefact(unittest.TestCase):
     """WRITE resolves the declarations artefact through the
     same trees the pack lookup consults — a fresh root with no
-    packs/ of its own must not fail at WRITE (the 2026-11-01
+    packs/ of its own must not fail at WRITE (the
     bare-root pilot failure)."""
 
     REL = "packs/open-domain/relation_declarations.json"

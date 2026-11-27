@@ -28,7 +28,7 @@ proposals for G-04/G-05):
                  role nouns are not identities); only when the
                  profile declares role-word rules. A term the
                  document itself defines is an identity inside
-                 it and passes (upstream program, 2026-10-29).
+                 it and passes.
   theme_missing  the relation is a bare prepositional phrase —
                  no predicate, hence no theme.
   duplicate      the item's (subject, relation, object) key —
@@ -36,7 +36,7 @@ proposals for G-04/G-05):
                  already-kept item's; recorded, never silently
                  dropped.
 
-Attestation is tiered (upstream program): verbatim, through
+Attestation is tiered: verbatim, through
 the document's own stipulated aliases (defined terms,
 acronym pairs — the registry), under punctuation-spacing
 collapse, or through a proposer-declared derivation surface;
@@ -68,7 +68,7 @@ slot_framing / slot_rules). The standalone harnesses' contract
 text survives as the CUAD profile's declared framing — the
 prompt CUAD builds is byte-identical to the recipe above.
 
-Mention layer (issue #54, profile-gated by the
+Mention layer (profile-gated by the
 `mention_layer` setup_config key; absent = off and every
 behavior below is inert): entities register and link by
 noun surface forms, so a fact the text states through a
@@ -90,12 +90,13 @@ never a silent drop. An endpoint whose mention data is
 absent — the proposer did not answer for it — is not
 blocked: it falls back to the legacy evidence path and
 is judged on its quote exactly as without the layer.
-(Cut 2: the first cut blocked absence too, and the
-measured Phase 2 A/B showed the proposer's unreliable
-mention-field compliance culling a quarter of all
-proposals before judging. The layer is additive by
+(The layer is additive by
 policy — only a declared-but-invalid mention can
-block — and every fallback is counted by endpoint in
+block; absence falls back rather than blocks, because
+blocking it culled a quarter of all
+proposals before judging in the layer's measured A/B,
+on the proposer's unreliable
+mention-field compliance — and every fallback is counted by endpoint in
 the batch accounting, so the fallback rate is always
 visible.) The quote is never rewritten — the resolution
 travels as annotation, and GATES judges the resolution
@@ -103,7 +104,7 @@ as its own decision before the fact (stage_gates), so
 the proposer proposes and Jev decides, as everywhere
 else in the pipeline.
 
-Entity sweep (issue #58, profile-gated by the
+Entity sweep (profile-gated by the
 `entity_sweep` setup_config key; absent = off and every
 behavior below is inert): the chunk pass proposes at
 document density, and an entity the text names but the
@@ -130,12 +131,13 @@ proposal mass, which is the structural form of the
 mention layer's measured lesson (a REPLACING variant
 proposed less, and differently, and the draw fell).
 
-Cut 2 (issue #58) makes the item's quote — its
-evidence span — load-bearing in this channel only.
-The first pilot's adjudicated precision was 0.676
-against a 0.90 bar: assertions the text does not
-state, proposed from a narrow anchor view, passed the
-gates. The sweep prompt now states the span as a
+In this channel only, the item's quote — its
+evidence span — is load-bearing.
+Assertions the text does not
+state, proposed from a narrow anchor view, pass the
+gates unless the span binds them: a pilot's
+adjudicated precision measured 0.676
+against a 0.90 bar on the unbound form. The sweep prompt states the span as a
 verified term of the contract, and
 propose_sweep_for_doc voids BY CODE any sweep
 proposal whose span is missing (field absent, empty,
@@ -144,13 +146,13 @@ FULL document text — before the anchor test and
 before the guards, never blocked into the record —
 counted as `evidence_missing` in the stage metrics
 and the finish record's restatement, so the void is
-visible accounting, not the cut-1 parse filter's
-silence (a span-less sweep item there vanished
+visible accounting, never a silent parse-filter drop
+(a span-less sweep item must not vanish
 uncounted). The accounting identity is
 proposed = items + off_anchor + evidence_missing.
 The void verifies presence, not sufficiency — a
 verbatim span can still be over-read — which is why
-the redesign is measured, not assumed. The chunk
+the binding is measured, not assumed. The chunk
 channel is untouched: its items keep the legacy
 discipline (a parse-required quote, guard-verified).
 """
@@ -225,7 +227,7 @@ Excerpt:
 ---"""
 
 # Mention types the proposer may declare for an endpoint's
-# mention span (issue #54). "named" = the mention is the
+# mention span. "named" = the mention is the
 # entity's name or a form of it; "pronominal" = a pronoun;
 # "descriptive" = a definite description that is not the
 # name ("the company", "the German racer").
@@ -293,8 +295,8 @@ Excerpt:
 {text}
 ---"""
 
-# The declared-surface variant of the triple prompt
-# (upstream attestation program, 2026-10-29): identical
+# The declared-surface variant of the triple prompt:
+# identical
 # rules for the triple itself, plus per-endpoint
 # `*_attested` fields — the exact words in the excerpt
 # the endpoint was derived FROM when the endpoint itself
@@ -489,8 +491,8 @@ def _build_triple_prompt(chunk: str, guidance: str = "",
     pipeline/profile_config.derive_guidance), the guidance block is
     appended after the base prompt.
 
-    `mentions` (the profile's mention-layer declaration,
-    issue #54) selects TRIPLE_PROMPT_MENTION instead of the
+    `mentions` (the profile's mention-layer declaration)
+    selects TRIPLE_PROMPT_MENTION instead of the
     base template; the default path is untouched.
 
     `prior_block` (the complement pass) is appended last: it
@@ -539,7 +541,7 @@ def _prior_block(prior_items: list) -> str:
 
 def _mention_from_item(it: dict, ep: str) -> dict:
     """One endpoint's mention record from a raw proposal
-    item (issue #54): the flat subject_mention /
+    item: the flat subject_mention /
     subject_mention_type / subject_antecedent fields the
     mention prompt asks for, gathered into one dict.
     Missing or malformed fields stay missing — guard_triples
@@ -592,10 +594,10 @@ def propose_triples_for_doc(doc_id: str, text: str, key: str,
     counts chunks whose parsed proposal count reached the
     ceiling — the saturation signal: a chunk at the cap is
     indistinguishable from a chunk that merely had that many
-    facts, unless it is counted (issue #52).
+    facts, unless it is counted.
 
-    mentions (the profile's mention-layer declaration,
-    issue #54) selects the mention prompt variant; items then
+    mentions (the profile's mention-layer declaration)
+    selects the mention prompt variant; items then
     also carry a `mentions` dict ({subject, object} ->
     {span, type, antecedent?}) as proposed — span
     verification is guard_triples' job, as for typed
@@ -703,7 +705,7 @@ def propose_triples_for_doc(doc_id: str, text: str, key: str,
 
 
 # ------------------------------------------------------------------
-# Entity sweep (issue #58): deterministic census + per-anchor pass
+# Entity sweep: deterministic census + per-anchor pass
 # ------------------------------------------------------------------
 # The per-anchor view's character ceiling: the mention
 # sentences of one anchor, ± 1 neighbouring sentence,
@@ -1009,11 +1011,10 @@ def census_entities(text: str) -> dict:
                 # quoted title ("Suffer the Children",
                 # "El Regalo Más Grande"), whose first
                 # token is part of the name — excluding it
-                # censused the title as a fragment ("the
-                # Children") and demoted the full title to
-                # an alias, and resolution then rewrote
-                # correct endpoints down to the fragment
-                # (scale-test pilot, 2026-10-29).
+                # censuses the title as a fragment ("the
+                # Children"), demotes the full title to
+                # an alias, and lets resolution rewrite
+                # correct endpoints down to the fragment.
                 if 2 <= len(plain) < len(seq) \
                         and not quoted[seq[0]]:
                     aliases = [norm_ws(tokens[x])
@@ -1092,7 +1093,7 @@ def census_entities(text: str) -> dict:
 # Amdír", "... Education To") — never the fragment's
 # own entity under a fuller name. Every measured
 # absorption whose extra tokens contained such a word
-# was damage (scale-test pilot, 2026-10-29); the
+# was damage; the
 # completions that survive the veto — given names,
 # compound parts, generational suffixes — carry none.
 _ABSORB_VETO = frozenset({
@@ -1616,8 +1617,7 @@ def _resolve_endpoint(ep_norm: str, index: tuple,
         if rule_complete is not None:
             return by_norm[rule_complete]["surface"], []
         return None, []
-    # The identity seat (identity-surgery program,
-    # 2026-10-30): an injected judge consulted per
+    # The identity seat: an injected judge consulted per
     # subset candidate with the code-computed feature
     # envelope. The seat answers True (complete),
     # False (stand), or None (no opinion \u2014 the rule
@@ -1736,7 +1736,7 @@ def _build_sweep_prompt(context: str, anchor: str,
     untouched), over the anchor's view instead of a chunk,
     plus two added rules: the anchor rule (an endpoint of
     every triple must be the anchor entity, named as it
-    appears in the text) and — cut 2 — the evidence rule
+    appears in the text) and the evidence rule
     (every triple must carry its evidence span, and the
     span is verified; a triple without a verifying span
     is discarded)."""
@@ -1773,7 +1773,7 @@ def propose_sweep_for_doc(doc_id: str, text: str,
     view as their chunk fields, so guard_triples' chunk
     attestation rung reads the view.
 
-    Cut 2 — the evidence void, checked FIRST, before
+    The evidence void, checked FIRST, before
     the anchor test: an item whose evidence span (its
     `quote`) is missing — the field absent, empty, or
     not a string — or whose span fails verification
@@ -1832,7 +1832,7 @@ def propose_sweep_for_doc(doc_id: str, text: str,
                     it.get(k) for k in
                     ("subject", "relation", "object"))):
                 continue
-            # The evidence void (cut 2): the span must be
+            # The evidence void: the span must be
             # present and verify against the full document
             # text. A missing or unverifiable span voids
             # the proposal here — it never reaches the
@@ -1999,17 +1999,17 @@ def quote_window(text: str, quote: str, half: int = WINDOW) -> str:
 # ------------------------------------------------------------------
 def _verify_mentions(it: dict, qn: str, doc_norm: str,
                      sn: str, on: str) -> tuple[dict, list] | str:
-    """Verify one item's mention records (issue #54).
+    """Verify one item's mention records.
 
     Returns (cleaned, fallback) — the verified mention
     records by endpoint, and the endpoints whose mention
     data was ABSENT — or the block reason string when a
-    DECLARED mention is invalid. The policy (cut 2) is
+    DECLARED mention is invalid. The policy is
     per-endpoint and additive:
 
     - Absent: the endpoint carries no mention record, or
       the record has no usable span (the proposer did not
-      answer for that endpoint — the measured Phase 2
+      answer for that endpoint — the measured A/B
       shape: the mention fields were simply omitted). The
       endpoint falls back to the legacy evidence path:
       the item is judged on its quote exactly as without
@@ -2082,7 +2082,7 @@ def punct_collapse(s: str) -> str:
 
 
 # ------------------------------------------------------------------
-# Document registry (upstream attestation program, 2026-10-29)
+# Document registry
 # ------------------------------------------------------------------
 # A document stipulates its own aliases: defined terms in
 # contracts ("X (the "Term")", ""Term" means …",
@@ -2093,7 +2093,7 @@ def punct_collapse(s: str) -> str:
 # never to a genre label — and document-scoped: nothing in
 # it carries into another document.
 #
-# Measured motivation (provenance audit, 2026-10-29): of 89
+# Measured motivation: of 89
 # role-word blocks in the CUAD slice, 77 (87%) had their
 # endpoint term defined in the very document that proposed
 # them — the guard was killing the contract's own defined
@@ -2513,17 +2513,16 @@ def guard_triples(items: list[dict], doc_text: str,
       are verb+preposition forms ("works at", "diagnosed
       with") whose objects the text typically names across
       the passage rather than inside the minimal quote, the
-      quote-only test blocks the relation wholesale (the
-      2026-10-23 BYO walk: 10/10 "works at" proposals from a
-      hand-authored pack). The relaxation is weaker than
+      quote-only test blocks the relation wholesale (a
+      hand-authored pack's walk measured 10/10 "works at" proposals
+      blocked this way). The relaxation is weaker than
       the quote test — the object need only co-occur in the
       chunk — so it is a declared opt-in, never a default.
       (Subsumed by theme grading below: the grade is
       recorded either way; the flags remain accepted for
       signature compatibility and are no longer consulted.)
 
-    Upstream attestation program (2026-10-29; design and
-    decision tests in the launch notes):
+    The attestation design:
 
     - Attestation is tiered. An endpoint attests verbatim
       (the legacy path), through the document's stipulated
@@ -2544,7 +2543,7 @@ def guard_triples(items: list[dict], doc_text: str,
     - The role-word guard fires only for endpoints the
       document leaves undefined: a term the document
       defines is an identity inside it.
-    - theme_presence no longer blocks. An item whose
+    - theme_presence does not block. An item whose
       object attests in the document but not in its quote
       is kept with `theme_grade` (its `attest` level:
       chunk | document) for the judge.
@@ -2570,12 +2569,12 @@ def guard_triples(items: list[dict], doc_text: str,
     the resolution lands on the record only when the
     item is kept.
 
-    - `mentions`: the profile declared the mention layer
-      (issue #54). Each item's mention records are verified
+    - `mentions`: the profile declared the mention layer.
+      Each item's mention records are verified
       by _verify_mentions after the quote gate and before
       attestation: declared spans verbatim, a non-named
       mention carrying a verbatim, endpoint-naming
-      antecedent. The layer is additive (cut 2): an
+      antecedent. The layer is additive: an
       endpoint whose mention data is absent falls back to
       the legacy evidence path — kept items name those
       endpoints in `mention_fallback` and carry the
@@ -2754,7 +2753,7 @@ def guard_triples(items: list[dict], doc_text: str,
                       bridged: bool = False,
                       _forms=forms, _reg=reg_forms,
                       _base=base) -> bool:
-            # Attestation is tiered (upstream program):
+            # Attestation is tiered:
             # the endpoint's forms verbatim in the
             # haystack, the document's stipulated alias
             # forms, or any form under punctuation-
@@ -2862,12 +2861,11 @@ def guard_triples(items: list[dict], doc_text: str,
             continue
         if toks and toks[-1] in PREPS \
                 and not _attested("object", qn, qn_rep):
-            # Theme grading (decision test 1,
-            # 2026-10-29): the object is attested in
+            # Theme grading: the object is attested in
             # the document (L0 passed) but not inside
-            # the quote. The old guard blocked the
-            # whole class; a judged sample of the
-            # blocked class was overwhelmingly
+            # the quote. Blocking the
+            # whole class would cull proposals a judged
+            # sample of the blocked class showed overwhelmingly
             # text-true (the parse path states the
             # object across the passage, not inside
             # the minimal quote). The item is KEPT and

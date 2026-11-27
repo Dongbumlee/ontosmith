@@ -512,7 +512,7 @@ def render_ontology_loop(out: Path) -> Path:
 def main(argv=None) -> int:
     """Render all figures from the shipped record + code.
 
-    Placement (revised 2026-10-22): the process
+    Placement: the process
     diagrams go to docs/assets/ for the README; the
     quality-number chart is a whitepaper asset and goes to
     benchmarks/assets/ — the README carries no score

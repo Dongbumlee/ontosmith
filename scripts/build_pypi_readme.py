@@ -217,7 +217,7 @@ def build_variant(master: str, base: str = DEFAULT_BASE,
     # Brand banner LAST: the rewritten variant must carry
     # it exactly once, in the header (above the first
     # section heading) — the slot the generator
-    # used to reserve is now filled, and this check is
+    # reserves is filled, and this check is
     # what guards it.
     banner_abs = (f"![OntoSmith]({base}/raw/{branch}/"
                   f"{BANNER_IMAGE})")

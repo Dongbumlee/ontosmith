@@ -120,8 +120,8 @@ def _summary(model: str, records, lat, cost,
              extra: dict | None = None) -> dict:
     """The runners' common summary block (latency percentiles are
     the originals' index math, kept verbatim). The error count is
-    computed here so EVERY arm reports it (previously
-    only the llm arm did)."""
+    computed here so EVERY arm reports it (not
+    only the llm arm)."""
     lat_sorted = sorted(lat)
     summary = {
         "model": model, "n": len(records),

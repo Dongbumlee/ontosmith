@@ -12,8 +12,7 @@ computes both through the identical estimator: the original
 adjudication protocol's verdicts (judgments/) and the ruled
 verdicts (judgments_ruled/) — the same 565 seam-flagged items
 re-judged blind under the adjudication contract completed by
-the six seam rulings of 2026-10-22 (docs/ADJUDICATION.md;
-appendix RULING.md). The record's headlines are the ruled
+the six seam rulings (docs/ADJUDICATION.md). The record's headlines are the ruled
 estimates; the original-protocol estimates are computed
 beside them as the measurement's provenance.
 
@@ -152,7 +151,7 @@ def load_appendix(appendix: Path = APPENDIX) -> dict:
 def load_ruled_appendix(appendix: Path = APPENDIX) -> dict:
     """The appendix with the ruled verdict set substituted in.
 
-    The ruled set (judgments_ruled/, appendix RULING.md)
+    The ruled set (judgments_ruled/)
     covers the 565 seam-flagged items, re-judged blind under
     the ruled contract; every other item keeps its original
     verdict. Final labels are derived through the identical

@@ -1,6 +1,6 @@
 """Hybrid search eval: BM25 + dense (RRF) vs dense-only, same QA as rag_eval.
 
-Motivation (2026-10-12): modern vector engines ship hybrid
+Motivation: modern vector engines ship hybrid
 search (dense + BM25) by default; a pure-dense baseline understates RAG.
 Gold criterion (exact entity string in chunk) favors keyword matching,
 so this tests how much of the graph's edge is an artifact of the baseline.

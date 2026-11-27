@@ -1,6 +1,6 @@
 """Expand the Gutenberg clean corpus: 10 -> ~60 books.
 
-Direct downloads from gutenberg.org (worked 2026-10-11).
+Direct downloads from gutenberg.org.
 Saves book_<id>.txt into data/gutenberg/, skips existing files,
 reports successes/failures and total size.
 """

@@ -147,9 +147,9 @@ class TestCoreDefaults(unittest.TestCase):
 
     def test_complement_draw_on_by_default(self):
         # The complement pass is the free proposer's
-        # residual pass, promoted to a core default after
-        # the 2026-11-09 promotion gate measured it on the
-        # domain-pack slices: the baseline declares it on.
+        # residual pass, a core default: the promotion gate
+        # measured it on the
+        # domain-pack slices, and the baseline declares it on.
         # A domain pack may declare it false on measured
         # regression evidence — that declaration governs
         # (TestComplementResolutionStaged).

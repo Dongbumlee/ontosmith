@@ -4,8 +4,8 @@ A pack's schema_front may declare, per entity type, value
 attributes (dates, amounts, identifiers — the values a
 document states ABOUT an entity) with one of the six closed
 value types below. This module is the code side of the
-judgment split the design fixes (value-attributes design
-note, 2026-11-06): form — parsing, unit/currency handling,
+judgment split the design fixes (the value-attributes
+design): form — parsing, unit/currency handling,
 normalization — is deterministic code, never a model. A
 surface that parses here is normalized by THIS module's
 output, not by anything the proposer wrote; a surface that
@@ -29,8 +29,8 @@ declaration is demoted to date; duration is length only —
 a start/end pair is an interval (a value-node promotion
 case), not a duration, and fails here as one.
 
-A date carries its STATED precision (precision amendment,
-2026-11-06): a surface stating only a month or a year
+A date carries its STATED precision (the precision
+rule): a surface stating only a month or a year
 ("May 2008", "2008-05", "2008") normalizes to its
 reduced-precision ISO form with the precision named in
 the result (``precision``: day / month / year). No
@@ -97,10 +97,8 @@ _CURRENCY_SYMBOLS = {"$": "USD", "€": "EUR", "£": "GBP",
                      "¥": "JPY", "₩": "KRW", "₹": "INR"}
 #: "US$400,000.00" — the US prefix on the dollar symbol is
 #: a stated notation for USD, as deterministic as the bare
-#: symbol (contract documents use it constantly; the gap
-#: was found by the 2026-11-06 value-attribute
-#: re-measurement, where the bare "$" handling left the
-#: "US" residue unparseable).
+#: symbol (contract documents use it constantly; without
+#: the prefix rule the "US" residue is unparseable).
 _US_DOLLAR_PREFIX_RE = re.compile(r"^US\s*\$\s*",
                                   re.IGNORECASE)
 _CURRENCY_WORDS = {

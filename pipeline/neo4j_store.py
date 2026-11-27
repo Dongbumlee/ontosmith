@@ -1,8 +1,7 @@
 """Neo4j implementations of EntityRegistry and GraphStore.
 
-Phase 1: Neo4j implemented BOTH interfaces. That is superseded for
-the registry role: the source of truth is now the file-backed
-SqliteEntityRegistry (pipeline/file_registry.py), and Neo4j is the
+The registry role's source of truth is the file-backed
+SqliteEntityRegistry (pipeline/file_registry.py); Neo4j is the
 graph projection. Neo4jEntityRegistry remains for legacy callers and
 as the batch CLI's `JEV_REGISTRY=neo4j` fallback; new writes mint
 unique IDs and honor corpus namespaces either way.
@@ -106,8 +105,7 @@ class StoreUnreachableError(RuntimeError):
 class StoreIdentityError(RuntimeError):
     """The store's current graph cannot be identified, or
     a write would replace a graph it cannot name — raised
-    before anything is overwritten (store ruling,
-    2026-10-23). Like StoreUnreachableError, the CLI
+    before anything is overwritten (store ruling). Like StoreUnreachableError, the CLI
     prints it as a one-line refusal, never a traceback."""
 
 
@@ -384,7 +382,7 @@ def probe(client: Neo4jClient) -> str | None:
 
 
 class Neo4jEntityRegistry(EntityRegistry):
-    """EntityRegistry backed by Neo4j nodes (Phase 1).
+    """EntityRegistry backed by Neo4j nodes.
 
     find_candidates uses embedding similarity (large model) + substring
     as fallback. Embeddings are cached locally per entity_id.
@@ -394,7 +392,7 @@ class Neo4jEntityRegistry(EntityRegistry):
                  embedder=None, cache_path: Path | None = None):
         self.c = client or Neo4jClient()
         # entity_id must be unique — the registry's identity invariant.
-        # (Lesson 2026-10-10: naive backfill created duplicate IDs,
+        # (A naive backfill creates duplicate IDs,
         #  causing MATCH to hit multiple nodes and duplicate edges.)
         try:
             self.c.run([{"statement":
@@ -627,7 +625,7 @@ class Neo4jEntityRegistry(EntityRegistry):
 
 
 class Neo4jGraphStore(GraphStore):
-    """GraphStore backed by Neo4j (Phase 1 and beyond)."""
+    """GraphStore backed by Neo4j."""
 
     def __init__(self, client: Neo4jClient | None = None):
         self.c = client or Neo4jClient()

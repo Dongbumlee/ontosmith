@@ -472,7 +472,7 @@ def _er_decide_fn(name_a: str, name_b: str, label: str, context: str,
 
 def _resolution_decide_fn(context: str, mention: str, antecedent: str,
                           entity: str, model: str = JUDGE_MODEL):
-    """Jev noul via the judge seat (issue #54): does the
+    """Jev noul via the judge seat: does the
     mention in the excerpt refer to the claimed entity, on
     the evidence of the proposed antecedent?
 

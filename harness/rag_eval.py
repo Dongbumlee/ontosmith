@@ -1,6 +1,6 @@
 """RAG vs Graph RAG evaluation v2 — jfk-hybrid-v1 only, honest design.
 
-Three question types (2026-10-12):
+Three question types:
 1. Single-hop: from this batch's Tier 1 verb triples.
    Graph hit is 100% by construction; vector recall@k is the signal.
 2. Multi-hop: composed A->B->C paths in the Tier 1 graph.

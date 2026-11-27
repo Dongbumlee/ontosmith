@@ -1,10 +1,10 @@
 """Drift spot audit: pipeline.drift_check + the VERIFY hook.
 
-Regression for the installed-copy defect: stage_verify used to
-load the audit implementation from scripts/drift_check.py by
+Regression for the installed-copy defect: stage_verify
+must not load the audit implementation from scripts/drift_check.py by
 repo-relative file path. The wheel ships no scripts/ tree, so
 any installed batch run with a manifest and a graph store died
-at VERIFY with FileNotFoundError. The implementation now lives
+at VERIFY with FileNotFoundError. The implementation lives
 in the package as pipeline.drift_check; these tests exercise it
 the way an installed copy runs it — module import, manifest
 join against a workspace registry, store reads through the
@@ -189,7 +189,7 @@ class TestExpectedFromManifest(DriftWorkspace):
         # file in the batch's own directory is resolved before
         # the state-root default — the default here is a fresh
         # registry that knows none of the batch's entities, so
-        # the pre-fix resolution joined 0.
+        # a wrong resolution joins 0.
         d = batch_dir(self.root, self.batch_id)
         own = SqliteEntityRegistry(d / "registry_own.db")
         own.create(Entity(entity_id="ent-s", name="Acme Corp",

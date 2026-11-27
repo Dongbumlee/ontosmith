@@ -1,5 +1,4 @@
-"""Identity seat, batch wiring (identity-surgery
-program, 2026-10-30): the CANDIDATES stage resolves
+"""Identity seat, batch wiring: the CANDIDATES stage resolves
 the profile's identity_seat_decisions declaration,
 loads the frozen verdicts once, and threads a
 per-document seat into the guard. These tests run

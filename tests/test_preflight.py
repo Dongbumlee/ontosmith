@@ -4,7 +4,7 @@ The documented contract: a run whose pending stages need a seat
 with an unset key variable refuses with the connection layer's
 named BindingKeyError — before any stage runs — instead of
 starting and dying mid-run. Stage CANDIDATES' own key check
-raises the same named error (it used to raise a bare
+raises the same named error (not a bare
 RuntimeError).
 """
 import json
@@ -114,7 +114,7 @@ class TestCostCapPreflightSeats(TmpRoot):
 class TestRunBatchRefusesBeforeStages(TmpRoot):
     def test_retired_sources_refused_by_name(self):
         # The candidate_source setting was removed with the
-        # GLiNER+spaCy pipeline source (2026-10-29). A stored
+        # GLiNER+spaCy pipeline source. A stored
         # config still naming a retired value refuses by
         # name at load (BatchConfig.from_dict) — never
         # silently runs a different builder than the stored
@@ -251,8 +251,8 @@ class TestStorePreflight(TmpRoot):
         b = _batch()
         # A stub proposer key so the bindings preflight
         # passes and the STORE preflight is the refusal
-        # under test (the pipeline source that used to skip
-        # the proposer check was retired 2026-10-29).
+        # under test (the retired pipeline source skipped
+        # the proposer check).
         with mock.patch.dict(os.environ,
                              {"OPENROUTER_API_KEY": "sk-test"}), \
                 self.assertRaises(StoreUnreachableError):

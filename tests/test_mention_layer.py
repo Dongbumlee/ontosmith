@@ -1,4 +1,4 @@
-"""Mention-layer tests (issue #54).
+"""Mention-layer tests.
 
 The diagnosis: entities register and link by noun surface
 forms, so facts stated via pronouns, definite descriptions,
@@ -14,7 +14,7 @@ first):
   (mention_missing / mention_span / mention_antecedent),
   never silently; an endpoint whose mention data is
   absent falls back to the legacy evidence path and is
-  judged on its quote (cut 2 — the layer is additive:
+  judged on its quote (the layer is additive:
   only a declared-but-invalid mention can block), and
   every fallback is counted by endpoint in the batch
   accounting;
@@ -30,14 +30,14 @@ the span discipline; the fallback policy; the three
 resolution outcomes; the route cap and the drop reason
 classes.
 
-Batch-level guards added after the Phase 2 verdict (the
-A/B failed on an interaction the unit tests above never
-simulated — see the verdict record in the changelog):
+Batch-level guards (the
+layer's A/B failed on an interaction the unit tests above never
+simulated):
 the finish record restates guard-block counts by reason
 and mention fallback counts by endpoint, so neither a
 block cliff nor a silent fallback can hide at the
 finish; a scripted partial-compliance proposer (27%
-field omission, the measured Phase 2 rate) survives via
+field omission, the measured A/B rate) survives via
 fallback with the fallback count equal to the omission
 count; and fully compliant input survives identically
 with the layer on and off.
@@ -432,7 +432,7 @@ class TestRouteResolution(unittest.TestCase):
 
 
 # --------------------------------------- batch-level guards
-# Post-verdict (Phase 2, issue #54): the A/B's Tier-1
+# Post-verdict: the A/B's Tier-1
 # recall fell 0.1066 -> 0.0772 because the proposer omitted
 # the mention fields on a large share of proposals and the
 # fail-closed guard culled them before judging — an
@@ -474,7 +474,7 @@ def _scripted_invalid_items(n):
     """n proposals that DECLARE mention data, badly: the
     subject's mention span ("He") does not appear in the
     quote, so the mention is present-but-invalid — the
-    shape that still blocks by name under cut 2
+    shape that still blocks by name under the additive policy
     (mention_span)."""
     items = []
     for i in range(n):
@@ -540,7 +540,7 @@ class TestMentionFinishAccounting(unittest.TestCase):
 
     def test_block_counts_reach_the_finish_record(self):
         # Declared-but-invalid mentions (span outside the
-        # quote): the shape that still blocks under cut 2.
+        # quote): the shape that still blocks under the additive policy.
         b, stage_out = _run_candidates_stage(
             self.root, "mention-finish",
             _scripted_invalid_items(27), mention=True)
@@ -567,7 +567,7 @@ class TestMentionFinishAccounting(unittest.TestCase):
         self.assertIn("mention_span", out.getvalue())
 
     def test_fallback_counts_reach_the_finish_record(self):
-        # The Phase 2 omission shape under cut 2: nothing
+        # The A/B omission shape under the additive policy: nothing
         # blocks, and the finish must say how much of the
         # run was judged on the legacy evidence path — a
         # fallback with no finish line would read as an
@@ -606,19 +606,18 @@ class TestMentionFinishAccounting(unittest.TestCase):
 
 class TestMentionPartialCompliance(unittest.TestCase):
     """Partial compliance, characterized exactly. The
-    fixture's omission rate is the measured Phase 2 rate:
-    the v1 A/B run recorded 69 mention_missing blocks out
-    of 257 proposals (≈27%; cap-recall-measurement.md,
-    Phase 2 section) — under v1's fail-closed policy the
+    fixture's omission rate is the measured A/B rate:
+    the A/B run recorded 69 mention_missing blocks out
+    of 257 proposals (≈27%) — under a fail-closed policy the
     omission slice was culled before judging and Tier-1
-    recall fell 0.1066 -> 0.0772. Cut 2 makes the layer
+    recall fell 0.1066 -> 0.0772. The layer is
     additive, and this test is the reviewed artifact of
-    the new behavior: here 27 of 100 scripted proposals
+    the behavior: here 27 of 100 scripted proposals
     omit the mention fields, EVERY proposal survives —
     the 27 omission items via fallback, the 73 compliant
     ones with verified mentions — and the fallback count
     equals the omission count exactly (27 items x 2
-    endpoints). The v1 cliff is now a measured fallback
+    endpoints). The fail-closed cliff is now a measured fallback
     rate; changing either means rewriting this test
     deliberately."""
 

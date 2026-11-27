@@ -44,15 +44,16 @@ the round stops for an alias-policy review before any pair
 spend (design F-R4-3) — the builder reports the rate and the
 caller enforces the stop.
 
-F-R4-3 amendment (fired 2026-10-18 on the first build: 337/918
-refused = 36.71%): the review found the refusals were
+F-R4-3 amendment: on the first build the stop fired with
+337/918
+refused = 36.71%, and the review found the refusals were
 redundancy collisions on the dense union roster — clause (a)
 179 (the string already has its own roster row), clause (b)
 158 (151 of them A3 sub-phrases shared across mentions, first
 registrant wins) — not entity equations slipping through; the
 admitted set is collision-free by construction. Per the
 design's F-R4-3 prescription, the policy is tightened exactly
-as named there — standalone attestation is now required for
+as named there — standalone attestation is required for
 A1/A2 components as well (A3/A4 already required it) — and the
 roster is re-measured at $0. Refusals are counted per clause
 (refused_a / refused_b) so the composition stays visible.

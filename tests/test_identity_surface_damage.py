@@ -1,5 +1,5 @@
 """Identity surface damage — regression tests from the
-ontology scale-test pilot (2026-10-29, 60 docs, manual seat).
+ontology scale-test pilot (60 docs, manual seat).
 
 The pilot's largest single loss class was not the schema:
 15 of 284 kept candidates (5.3%) carried endpoints the
@@ -366,7 +366,7 @@ class TestIndependentLifeProtection(unittest.TestCase):
                          "Jared Scot Allen")
 
 
-# --- Round 3 (2026-10-30): structural absorption vetoes --
+# --- Structural absorption vetoes --
 # The genre sweep (S5-S8) and the held-out build (S4)
 # showed the remaining damage was one mechanism in many
 # costumes: subset absorption rewrote a mention to ANY
@@ -608,11 +608,11 @@ class TestStructuralAbsorptionVetoes(unittest.TestCase):
         self.assertEqual(kept[0]["subject"], "John Smith")
 
 
-# --- Round 4 (2026-10-30): the evidence rule generalised --
-# Round 3's generic-element veto was a hand-written list
+# --- The evidence rule generalised --
+# The generic-element veto was a hand-written list
 # of English type nouns (university, senate, corporation,
 # ...) — a per-language word list, and word lists are not
-# a mechanism. The bake-off that replaced it measured
+# a mechanism. The bake-off measured
 # what the list uniquely covered and found the coverage
 # was an instance of one rule: a subset rewrite needs
 # document-supplied identity evidence (see

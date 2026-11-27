@@ -40,8 +40,8 @@ ROOT = Path(__file__).resolve().parent.parent
 PACK_DIR = ROOT / "packs" / "open-domain"
 ARTEFACT = PACK_DIR / "relation_declarations.json"
 
-# The density program's Test A additions (orientation test,
-# 2026-11-01): (canonical, surface, flipped).
+# Test A additions (orientation test):
+# (canonical, surface, flipped).
 TEST_A_PAIRS = [
     ("participant", "participant in", False),
     ("conflict", "participant in", False),

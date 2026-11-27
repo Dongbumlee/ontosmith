@@ -40,8 +40,8 @@ def load_records(path: str, p_field: str, label_field: str,
 
     Rows carrying an explicit ``error`` field are judge FAILURES,
     not judgments: they are excluded here —
-    the gate runners used to store a failed call as p_true=0.0,
-    and scoring it as a judged negative would silently tax the
+    scoring a failed call as a judged negative (a stored
+    p_true=0.0) would silently tax the
     gate for an infrastructure failure. ``error_record_count``
     reports how many a file carries, and the CLI surfaces the
     excluded count in its output."""

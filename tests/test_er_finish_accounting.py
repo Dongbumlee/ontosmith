@@ -1,11 +1,11 @@
-"""ER finish-line accounting tests (issue #51).
+"""ER finish-line accounting tests.
 
 The defect: a build could finish VERIFIED with most of its
 ER decisions held for human settlement and nothing at the
 finish line said so — WRITE's stage metrics carried the
 count, but the batch's own completion report never totaled
-ER decisions by terminal state (multilingual pilot,
-2026-10-27: 49 decisions, 44 held, finish line silent).
+ER decisions by terminal state (multilingual pilot:
+49 decisions, 44 held, finish line silent).
 
 The hold itself is the product's measured design (a human
 decision, never an auto-merge) and is NOT changed here.

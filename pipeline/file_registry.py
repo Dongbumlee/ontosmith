@@ -454,7 +454,7 @@ class SqliteEntityRegistry(EntityRegistry):
         (batch, pair, outcome) idempotency rule applies: a
         repeat call for a pair already recorded under this batch
         is a no-op reporting already_detached=True. No entity is
-        created or deleted; the precedent shape is the 2026-10-16
+        created or deleted; the precedent shape is the
         ruling that detached `Steering Committee` from the Joint
         Commercial Committee entity.
 

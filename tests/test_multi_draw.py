@@ -1,5 +1,5 @@
 """Multi-draw proposer passes: declared extra framings and
-the complement pass (2026-11-02 draw measurement).
+the complement pass (draw measurement).
 
 Pinned here:
 - the two declarations validate fail-closed;

@@ -1,11 +1,12 @@
 """Review-tool case identity (audit F8).
 
 Two review-band cases from one document are distinct
-triples. Resume and undo used to key on doc_id alone: a
-document's second case was silently retired by the first
+triples. Resume and undo must not key on doc_id alone:
+keyed that way, a
+document's second case is silently retired by the first
 case's label (never shown, never recorded — against the
 tool's own "never silently dropped" contract), and undo
-jumped to the first case sharing the doc_id. These tests
+jumps to the first case sharing the doc_id. These tests
 pin the case-key behavior and the legacy-row fallback.
 """
 import json

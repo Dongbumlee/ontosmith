@@ -1,4 +1,4 @@
-"""Entity sweep (issue #58): the profile-gated additive
+"""Entity sweep: the profile-gated additive
 second proposal pass inside CANDIDATES.
 
 The pass exists because the gold re-examination measured

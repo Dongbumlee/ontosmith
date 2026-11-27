@@ -1,4 +1,4 @@
-"""Extraction density tests (issue #52).
+"""Extraction density tests.
 
 The diagnosis: the free proposer chunks documents fully
 (20,000-char windows — coverage is not the defect), but its

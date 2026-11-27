@@ -1,4 +1,4 @@
-"""Theme-attestation regressions (BYO ontology review, 2026-10-23).
+"""Theme-attestation regressions (BYO ontology review).
 
 The theme-presence guard blocked a hand-authored pack's
 verb+preposition relation wholesale (10/10 "works at"
@@ -52,11 +52,10 @@ class TestThemePresenceGuard(unittest.TestCase):
     outside the shortest quote blocks by name."""
 
     def test_object_outside_quote_kept_with_grade(self):
-        # Theme grading (upstream program, decision test
-        # 2026-10-29): an object attested in the chunk but
-        # not inside the quote no longer blocks — the item
+        # Theme grading: an object attested in the chunk but
+        # not inside the quote does not block — the item
         # is kept and carries its evidence grade for the
-        # judge. (Supersedes the pre-grading block spec.)
+        # judge.
         kept, blocked = guard_triples([_item()], DOC)
         self.assertEqual(blocked, [])
         self.assertEqual(len(kept), 1)

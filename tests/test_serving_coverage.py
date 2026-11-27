@@ -1,10 +1,10 @@
-"""Serving coverage tests (issue #50).
+"""Serving coverage tests.
 
 The defect: INDEX chunked only documents holding a
 Tier-2-routed candidate, so a Tier-1-heavy build's serving
 index silently covered a subset of the corpus — and VERIFY
 recorded green, because no check compared the index against
-the documents built (multilingual pilot, 2026-10-27: 1 of 16
+the documents built (multilingual pilot: 1 of 16
 documents served, hybrid recall 0.00 even on English
 controls).
 
