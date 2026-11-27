@@ -1,10 +1,8 @@
 # Quality record — Re-DocRED flagship build (pointer)
 
 **The record's canonical text lives in the [whitepaper](../docs/whitepaper.md),
-§5** (placement revision, 2026-10-22: the
-scores moved out of the repository's front surfaces into
-the long-form document, where they travel with their
-scope, method, and failure anatomy). This file is the
+§5**, where the scores travel with their
+scope, method, and failure anatomy. This file is the
 record's in-tree pointer: its scope, its replay path, and
 the anatomy data block the chart renderer parses. The
 claim-level index of every published number is
@@ -48,7 +46,7 @@ verdicts ship as the supplementary appendix
 ([`appendix/`](appendix/)), labeled machine judgments —
 evidence a reader can re-check, not a standalone
 dataset. Both verdict sets ship (the original protocol's
-and the ruled re-adjudication's, with the ruling text);
+and the ruled re-adjudication's);
 `examples/demo/replay_scores.py` recomputes every
 headline of the record from the appendix files alone —
 both estimates — and exits non-zero on drift; the

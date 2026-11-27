@@ -391,8 +391,7 @@ component, not a seat chosen by a published head-to-head
 bake-off; no Jev-versus-frontier judgment comparison is
 in this record, and none should be inferred from it.
 
-*Note, 2026-10-23 — the binding layer generalized; the record did
-not move.* The declaration path is now a front door (`ontosmith
+The declaration path is a front door (`ontosmith
 configure`, interactive or from a template file) that writes the
 per-seat binding as its artifact, with zero-spend probes and a
 binding stamp. Each seat additionally declares a provider
@@ -407,19 +406,20 @@ unknown cost is recorded as unknown (no rate is ever invented in
 code); a USD stop-line set over a seat that cannot meter cost
 refuses by name instead of silently never tripping.
 
-Model-name pattern matching for request shape is replaced by
-declared capabilities, with model-id derivation retained only as
+Request shape follows declared capabilities, not
+model-name pattern matching; model-id derivation is
+retained only as
 the undeclared default.
 
-What
-deliberately did **not** change: the reference
-profile's values above — the preset request bytes are
+The reference
+profile's values above stand as the measured
+configuration — the preset request bytes are
 unchanged, guarded by byte-identical request fixtures —
-and the judge seat's contract, whose unit of
-generalization is the decisions route rather than
-another chat model. §5.6's provider row is the
-historical record of the measured run and stands as
-written.
+and the judge seat's contract keeps the decisions route
+as its unit of
+generalization rather than
+another chat model. §5.6's provider row records the
+measured run.
 
 ### 4.2 Cost guardrails
 
@@ -592,9 +592,9 @@ credited with.
   subject-identity shifts, dropped qualifiers, and
   non-transitive containment rejected as typed. The
   rulings are part of the measurement. Cross-family
-  agreement under the ruled contract itself has since
-  been re-measured on a fresh sample (addendum at the
-  end of this section, 2026-10-23): a judge from the
+  agreement under the ruled contract itself is
+  also re-measured on a fresh sample (addendum at the
+  end of this section): a judge from the
   original panel's family agreed with the ruled
   verdicts on 77.3% of the comparable pairs (Cohen's
   κ = 0.4271, three-category) — the contract narrows
@@ -649,8 +649,7 @@ credited with.
   appendix to the quality record, labeled machine
   judgments — evidence a reader can re-check, not a
   standalone dataset. Both verdict sets ship: the original
-  protocol's, and the ruled re-adjudication's with the
-  ruling text the judges received; the replay recomputes
+  protocol's, and the ruled re-adjudication's; the replay recomputes
   both estimates, and this record's headlines are the
   ruled ones.
 
@@ -685,9 +684,8 @@ The original panel's readings were sound where the contract was
 explicit and loose exactly where it was silent; the contract now
 ships with its rulings stated, not implied.
 
-**Addendum (2026-10-23) — cross-family agreement of the
-ruled contract, re-measured.** The follow-up recorded in
-this section's first bullet has landed. A fresh
+**Addendum — cross-family agreement of the
+ruled contract, re-measured.** A fresh
 stratified sample of 150 items was drawn from the
 shipped direction-A adjudication sample (non-control
 items; strata no-gold-pair 120 / pair-matched 30; seed
@@ -941,7 +939,7 @@ documents (509 unique content), 41 label categories over
 (CC BY 4.0); no corpus text ships with the product.
 Profile: a setup-service census with 30 scanner-verified
 claims and 16 human decision points, all approved as
-recommended (2026-10-16, conformance CC-1); the payload
+recommended (conformance CC-1); the payload
 this pack pins descends from that approval.
 
 **Extraction bake-off (CC-2).** Identical harness, two
@@ -964,7 +962,7 @@ scored clause-slot precision **0.938** / recall **0.840**.
 **Certification (CC-3).** The served graph lineage built
 under this pack's payload passed the promotion gate on
 all three legs — audit record, pinned QA, doc-check
-closure — verdict **PROMOTABLE** (2026-10-16):
+closure — verdict **PROMOTABLE**:
 
 - **Audit:** precision **0.7185** (140 sampled, 135
   decided, blind labels; the human round-2 rulings

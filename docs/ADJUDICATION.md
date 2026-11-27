@@ -2,8 +2,8 @@
 
 The standing specification for machine adjudication in
 OntoSmith's quality records: how blind samples of predicted
-and gold triples are judged, what counts as support, and —
-since 2026-10-22 — the explicit rulings that complete the
+and gold triples are judged, what counts as support, and
+the explicit rulings that complete the
 contract at the six surface situations where judges
 otherwise supply their own readings. Every corrected
 number in the quality record (whitepaper §5) rests on
@@ -34,15 +34,13 @@ pre-registered discipline, never mid-run.
   `unclear`, each with its evidence quote (or its absence
   stated) and a note.
 
-## The seam rulings (2026-10-22)
+## The seam rulings
 
 Six recurring surface situations the base contract left
 silent. Each is settled as a definition; where a ruling
 decides a verdict, the judge records the ruling's code
 (`seam_applied`), so the seam population of any future
-correction is measured, not guessed. The packet text
-judges receive is the R1–R6 block of the appendix's
-`RULING.md`; the rulings in brief:
+correction is measured, not guessed. The rulings in brief:
 
 1. **DEM — ACCEPT.** An adjectival/demonym form that
    unambiguously denotes the typed entity counts as the
@@ -82,13 +80,12 @@ judges receive is the R1–R6 block of the appendix's
 
 ## Provenance
 
-The rulings were adopted on 2026-10-22, after a
-pre-registered cross-family blind recheck of the flagship
-record's verdicts failed its registered bar (agreement
-0.815 against 0.95) and localized the disagreement to
-exactly these six situations. The flagship's 565 flagged
-items were then re-judged blind under this contract and
-the record re-priced; the full account, the ruling text
-as the judges received it, and both verdict sets are in
-the whitepaper (§5.4) and the benchmark appendix
-(`benchmarks/appendix/RULING.md`, `judgments_ruled/`).
+The rulings complete the base contract at the six
+situations a pre-registered cross-family blind recheck
+of the flagship record's verdicts localized, after the
+recheck failed its registered bar (agreement
+0.815 against 0.95). The flagship's 565 flagged
+items were re-judged blind under this contract and
+the record re-priced; the full account and both verdict
+sets are in the whitepaper (§5.4) and the benchmark
+appendix (`judgments_ruled/`).

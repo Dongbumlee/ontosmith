@@ -1,8 +1,7 @@
 # Benchmarks — the quality records and their data
 
 The quality records' canonical text lives in the
-[**whitepaper**](../docs/whitepaper.md) (placement revision,
-2026-10-22): the scores travel with their scope, method,
+[**whitepaper**](../docs/whitepaper.md): the scores travel with their scope, method,
 and failure anatomy in the long-form document, not on the
 repository's front surfaces. What ships here is the
 records' index, their evidence data, and the replay
@@ -46,7 +45,7 @@ the [NOTICE](../NOTICE).
 - [`appendix/`](appendix/) — the flagship record's
   adjudication samples, key files, and verdicts (both
   sets: the original protocol's and the ruled
-  re-adjudication's, with the ruling text), labeled
+  re-adjudication's), labeled
   machine judgments, with the sampling manifest
   and the raw census scores.
 - `examples/demo/replay_scores.py` — recomputes every
@@ -107,7 +106,7 @@ checks it, and the readout where it lives.
 | Pinned QA — graph | recall@20 0.6516 | 116 questions, production path | query stack (R16 path) | whitepaper §5.8 |
 | Pinned QA — hybrid | recall@20 0.6314 | same QA, same corpus | query stack | whitepaper §5.8 |
 | Pinned QA — graph+hybrid | recall@20 **0.7115** (+0.080 over hybrid) | long documents — stated scope | query stack | whitepaper §5.8 |
-| Promotion verdict (CC-3) | PROMOTABLE (gate PASS × 3) | 2026-10-16 final re-run | promotion gate | whitepaper §5.8; pack conformance CC-3 |
+| Promotion verdict (CC-3) | PROMOTABLE (gate PASS × 3) | run 2026-10-16 | promotion gate | whitepaper §5.8; pack conformance CC-3 |
 | Profile approval (CC-1) | 16/16 decision points approved | CUAD census, 510 docs | setup service census + scanners | whitepaper §5.8; pack conformance CC-1 |
 | Framing as data (CC-4) | prompts byte-identical after PK-01 move | proposer + slot surfaces | profile config (payload channel) | pack conformance CC-4 |
 
@@ -125,7 +124,7 @@ population, delta) lives in each pack's `conformance.json`.
 | Bio Medical | CR-5 | measured, not adopted | Association specialist T2a: Association agreement 24/30 → 6/30 |
 | Bio Medical | CR-6 | measured, not adopted | definitions-free second look T2b: net agreement +1 |
 | Bio Medical | CR-7 | closed | Train-fitted picker T4: Dev agreements 390 → 358 (leg ≥ +30) |
-| Legal Contract | CC-1 | adopted | profile approval 2026-10-16, 16 decision points |
+| Legal Contract | CC-1 | adopted | profile approval, 16 decision points |
 | Legal Contract | CC-2 | adopted | extraction bake-off: Haiku seat, precision 0.963 |
 | Legal Contract | CC-3 | adopted | certification PROMOTABLE: audit 0.7185; QA 0.7115 |
 | Legal Contract | CC-4 | adopted | PK-01: domain framing moved into payload data, prompts byte-identical |

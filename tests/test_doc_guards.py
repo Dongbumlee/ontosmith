@@ -1,27 +1,25 @@
 """Mechanical documentation-drift guards.
 
-The 2026-10-23 doc-sync audit (DS-1…DS-12) found drift in
+Documentation audits find drift in
 surfaces that predate the feature they describe. Three of
 those drift classes are mechanically checkable, so they
 are guarded here instead of waiting for the next manual
 sweep:
 
 1. Generated-file freshness — the committed PyPI README
-   variant must equal a fresh run of its generator
-   (DS-1's class).
+   variant must equal a fresh run of its generator.
 2. Printed-command existence — every `ontosmith <cmd>`
    invocation printed in the main docs must name a real
    command, a real subcommand, and only flags that exist
    on that command's `--help` (the audit's command check,
    mechanized).
 3. Key-doc presence — the docs that teach binding setup
-   must mention `configure`, the declaration front door
-   (DS-2/DS-3's class).
+   must mention `configure`, the declaration front door.
 4. Packaging coverage — every file under packs/ in the
    source tree must be covered by the pyproject data-files
-   declaration, so it ships in the wheel (the 0.1.4
-   omission class: relation_declarations.json never
-   reached wheel installs).
+   declaration, so it ships in the wheel (the
+   omission class: a pack data file that never
+   reaches wheel installs).
 
 Prose-claim consistency and stale numbers are judgment
 work; they stay with the per-feature doc-sync sweep.
@@ -66,7 +64,7 @@ def _code_spans(text: str) -> list[str]:
 
 
 def test_pypi_readme_variant_is_fresh() -> None:
-    """DS-1 guard: committed variant == fresh generator output."""
+    """Generated-file guard: committed variant == fresh generator output."""
     spec = importlib.util.spec_from_file_location(
         "build_pypi_readme", ROOT / "scripts" / "build_pypi_readme.py")
     assert spec is not None and spec.loader is not None
@@ -139,7 +137,7 @@ def test_printed_commands_exist() -> None:
 
 
 def test_binding_docs_mention_configure() -> None:
-    """DS-2/DS-3 guard: binding-setup docs name the front door."""
+    """Key-doc guard: binding-setup docs name the front door."""
     for rel in BINDING_DOCS:
         text = (ROOT / rel).read_text(encoding="utf-8")
         assert "ontosmith configure" in text, (
@@ -196,15 +194,13 @@ def test_pack_data_files_cover_the_pack_tree() -> None:
         + ", ".join(missing))
 
 
-# The settled store story (RR program): the pre-BO story —
+# The settled store story: the earlier story —
 # "the graph is a rebuildable projection / no database
-# needed" — has resurfaced in entry docs three times. The
+# needed" — resurfaces in entry docs if unguarded. The
 # current-tense telling surfaces must not carry its marker
 # phrases. Deliberately NOT covered: docs/whitepaper.md
 # (the term there is the data-model name for the
-# registry→graph mapping, kept by the BO program's ruling)
-# and CHANGELOG history sections (a record of what was
-# true when written).
+# registry→graph mapping).
 STORE_STORY_DOCS = (
     "README.md",
     "llms.txt",
@@ -212,7 +208,6 @@ STORE_STORY_DOCS = (
     "docs/serving.md",
     "docs/hands-on.md",
     "docs/cli-reference.md",
-    "docs/release-notes-v0.1.0-draft.md",
     "examples/README.md",
 )
 
@@ -226,7 +221,7 @@ BANNED_STORE_PHRASES = (
 
 
 def test_store_story_docs_tell_the_settled_story() -> None:
-    """RR guard: entry surfaces tell the settled store story."""
+    """Store-story guard: entry surfaces tell the settled store story."""
     offenders = []
     for rel in STORE_STORY_DOCS:
         text = (ROOT / rel).read_text(encoding="utf-8").lower()

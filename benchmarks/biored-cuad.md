@@ -1,8 +1,7 @@
 # Quality records — BioRED & CUAD supporting builds (pointer)
 
 **The records' canonical text lives in the [whitepaper](../docs/whitepaper.md)**
-— BioRED at §5.7, CUAD at §5.8 (placement revision,
-2026-10-22). This file is the in-tree
+— BioRED at §5.7, CUAD at §5.8. This file is the in-tree
 pointer: what the records cover, and where their data
 lives. The claim-level index of every published number
 is [`benchmarks/README.md`](README.md).
@@ -12,7 +11,7 @@ is [`benchmarks/README.md`](README.md).
 - **Bio Medical pack — BioRED pilot (Dev-100).** The
   schema-first pilot build over the BioRED dev split
   (100 documents; test split sealed), scored against
-  criteria carried unchanged since round 3. The
+  the record's frozen criteria. The
   whitepaper record carries the build, the criteria
   table — including the frozen-precision criterion
   recorded as **FAIL**, unsoftened — the conversion
@@ -21,8 +20,7 @@ is [`benchmarks/README.md`](README.md).
   records (five measured candidates, none adopted; type
   assignment is the pilot's named open problem).
 - **Legal Contract pack — CUAD.** The full-corpus build
-  (510 documents) under the pack pinned from the
-  2026-10-16 profile approval: the extraction-seat
+  (510 documents) under the pinned pack profile: the extraction-seat
   bake-off, and the certification that closed
   **PROMOTABLE** on its three legs (audit record, pinned
   QA, doc-check closure). The whitepaper record carries

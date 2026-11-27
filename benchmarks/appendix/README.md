@@ -25,9 +25,9 @@ ceiling-adjusted recall, stratified estimation).
 
 Two verdict sets ship: the original adjudication
 protocol's (`judgments/`) and the **ruled** set
-(`judgments_ruled/` + `RULING.md`) — the 565 seam-flagged
+(`judgments_ruled/`) — the 565 seam-flagged
 items re-judged blind under the adjudication contract
-completed by the six seam rulings of 2026-10-22
+completed by the six seam rulings
 ([`docs/ADJUDICATION.md`](../../docs/ADJUDICATION.md)).
 The record's headlines are the ruled estimates; the
 original set is the measurement's provenance.
@@ -41,8 +41,7 @@ quote-verification failures, and all five fate support
 rates, and exits non-zero if any reproduced value leaves
 the published figure (the figures themselves: whitepaper
 §5; claim index in [`benchmarks/README.md`](../README.md)).
-Verified at assembly and again when the ruled set was
-added (2026-10-22): all headlines reproduce, both sets.
+All headlines reproduce, both sets.
 
 ## Manifest — exactly what was copied
 
@@ -61,10 +60,10 @@ directory); sha256 of the staged file equals the source's.
 | `sample_manifest.json` | `s3_sample_manifest.json` | `a0ccea3d5d6e100a8a22b9e3124e5fc50a57561e872173d1951c126f27bc0133` | Sampling frames, strata populations, allocations, seeds, blinding record |
 | `raw_scores.json` | `s3_raw_scores.json` | `7396786e3b529b2e159b2a1fbeebcf7f9446e50773400afe0c5e85a1195b4802` | The raw census scores (FULL-500 / CONF-440) the correction starts from |
 
-Added 2026-10-22 — the ruled verdict set, from
-the adjudication recheck's verification record (the
-ruled re-adjudication of 2026-10-22; account in the
-whitepaper §5.4 and in `RULING.md` itself). The verdict
+The ruled verdict set, from
+the adjudication recheck's verification record (account
+in the whitepaper §5.4; the rulings themselves in
+[`docs/ADJUDICATION.md`](../../docs/ADJUDICATION.md)). The verdict
 files are the ruled run's `ruled_verdicts.jsonl`
 (sha256 `21cb4467114d5310e03b02ec319392a4d1646ea5badc7d5e934078d956af68da`)
 re-serialized per direction — `queue_id` renamed to the
@@ -75,11 +74,10 @@ notes, and `seam_applied` values are the run's own:
 |---|---|---|
 | `judgments_ruled/a.jsonl` | `178379e0e5943ab409b8496aced2a33dc0a5cfd8d7a41a875305a8d3f9c66ad1` | Ruled verdicts, Direction A items (240 of the 565 flagged) |
 | `judgments_ruled/b.jsonl` | `adb2aaa7e20adc1b096241827af67c88642163803289a3b0c071549a4cce9194` | Ruled verdicts, Direction B items (325 of the 565 flagged) |
-| `RULING.md` | `acff9f4f62bc1835deec788d648a761cae95db5a1a27e1fe02252dfef431ce24` | The ruling's provenance and the packet text verbatim (R1–R6), as the ruled judges received it |
 
-Added 2026-10-23 — the cross-family verdicts, from
+The cross-family verdicts, from
 the post-ruling agreement re-measurement recorded in the
-whitepaper §5.4 addendum of the same date. A third verdict
+whitepaper §5.4. A third verdict
 set, of a different kind: it feeds no estimate. A fresh
 stratified sample of 150 direction-A items (seed
 20261024) was judged blind under the ruled contract by
