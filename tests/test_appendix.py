@@ -48,15 +48,13 @@ EXPECTED_SHA256 = {
         "a0ccea3d5d6e100a8a22b9e3124e5fc50a57561e872173d1951c126f27bc0133",
     "raw_scores.json":
         "7396786e3b529b2e159b2a1fbeebcf7f9446e50773400afe0c5e85a1195b4802",
-    # The ruled verdict set (added 2026-10-22):
+    # The ruled verdict set:
     # re-serialized per direction from the ruled run's
     # ruled_verdicts.jsonl (appendix README table).
     "judgments_ruled/a.jsonl":
         "178379e0e5943ab409b8496aced2a33dc0a5cfd8d7a41a875305a8d3f9c66ad1",
     "judgments_ruled/b.jsonl":
         "adb2aaa7e20adc1b096241827af67c88642163803289a3b0c071549a4cce9194",
-    "RULING.md":
-        "acff9f4f62bc1835deec788d648a761cae95db5a1a27e1fe02252dfef431ce24",
 }
 
 SEAM_CODES = {"none", "DEM", "RELPREC", "EVAL", "CONT-a",

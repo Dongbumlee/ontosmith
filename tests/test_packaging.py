@@ -76,15 +76,13 @@ class TestPyproject(unittest.TestCase):
             "Issues":
                 "https://github.com/Dongbumlee/ontosmith/issues",
             "Changelog":
-                "https://github.com/Dongbumlee/ontosmith/"
-                "blob/main/CHANGELOG.md",
+                "https://github.com/Dongbumlee/ontosmith/releases",
         })
         for keyword in ("knowledge-graph", "ontology",
                         "information-extraction", "graphrag"):
             self.assertIn(keyword, proj["keywords"])
-        # The Changelog URL must resolve to a file that
-        # exists in this tree.
-        self.assertTrue((ROOT / "CHANGELOG.md").is_file())
+        # Release notes live on the project's Releases
+        # page; no changelog file ships in this tree.
 
     def test_dependencies_classified(self):
         proj = _pyproject()["project"]
@@ -93,7 +91,7 @@ class TestPyproject(unittest.TestCase):
         extras = proj["optional-dependencies"]
         self.assertEqual(extras["neo4j"], ["neo4j"])
         # No "nlp" extra: the GLiNER+spaCy pipeline
-        # candidate source was retired 2026-10-29 — there
+        # candidate source is retired — there
         # is no local NER/RER surface left to install.
         self.assertNotIn("nlp", extras)
         # No "embed" extra: there is no local

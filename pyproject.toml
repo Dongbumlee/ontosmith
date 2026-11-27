@@ -69,7 +69,7 @@ Homepage = "https://github.com/Dongbumlee/ontosmith"
 Documentation = "https://github.com/Dongbumlee/ontosmith#readme"
 Repository = "https://github.com/Dongbumlee/ontosmith"
 Issues = "https://github.com/Dongbumlee/ontosmith/issues"
-Changelog = "https://github.com/Dongbumlee/ontosmith/blob/main/CHANGELOG.md"
+Changelog = "https://github.com/Dongbumlee/ontosmith/releases"
 
 [project.optional-dependencies]
 # Neo4j-backed store and export/retrieval utilities
